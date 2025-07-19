@@ -4,6 +4,7 @@ import 'package:raabta/features/auth/domain/firebase_auth_repository.dart';
 import 'package:raabta/features/auth/domain/user_profile_repository.dart';
 import 'package:raabta/features/auth/domain/models/user_profile_model.dart';
 import 'package:raabta/features/auth/presentation/sign_in_screen.dart';
+import 'package:raabta/features/chat/presentation/conversations_screen.dart';
 import 'package:raabta/core/services/service_locator.dart';
 import 'package:intl/intl.dart';
 
@@ -75,6 +76,15 @@ class _HomeScreenState extends State<HomeScreen> {
         foregroundColor: Colors.white,
         actions: [
           IconButton(
+            icon: const Icon(Icons.chat),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const ConversationsScreen()),
+              );
+            },
+            tooltip: 'Messages',
+          ),
+          IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
               await _authRepository.signOut();
@@ -84,6 +94,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               }
             },
+            tooltip: 'Sign Out',
           ),
         ],
       ),
@@ -158,6 +169,17 @@ class _HomeScreenState extends State<HomeScreen> {
             _buildInfoRow('Profile Complete:', _userProfile?.isProfileComplete == true ? 'Yes' : 'No'),
           ],
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (context) => const ConversationsScreen()),
+          );
+        },
+        backgroundColor: Colors.deepPurple,
+        foregroundColor: Colors.white,
+        child: const Icon(Icons.chat),
+        tooltip: 'Open Messages',
       ),
     );
   }

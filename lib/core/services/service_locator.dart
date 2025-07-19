@@ -4,6 +4,8 @@ import 'package:raabta/features/auth/domain/user_repository.dart';
 import 'package:raabta/features/auth/domain/firebase_user_repository.dart';
 import 'package:raabta/features/auth/domain/user_profile_repository.dart';
 import 'package:raabta/features/auth/domain/firebase_user_profile_repository.dart';
+import 'package:raabta/features/chat/domain/chat_repository.dart';
+import 'package:raabta/features/chat/domain/firebase_chat_repository.dart';
 
 /// Service locator for dependency injection
 /// This allows for easy replacement of services
@@ -27,6 +29,9 @@ class ServiceLocator {
   /// User profile repository instance
   late UserProfileRepository _userProfileRepository;
 
+  /// Chat repository instance
+  late ChatRepository _chatRepository;
+
   /// Initialize services
   Future<void> initialize() async {
     // Initialize backend service
@@ -41,6 +46,9 @@ class ServiceLocator {
 
     // Initialize user profile repository
     _userProfileRepository = FirebaseUserProfileRepository();
+
+    // Initialize chat repository
+    _chatRepository = FirebaseChatRepository();
   }
 
   /// Get backend service
@@ -54,4 +62,7 @@ class ServiceLocator {
 
   /// Get user profile repository
   UserProfileRepository get userProfileRepository => _userProfileRepository;
+
+  /// Get chat repository
+  ChatRepository get chatRepository => _chatRepository;
 }
