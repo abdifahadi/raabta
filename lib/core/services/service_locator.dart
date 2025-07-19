@@ -1,5 +1,8 @@
 import 'auth_service.dart';
 import 'firebase_service.dart';
+import 'storage_repository.dart';
+import 'firebase_storage_repository.dart';
+import 'media_picker_service.dart';
 import 'package:raabta/features/auth/domain/user_repository.dart';
 import 'package:raabta/features/auth/domain/firebase_user_repository.dart';
 import 'package:raabta/features/auth/domain/user_profile_repository.dart';
@@ -32,6 +35,12 @@ class ServiceLocator {
   /// Chat repository instance
   late ChatRepository _chatRepository;
 
+  /// Storage repository instance
+  late StorageRepository _storageRepository;
+
+  /// Media picker service instance
+  late MediaPickerService _mediaPickerService;
+
   /// Initialize services
   Future<void> initialize() async {
     // Initialize backend service
@@ -49,6 +58,12 @@ class ServiceLocator {
 
     // Initialize chat repository
     _chatRepository = FirebaseChatRepository();
+
+    // Initialize storage repository
+    _storageRepository = FirebaseStorageRepository();
+
+    // Initialize media picker service
+    _mediaPickerService = MediaPickerService();
   }
 
   /// Get backend service
@@ -65,4 +80,10 @@ class ServiceLocator {
 
   /// Get chat repository
   ChatRepository get chatRepository => _chatRepository;
+
+  /// Get storage repository
+  StorageRepository get storageRepository => _storageRepository;
+
+  /// Get media picker service
+  MediaPickerService get mediaPickerService => _mediaPickerService;
 }

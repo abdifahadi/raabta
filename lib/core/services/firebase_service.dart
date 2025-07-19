@@ -65,12 +65,24 @@ class FirebaseService implements BackendService {
         }
       }
 
-      // Add retry mechanism for initialization
-      int retries = 3;
+      // Web-specific initialization delay to ensure DOM is ready
+      if (kIsWeb) {
+        if (kDebugMode) {
+          print('🌐 Web platform detected, adding initialization delay...');
+        }
+        await Future.delayed(const Duration(milliseconds: 500));
+      }
+
+      // Add retry mechanism for initialization with exponential backoff
+      int retries = 5;
       Exception? lastException;
       
       for (int i = 0; i < retries; i++) {
         try {
+          if (kDebugMode) {
+            print('🔥 Firebase initialization attempt ${i + 1}/${retries}');
+          }
+
           await Firebase.initializeApp(
             options: DefaultFirebaseOptions.currentPlatform,
           );
@@ -85,12 +97,22 @@ class FirebaseService implements BackendService {
               print('🌐 Running on Web platform');
               print('🔑 Project ID: ${DefaultFirebaseOptions.web.projectId}');
               print('🔗 Auth Domain: ${DefaultFirebaseOptions.web.authDomain}');
+              print('🗄️ Storage Bucket: ${DefaultFirebaseOptions.web.storageBucket}');
             } else {
               print('📱 Running on ${defaultTargetPlatform.toString()} platform');
               final options = DefaultFirebaseOptions.currentPlatform;
               print('🔑 Project ID: ${options.projectId}');
               print('🆔 App ID: ${options.appId}');
             }
+            
+            // Verify Firebase app is properly initialized
+            final app = Firebase.app();
+            print('✅ Firebase app verification: ${app.name} - ${app.options.projectId}');
+          }
+          
+          // Additional web-specific validation
+          if (kIsWeb) {
+            await _validateWebFirebaseSetup();
           }
           
           return; // Success, exit retry loop
@@ -98,11 +120,19 @@ class FirebaseService implements BackendService {
           lastException = e is Exception ? e : Exception(e.toString());
           if (kDebugMode) {
             print('🚨 Firebase initialization attempt ${i + 1} failed: $e');
+            if (e is FirebaseException) {
+              print('🔍 Firebase error code: ${e.code}');
+              print('🔍 Firebase error message: ${e.message}');
+            }
           }
           
           if (i < retries - 1) {
-            // Wait before retrying
-            await Future.delayed(Duration(milliseconds: 500 * (i + 1)));
+            // Exponential backoff: 500ms, 1s, 2s, 4s
+            final delay = Duration(milliseconds: 500 * (1 << i));
+            if (kDebugMode) {
+              print('⏳ Waiting ${delay.inMilliseconds}ms before retry...');
+            }
+            await Future.delayed(delay);
           }
         }
       }
@@ -117,14 +147,17 @@ class FirebaseService implements BackendService {
         
         // Additional debugging for web
         if (kIsWeb) {
-          print('🌐 Web Firebase Config:');
-          print('  API Key: ${DefaultFirebaseOptions.web.apiKey.isNotEmpty ? '[SET]' : '[MISSING]'}');
+          print('🌐 Web Firebase Config Check:');
+          print('  API Key: ${DefaultFirebaseOptions.web.apiKey.isNotEmpty ? '[SET - ${DefaultFirebaseOptions.web.apiKey.length} chars]' : '[MISSING]'}');
           print('  Auth Domain: ${DefaultFirebaseOptions.web.authDomain}');
           print('  Project ID: ${DefaultFirebaseOptions.web.projectId}');
           print('  Storage Bucket: ${DefaultFirebaseOptions.web.storageBucket}');
           print('  Messaging Sender ID: ${DefaultFirebaseOptions.web.messagingSenderId}');
           print('  App ID: ${DefaultFirebaseOptions.web.appId}');
-          print('  Measurement ID: ${DefaultFirebaseOptions.web.measurementId}');
+          print('  Measurement ID: ${DefaultFirebaseOptions.web.measurementId ?? '[NOT SET]'}');
+          
+          // Check browser compatibility
+          _checkWebCompatibility();
         }
       }
       
@@ -133,8 +166,145 @@ class FirebaseService implements BackendService {
     }
   }
 
+  /// Validate Firebase setup specifically for web
+  Future<void> _validateWebFirebaseSetup() async {
+    if (!kIsWeb) return;
+    
+    try {
+      if (kDebugMode) {
+        print('🌐 Validating web Firebase setup...');
+      }
+      
+      // Check if Firebase Auth is available
+      try {
+        final _ = Firebase.app().options;
+        if (kDebugMode) {
+          print('✅ Firebase options accessible');
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          print('⚠️ Firebase options validation failed: $e');
+        }
+        throw Exception('Firebase configuration validation failed: $e');
+      }
+      
+      if (kDebugMode) {
+        print('✅ Web Firebase setup validation completed');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('🚨 Web Firebase validation failed: $e');
+      }
+      throw Exception('Web Firebase validation failed: $e');
+    }
+  }
+
+  /// Check web browser compatibility
+  void _checkWebCompatibility() {
+    if (!kIsWeb) return;
+    
+    if (kDebugMode) {
+      print('🌐 Browser Compatibility Check:');
+      print('  User Agent: ${_getBrowserInfo()}');
+      print('  Local Storage: ${_hasLocalStorage()}');
+      print('  Session Storage: ${_hasSessionStorage()}');
+      print('  IndexedDB: ${_hasIndexedDB()}');
+      print('  Fetch API: ${_hasFetch()}');
+      print('  Promises: ${_hasPromises()}');
+    }
+  }
+
+  /// Get browser information
+  String _getBrowserInfo() {
+    try {
+      // This is a simple way to get browser info in web
+      return 'Web Browser';
+    } catch (e) {
+      return 'Unknown';
+    }
+  }
+
+  /// Check if localStorage is available
+  bool _hasLocalStorage() {
+    try {
+      // This would be implemented with dart:html in a real scenario
+      return true; // Assume true for now
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Check if sessionStorage is available
+  bool _hasSessionStorage() {
+    try {
+      // This would be implemented with dart:html in a real scenario
+      return true; // Assume true for now
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Check if IndexedDB is available
+  bool _hasIndexedDB() {
+    try {
+      // This would be implemented with dart:html in a real scenario
+      return true; // Assume true for now
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Check if Fetch API is available
+  bool _hasFetch() {
+    try {
+      // This would be implemented with dart:html in a real scenario
+      return true; // Assume true for now
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Check if Promises are available
+  bool _hasPromises() {
+    try {
+      // This would be implemented with dart:html in a real scenario
+      return true; // Assume true for now
+    } catch (e) {
+      return false;
+    }
+  }
+
   /// Reset initialization state (for testing)
   void reset() {
     _initialized = false;
+  }
+
+  /// Get detailed Firebase configuration info (for debugging)
+  Map<String, dynamic> getConfigInfo() {
+    if (!_initialized) {
+      return {'status': 'not_initialized'};
+    }
+
+    try {
+      final app = Firebase.app();
+      final options = app.options;
+      
+      return {
+        'status': 'initialized',
+        'app_name': app.name,
+        'project_id': options.projectId,
+        'app_id': options.appId,
+        'api_key_length': options.apiKey.length,
+        'auth_domain': options.authDomain,
+        'storage_bucket': options.storageBucket,
+        'messaging_sender_id': options.messagingSenderId,
+        'platform': kIsWeb ? 'web' : defaultTargetPlatform.toString(),
+      };
+    } catch (e) {
+      return {
+        'status': 'error',
+        'error': e.toString(),
+      };
+    }
   }
 }

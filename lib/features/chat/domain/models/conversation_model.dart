@@ -12,6 +12,8 @@ class ConversationModel {
   final DateTime createdAt;
   final DateTime updatedAt;
   final Map<String, int> unreadCounts; // userId -> unread count
+  final List<String> mutedBy; // List of user IDs who muted this conversation
+  final List<String> blockedBy; // List of user IDs who blocked this conversation
   final Map<String, dynamic>? metadata;
 
   ConversationModel({
@@ -24,6 +26,8 @@ class ConversationModel {
     required this.createdAt,
     required this.updatedAt,
     this.unreadCounts = const {},
+    this.mutedBy = const [],
+    this.blockedBy = const [],
     this.metadata,
   });
 
@@ -51,6 +55,42 @@ class ConversationModel {
     return unreadCounts[userId] ?? 0;
   }
 
+  /// Check if conversation is muted by a user
+  bool isMutedBy(String userId) {
+    return mutedBy.contains(userId);
+  }
+
+  /// Check if conversation is blocked by a user
+  bool isBlockedBy(String userId) {
+    return blockedBy.contains(userId);
+  }
+
+  /// Check if conversation is blocked by any participant
+  bool get isBlocked => blockedBy.isNotEmpty;
+
+  /// Check if conversation is active (not blocked)
+  bool get isActive => !isBlocked;
+
+  /// Get last message preview text
+  String get lastMessagePreview {
+    if (lastMessage == null) return 'No messages yet';
+    
+    switch (lastMessageType) {
+      case MessageType.text:
+        return lastMessage!;
+      case MessageType.image:
+        return '📷 Photo';
+      case MessageType.file:
+        return '📎 File';
+      case MessageType.audio:
+        return '🎵 Audio';
+      case MessageType.video:
+        return '🎬 Video';
+      case null:
+        return lastMessage!;
+    }
+  }
+
   /// Convert to a map for Firestore
   Map<String, dynamic> toMap() {
     return {
@@ -65,6 +105,8 @@ class ConversationModel {
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
       'unreadCounts': unreadCounts,
+      'mutedBy': mutedBy,
+      'blockedBy': blockedBy,
       'metadata': metadata,
     };
   }
@@ -85,6 +127,8 @@ class ConversationModel {
       createdAt: (map['createdAt'] as Timestamp).toDate(),
       updatedAt: (map['updatedAt'] as Timestamp).toDate(),
       unreadCounts: Map<String, int>.from(map['unreadCounts'] ?? {}),
+      mutedBy: List<String>.from(map['mutedBy'] ?? []),
+      blockedBy: List<String>.from(map['blockedBy'] ?? []),
       metadata: map['metadata'] as Map<String, dynamic>?,
     );
   }
@@ -100,6 +144,8 @@ class ConversationModel {
     DateTime? createdAt,
     DateTime? updatedAt,
     Map<String, int>? unreadCounts,
+    List<String>? mutedBy,
+    List<String>? blockedBy,
     Map<String, dynamic>? metadata,
   }) {
     return ConversationModel(
@@ -112,6 +158,8 @@ class ConversationModel {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       unreadCounts: unreadCounts ?? this.unreadCounts,
+      mutedBy: mutedBy ?? this.mutedBy,
+      blockedBy: blockedBy ?? this.blockedBy,
       metadata: metadata ?? this.metadata,
     );
   }
@@ -139,14 +187,16 @@ class ConversationModel {
   ConversationModel updateWithMessage(MessageModel message) {
     final newUnreadCounts = Map<String, int>.from(unreadCounts);
     
-    // Increment unread count for receiver
-    newUnreadCounts[message.receiverId] = (newUnreadCounts[message.receiverId] ?? 0) + 1;
+    // Increment unread count for receiver if conversation is not muted
+    if (!isMutedBy(message.receiverId)) {
+      newUnreadCounts[message.receiverId] = (newUnreadCounts[message.receiverId] ?? 0) + 1;
+    }
     
     // Reset unread count for sender
     newUnreadCounts[message.senderId] = 0;
 
     return copyWith(
-      lastMessage: message.content,
+      lastMessage: message.previewText,
       lastMessageSenderId: message.senderId,
       lastMessageTimestamp: message.timestamp,
       lastMessageType: message.messageType,
@@ -157,6 +207,65 @@ class ConversationModel {
 
   /// Mark messages as read for a user
   ConversationModel markAsRead(String userId) {
+    final newUnreadCounts = Map<String, int>.from(unreadCounts);
+    newUnreadCounts[userId] = 0;
+    
+    return copyWith(
+      unreadCounts: newUnreadCounts,
+      updatedAt: DateTime.now(),
+    );
+  }
+
+  /// Mute conversation for a user
+  ConversationModel muteFor(String userId) {
+    if (isMutedBy(userId)) return this;
+    
+    final newMutedBy = List<String>.from(mutedBy)..add(userId);
+    
+    return copyWith(
+      mutedBy: newMutedBy,
+      updatedAt: DateTime.now(),
+    );
+  }
+
+  /// Unmute conversation for a user
+  ConversationModel unmuteFor(String userId) {
+    if (!isMutedBy(userId)) return this;
+    
+    final newMutedBy = List<String>.from(mutedBy)..remove(userId);
+    
+    return copyWith(
+      mutedBy: newMutedBy,
+      updatedAt: DateTime.now(),
+    );
+  }
+
+  /// Block conversation for a user
+  ConversationModel blockFor(String userId) {
+    if (isBlockedBy(userId)) return this;
+    
+    final newBlockedBy = List<String>.from(blockedBy)..add(userId);
+    
+    return copyWith(
+      blockedBy: newBlockedBy,
+      updatedAt: DateTime.now(),
+    );
+  }
+
+  /// Unblock conversation for a user
+  ConversationModel unblockFor(String userId) {
+    if (!isBlockedBy(userId)) return this;
+    
+    final newBlockedBy = List<String>.from(blockedBy)..remove(userId);
+    
+    return copyWith(
+      blockedBy: newBlockedBy,
+      updatedAt: DateTime.now(),
+    );
+  }
+
+  /// Clear chat for a user (just resets unread count, actual message deletion handled separately)
+  ConversationModel clearChatFor(String userId) {
     final newUnreadCounts = Map<String, int>.from(unreadCounts);
     newUnreadCounts[userId] = 0;
     
