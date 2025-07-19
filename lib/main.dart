@@ -262,7 +262,7 @@ class MyApp extends StatelessWidget {
         ),
       ),
       home: const SafeArea(
-        child: AppInitializer(),
+        child: AuthWrapper(),
       ),
       // Enhanced error builder for better error handling
       builder: (context, widget) {
@@ -335,7 +335,7 @@ class MyApp extends StatelessWidget {
                         Navigator.of(context).pushReplacement(
                           MaterialPageRoute(
                             builder: (context) => const SafeArea(
-                              child: AppInitializer(),
+                              child: AuthWrapper(),
                             ),
                           ),
                         );
@@ -366,166 +366,5 @@ class MyApp extends StatelessWidget {
         return widget ?? const SizedBox.shrink();
       },
     );
-  }
-}
-
-/// App initializer widget to handle loading state
-class AppInitializer extends StatefulWidget {
-  const AppInitializer({super.key});
-
-  @override
-  State<AppInitializer> createState() => _AppInitializerState();
-}
-
-class _AppInitializerState extends State<AppInitializer> {
-  bool _isInitialized = false;
-  String? _error;
-  
-  @override
-  void initState() {
-    super.initState();
-    _checkInitialization();
-  }
-  
-  Future<void> _checkInitialization() async {
-    try {
-      // Check if services are properly initialized
-      final serviceLocator = ServiceLocator();
-      final backendService = serviceLocator.backendService;
-      
-      if (!backendService.isInitialized) {
-        if (kDebugMode) {
-          print('⚠️ Backend service not initialized, retrying...');
-        }
-        await serviceLocator.initialize();
-      }
-      
-      if (mounted) {
-        setState(() {
-          _isInitialized = true;
-        });
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('🚨 Initialization check failed: $e');
-      }
-      if (mounted) {
-        setState(() {
-          _error = e.toString();
-        });
-      }
-    }
-  }
-  
-  @override
-  Widget build(BuildContext context) {
-    if (_error != null) {
-      return Scaffold(
-        body: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0xFFFF6B6B), Color(0xFFFFE66D)],
-            ),
-          ),
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.error_outline,
-                  size: 64,
-                  color: Colors.white,
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Initialization Error',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Failed to initialize app services',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      _error = null;
-                      _isInitialized = false;
-                    });
-                    _checkInitialization();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.red[600],
-                  ),
-                  child: const Text('Retry'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-    
-    if (!_isInitialized) {
-      return Scaffold(
-        body: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-            ),
-          ),
-          child: const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // App logo
-                Icon(
-                  Icons.chat_bubble_outline,
-                  size: 80,
-                  color: Colors.white,
-                ),
-                SizedBox(height: 24),
-                CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 3,
-                ),
-                SizedBox(height: 16),
-                Text(
-                  'Loading Raabta...',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'Please wait while we set things up',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.white70,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-    
-    return const AuthWrapper();
   }
 }

@@ -1,12 +1,14 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:raabta/features/auth/domain/auth_repository.dart';
 import 'package:raabta/features/auth/domain/firebase_auth_repository.dart';
 import 'package:raabta/features/auth/domain/user_profile_repository.dart';
 import 'package:raabta/features/auth/presentation/sign_in_screen.dart';
 import 'package:raabta/features/auth/presentation/profile_setup_screen.dart';
 import 'package:raabta/features/home/presentation/home_screen.dart';
+import 'package:raabta/features/onboarding/presentation/welcome_screen.dart';
 import 'package:raabta/core/services/service_locator.dart';
 
 /// A wrapper widget that handles authentication state changes
@@ -20,6 +22,8 @@ class AuthWrapper extends StatefulWidget {
 class _AuthWrapperState extends State<AuthWrapper> {
   bool _hasTimeout = false;
   bool _isRetrying = false;
+  bool _isFirstLaunch = true;
+  bool _isCheckingFirstLaunch = true;
   late final AuthRepository _authRepository;
   late final UserProfileRepository _userProfileRepository;
   
@@ -31,6 +35,9 @@ class _AuthWrapperState extends State<AuthWrapper> {
     _authRepository = FirebaseAuthRepository();
     _userProfileRepository = ServiceLocator().userProfileRepository;
     
+    // Check if this is first launch
+    _checkFirstLaunch();
+    
     // Reduced timeout for better UX (from 10 seconds to 8 seconds)
     Future.delayed(const Duration(seconds: 8), () {
       if (mounted && !_isRetrying) {
@@ -39,6 +46,40 @@ class _AuthWrapperState extends State<AuthWrapper> {
         });
       }
     });
+  }
+
+  Future<void> _checkFirstLaunch() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final isFirstLaunch = prefs.getBool('is_first_launch') ?? true;
+      
+      if (kDebugMode) {
+        print('🔍 Checking first launch: $isFirstLaunch');
+      }
+      
+      if (mounted) {
+        setState(() {
+          _isFirstLaunch = isFirstLaunch;
+          _isCheckingFirstLaunch = false;
+        });
+      }
+      
+      // If this is first launch, mark it as false for next time
+      if (isFirstLaunch) {
+        await prefs.setBool('is_first_launch', false);
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('🚨 Error checking first launch: $e');
+      }
+      // Default to showing welcome screen if error
+      if (mounted) {
+        setState(() {
+          _isFirstLaunch = true;
+          _isCheckingFirstLaunch = false;
+        });
+      }
+    }
   }
 
   void _retry() {
@@ -294,6 +335,22 @@ class _AuthWrapperState extends State<AuthWrapper> {
       print('🔐 Building AuthWrapper');
     }
 
+    // Show loading while checking first launch
+    if (_isCheckingFirstLaunch) {
+      return _buildLoadingScreen(
+        title: 'Loading Raabta...',
+        subtitle: 'Please wait while we set things up',
+      );
+    }
+
+    // Show welcome screen for first-time users
+    if (_isFirstLaunch) {
+      if (kDebugMode) {
+        print('🎉 First launch detected, showing welcome screen');
+      }
+      return const WelcomeScreen();
+    }
+
     // Show timeout message if loading takes too long
     if (_hasTimeout) {
       return _buildErrorScreen(
@@ -345,8 +402,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
             print('🔐 Waiting for auth state...');
           }
           return _buildLoadingScreen(
-            title: 'Loading Raabta...',
-            subtitle: 'Please wait while we set things up',
+            title: 'Checking authentication...',
+            subtitle: 'Please wait a moment',
           );
         }
 
