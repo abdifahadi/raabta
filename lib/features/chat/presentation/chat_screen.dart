@@ -602,7 +602,6 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
         ],
       ),
-            ),
           ],
         ),
       ),
@@ -629,7 +628,7 @@ class _ChatScreenState extends State<ChatScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Replying to ${_replyingTo!.senderName ?? 'Unknown'}',
+                  'Replying to ${_replyingTo!.senderId == _currentUserId ? 'You' : widget.otherUser.name}',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
@@ -638,7 +637,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  _replyingTo!.text ?? 'Media message',
+                  _replyingTo!.content.isNotEmpty ? _replyingTo!.content : 'Media message',
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.grey[600],
@@ -667,7 +666,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   // Placeholder methods for future implementation
   void _showEditDialog(MessageModel message) {
-    if (message.text == null || message.text!.isEmpty) {
+    if (message.content.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Only text messages can be edited'),
@@ -677,7 +676,7 @@ class _ChatScreenState extends State<ChatScreen> {
       return;
     }
 
-    final TextEditingController editController = TextEditingController(text: message.text);
+    final TextEditingController editController = TextEditingController(text: message.content);
 
     showDialog(
       context: context,
@@ -700,14 +699,13 @@ class _ChatScreenState extends State<ChatScreen> {
             ElevatedButton(
               onPressed: () async {
                 final newText = editController.text.trim();
-                if (newText.isNotEmpty && newText != message.text) {
+                if (newText.isNotEmpty && newText != message.content) {
                   try {
                     final updatedMessage = message.copyWith(
-                      text: newText,
-                      isEdited: true,
+                      content: newText,
                     );
                     
-                    await _chatRepository.updateMessage(updatedMessage);
+                    await _chatRepository.updateMessage(widget.conversation.id, updatedMessage);
                     
                     if (mounted) {
                       Navigator.of(context).pop();
@@ -755,7 +753,7 @@ class _ChatScreenState extends State<ChatScreen> {
             ElevatedButton(
               onPressed: () async {
                 try {
-                  await _chatRepository.deleteMessage(message.id);
+                  await _chatRepository.deleteMessage(widget.conversation.id, message.id);
                   
                   if (mounted) {
                     Navigator.of(context).pop();
@@ -823,8 +821,8 @@ class _ChatScreenState extends State<ChatScreen> {
     try {
       String textToCopy = '';
       
-      if (message.text != null && message.text!.isNotEmpty) {
-        textToCopy = message.text!;
+      if (message.content.isNotEmpty) {
+        textToCopy = message.content;
       } else if (message.mediaUrl != null) {
         textToCopy = message.mediaUrl!;
       } else {
