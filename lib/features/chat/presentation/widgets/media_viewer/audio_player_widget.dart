@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
-import '../../../../core/services/download_service.dart';
+import '../../../../../core/services/download_service.dart';
 
 class AudioPlayerWidget extends StatefulWidget {
   final String audioUrl;
@@ -243,9 +243,9 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
               // Download button
               IconButton(
                 onPressed: () => _downloadAudio(context),
-                icon: Icon(
+                icon: const Icon(
                   Icons.download,
-                  color: Colors.grey[600],
+                  color: Colors.grey,
                   size: 20,
                 ),
                 tooltip: 'Download',
@@ -270,6 +270,8 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
 
       final success = await DownloadService().downloadFile(widget.audioUrl, fileName);
       
+      if (!mounted) return;
+      
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -286,6 +288,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
         );
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error downloading audio: $e'),

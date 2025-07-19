@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:share_plus/share_plus.dart';
-import '../../../../core/services/download_service.dart';
+import '../../../../../core/services/download_service.dart';
 
-class ImageViewer extends StatelessWidget {
+class ImageViewer extends StatefulWidget {
   final String imageUrl;
   final String? heroTag;
   final String? fileName;
@@ -17,16 +17,18 @@ class ImageViewer extends StatelessWidget {
   });
 
   @override
+  State<ImageViewer> createState() => _ImageViewerState();
+}
+
+class _ImageViewerState extends State<ImageViewer> {
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black87,
         foregroundColor: Colors.white,
-        title: Text(
-          fileName ?? 'Image',
-          style: const TextStyle(fontSize: 16),
-        ),
+        title: Text(widget.fileName ?? 'Image'),
         actions: [
           IconButton(
             onPressed: () => _downloadImage(context),
@@ -41,51 +43,31 @@ class ImageViewer extends StatelessWidget {
         ],
       ),
       body: PhotoView(
-        imageProvider: CachedNetworkImageProvider(imageUrl),
-        heroAttributes: heroTag != null
-            ? PhotoViewHeroAttributes(tag: heroTag!)
+        imageProvider: CachedNetworkImageProvider(widget.imageUrl),
+        heroAttributes: widget.heroTag != null 
+            ? PhotoViewHeroAttributes(tag: widget.heroTag!)
             : null,
         minScale: PhotoViewComputedScale.contained,
-        maxScale: PhotoViewComputedScale.covered * 4.0,
-        loadingBuilder: (context, event) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(
-                value: event == null
-                    ? null
-                    : event.cumulativeBytesLoaded / event.expectedTotalBytes!,
-                color: Colors.white,
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Loading image...',
-                style: TextStyle(color: Colors.white),
-              ),
-            ],
-          ),
+        maxScale: PhotoViewComputedScale.covered * 2.0,
+        backgroundDecoration: const BoxDecoration(
+          color: Colors.black,
         ),
-        errorBuilder: (context, error, stackTrace) => Center(
+        loadingBuilder: (context, event) => const Center(
+          child: CircularProgressIndicator(color: Colors.white),
+        ),
+        errorBuilder: (context, error, stackTrace) => const Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
-                Icons.broken_image,
-                color: Colors.white54,
-                size: 64,
+              Icon(
+                Icons.error_outline,
+                color: Colors.white,
+                size: 48,
               ),
-              const SizedBox(height: 16),
-              const Text(
+              SizedBox(height: 16),
+              Text(
                 'Failed to load image',
-                style: TextStyle(color: Colors.white54),
-              ),
-              const SizedBox(height: 8),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text(
-                  'Go Back',
-                  style: TextStyle(color: Colors.white),
-                ),
+                style: TextStyle(color: Colors.white),
               ),
             ],
           ),
@@ -96,16 +78,16 @@ class ImageViewer extends StatelessWidget {
 
   Future<void> _downloadImage(BuildContext context) async {
     try {
-      final fileName = this.fileName ?? 'image_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Downloading image...'),
+          content: Text('Starting download...'),
           backgroundColor: Colors.blue,
         ),
       );
 
-      final success = await DownloadService().downloadFile(imageUrl, fileName);
+      final success = await DownloadService().downloadFile(widget.imageUrl, widget.fileName);
+      
+      if (!mounted) return;
       
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -123,6 +105,7 @@ class ImageViewer extends StatelessWidget {
         );
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error downloading image: $e'),
@@ -135,10 +118,11 @@ class ImageViewer extends StatelessWidget {
   Future<void> _shareImage(BuildContext context) async {
     try {
       await Share.share(
-        imageUrl,
-        subject: fileName != null ? 'Shared Image: $fileName' : 'Shared Image',
+        widget.imageUrl,
+        subject: widget.fileName != null ? 'Shared Image: ${widget.fileName}' : 'Shared Image',
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error sharing image: $e'),
@@ -148,7 +132,7 @@ class ImageViewer extends StatelessWidget {
     }
   }
 
-  /// Static method to show image viewer
+  /// Static method to show image in fullscreen
   static void show(
     BuildContext context, {
     required String imageUrl,

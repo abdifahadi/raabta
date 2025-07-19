@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
-import '../../../../core/services/download_service.dart';
+import '../../../../../core/services/download_service.dart';
 
 class VideoPlayerWidget extends StatefulWidget {
   final String videoUrl;
@@ -176,10 +176,10 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Colors.black.withValues(alpha: 0.7),
+            Colors.black.withOpacity(0.7),
             Colors.transparent,
             Colors.transparent,
-            Colors.black.withValues(alpha: 0.7),
+            Colors.black.withOpacity(0.7),
           ],
         ),
       ),
@@ -220,7 +220,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.6),
+                  color: Colors.black.withOpacity(0.6),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -287,6 +287,8 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
 
       final success = await DownloadService().downloadFile(widget.videoUrl, fileName);
       
+      if (!mounted) return;
+      
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -303,6 +305,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
         );
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error downloading video: $e'),

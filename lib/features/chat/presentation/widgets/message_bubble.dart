@@ -80,7 +80,7 @@ class MessageBubble extends StatelessWidget {
   Widget _buildAvatar() {
     return CircleAvatar(
       radius: 16,
-      backgroundColor: Colors.deepPurple.withValues(alpha: 0.1),
+      backgroundColor: Colors.deepPurple.withOpacity(0.1),
       backgroundImage: otherUserPhotoUrl != null
           ? NetworkImage(otherUserPhotoUrl!)
           : null,
@@ -205,7 +205,7 @@ class MessageBubble extends StatelessWidget {
               // Play button overlay
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.5),
+                  color: Colors.black.withOpacity(0.5),
                   shape: BoxShape.circle,
                 ),
                 padding: const EdgeInsets.all(12),
@@ -251,9 +251,9 @@ class MessageBubble extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.red.withValues(alpha: 0.1),
+        color: Colors.red.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+        border: Border.all(color: Colors.red.withOpacity(0.3)),
       ),
       child: Row(
         children: [
@@ -328,19 +328,36 @@ class MessageBubble extends StatelessWidget {
   }
 
   void _openImageViewer(BuildContext context) {
-    ImageViewer.show(
-      context,
-      imageUrl: message.mediaUrl!,
-      heroTag: 'image_${message.id}',
-      fileName: message.fileName,
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ImageViewer(
+          imageUrl: message.mediaUrl!,
+          heroTag: 'image_${message.id}',
+          fileName: message.fileName,
+        ),
+      ),
     );
   }
 
   void _openVideoViewer(BuildContext context) {
-    VideoPlayerWidget.showFullscreen(
-      context,
-      videoUrl: message.mediaUrl!,
-      fileName: message.fileName,
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            backgroundColor: Colors.black87,
+            foregroundColor: Colors.white,
+            title: Text(message.fileName ?? 'Video'),
+          ),
+          body: Center(
+            child: VideoPlayerWidget(
+              videoUrl: message.mediaUrl!,
+              fileName: message.fileName,
+              autoPlay: true,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

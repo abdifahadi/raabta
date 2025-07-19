@@ -34,7 +34,7 @@ class DefaultFirebaseOptions {
   }
 
   /// Web-specific Firebase options.
-  static final FirebaseOptions web = FirebaseOptions(
+  static const FirebaseOptions web = FirebaseOptions(
     apiKey: 'AIzaSyAfaX4V-FvnvyYJTBuI3PBVgIOy83O7Ehc',
     authDomain: 'abdifahadi-raabta.firebaseapp.com',
     projectId: 'abdifahadi-raabta',
@@ -45,7 +45,7 @@ class DefaultFirebaseOptions {
   );
 
   /// Android-specific Firebase options.
-  static final FirebaseOptions android = FirebaseOptions(
+  static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyAfaX4V-FvnvyYJTBuI3PBVgIOy83O7Ehc',
     appId: '1:507820378047:android:a78393966656f46391c30a',
     messagingSenderId: '507820378047',
@@ -54,7 +54,7 @@ class DefaultFirebaseOptions {
   );
 
   /// iOS-specific Firebase options.
-  static final FirebaseOptions ios = FirebaseOptions(
+  static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyAfaX4V-FvnvyYJTBuI3PBVgIOy83O7Ehc',
     appId: '1:507820378047:ios:a78393966656f46391c30a',
     messagingSenderId: '507820378047',
@@ -64,7 +64,7 @@ class DefaultFirebaseOptions {
   );
 
   /// macOS-specific Firebase options.
-  static final FirebaseOptions macos = FirebaseOptions(
+  static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyAfaX4V-FvnvyYJTBuI3PBVgIOy83O7Ehc',
     appId: '1:507820378047:ios:a78393966656f46391c30a',
     messagingSenderId: '507820378047',

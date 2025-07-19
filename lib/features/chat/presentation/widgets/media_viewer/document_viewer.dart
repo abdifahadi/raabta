@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../../../core/services/download_service.dart';
+import '../../../../../core/services/download_service.dart';
 
-class DocumentViewer extends StatelessWidget {
+class DocumentViewer extends StatefulWidget {
   final String documentUrl;
   final String fileName;
   final String? mimeType;
@@ -16,12 +16,17 @@ class DocumentViewer extends StatelessWidget {
   });
 
   @override
+  State<DocumentViewer> createState() => _DocumentViewerState();
+}
+
+class _DocumentViewerState extends State<DocumentViewer> {
+  @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.grey[300]!),
       ),
       child: Column(
@@ -29,94 +34,64 @@ class DocumentViewer extends StatelessWidget {
         children: [
           Row(
             children: [
-              // File icon
               Container(
-                width: 48,
-                height: 48,
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: _getFileTypeColor(),
+                  color: _getColorByMimeType(widget.mimeType),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
-                  _getFileTypeIcon(),
+                  _getIconByMimeType(widget.mimeType),
                   color: Colors.white,
                   size: 24,
                 ),
               ),
-              
               const SizedBox(width: 12),
-              
-              // File info
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      fileName,
+                      widget.fileName,
                       style: const TextStyle(
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w600,
                         fontSize: 14,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    
                     const SizedBox(height: 4),
-                    
                     Row(
                       children: [
-                        if (mimeType != null) ...[
+                        Text(
+                          _getFileTypeDescription(widget.mimeType),
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                          ),
+                        ),
+                        if (widget.fileSize != null) ...[
                           Text(
-                            _getFileTypeDisplay(),
+                            ' • ${_formatFileSize(widget.fileSize!)}',
                             style: TextStyle(
-                              fontSize: 12,
                               color: Colors.grey[600],
+                              fontSize: 12,
                             ),
                           ),
-                          if (fileSize != null) ...[
-                            Text(
-                              ' • ',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ],
                         ],
-                        if (fileSize != null)
-                          Text(
-                            _formatFileSize(fileSize!),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                            ),
-                          ),
                       ],
                     ),
                   ],
                 ),
               ),
-              
-              // Action buttons
-              Column(
-                children: [
-                  IconButton(
-                    onPressed: () => _previewDocument(context),
-                    icon: const Icon(
-                      Icons.visibility,
-                      color: Colors.deepPurple,
-                    ),
-                    tooltip: 'Preview',
-                  ),
-                  IconButton(
-                    onPressed: () => _downloadDocument(context),
-                    icon: Icon(
-                      Icons.download,
-                      color: Colors.grey[600],
-                    ),
-                    tooltip: 'Download',
-                  ),
-                ],
+              IconButton(
+                onPressed: () => _downloadDocument(context),
+                icon: const Icon(
+                  Icons.download,
+                  color: Colors.blue,
+                  size: 20,
+                ),
+                tooltip: 'Download',
               ),
             ],
           ),
@@ -125,130 +100,90 @@ class DocumentViewer extends StatelessWidget {
     );
   }
 
-  Color _getFileTypeColor() {
+  Color _getColorByMimeType(String? mimeType) {
     if (mimeType == null) return Colors.grey;
     
-    if (mimeType!.contains('pdf')) {
+    if (mimeType.contains('pdf')) {
       return Colors.red;
-    } else if (mimeType!.contains('word') || mimeType!.contains('document')) {
+    } else if (mimeType.contains('word') || mimeType.contains('doc')) {
       return Colors.blue;
-    } else if (mimeType!.contains('excel') || mimeType!.contains('spreadsheet')) {
+    } else if (mimeType.contains('excel') || mimeType.contains('sheet')) {
       return Colors.green;
-    } else if (mimeType!.contains('powerpoint') || mimeType!.contains('presentation')) {
+    } else if (mimeType.contains('powerpoint') || mimeType.contains('presentation')) {
       return Colors.orange;
-    } else if (mimeType!.contains('text')) {
-      return Colors.grey[700]!;
+    } else if (mimeType.contains('text')) {
+      return Colors.grey;
+    } else if (mimeType.contains('zip') || mimeType.contains('rar') || mimeType.contains('archive')) {
+      return Colors.purple;
     } else {
       return Colors.grey;
     }
   }
 
-  IconData _getFileTypeIcon() {
-    if (mimeType == null) return Icons.insert_drive_file;
+  IconData _getIconByMimeType(String? mimeType) {
+    if (mimeType == null) return Icons.description;
     
-    if (mimeType!.contains('pdf')) {
+    if (mimeType.contains('pdf')) {
       return Icons.picture_as_pdf;
-    } else if (mimeType!.contains('word') || mimeType!.contains('document')) {
+    } else if (mimeType.contains('word') || mimeType.contains('doc')) {
       return Icons.description;
-    } else if (mimeType!.contains('excel') || mimeType!.contains('spreadsheet')) {
+    } else if (mimeType.contains('excel') || mimeType.contains('sheet')) {
       return Icons.table_chart;
-    } else if (mimeType!.contains('powerpoint') || mimeType!.contains('presentation')) {
+    } else if (mimeType.contains('powerpoint') || mimeType.contains('presentation')) {
       return Icons.slideshow;
-    } else if (mimeType!.contains('text')) {
-      return Icons.article;
-    } else if (mimeType!.contains('zip') || mimeType!.contains('archive')) {
+    } else if (mimeType.contains('text')) {
+      return Icons.text_snippet;
+    } else if (mimeType.contains('zip') || mimeType.contains('rar') || mimeType.contains('archive')) {
       return Icons.archive;
     } else {
-      return Icons.insert_drive_file;
+      return Icons.description;
     }
   }
 
-  String _getFileTypeDisplay() {
+  String _getFileTypeDescription(String? mimeType) {
     if (mimeType == null) return 'Document';
     
-    if (mimeType!.contains('pdf')) {
-      return 'PDF';
-    } else if (mimeType!.contains('word') || mimeType!.contains('document')) {
+    if (mimeType.contains('pdf')) {
+      return 'PDF Document';
+    } else if (mimeType.contains('word') || mimeType.contains('doc')) {
       return 'Word Document';
-    } else if (mimeType!.contains('excel') || mimeType!.contains('spreadsheet')) {
+    } else if (mimeType.contains('excel') || mimeType.contains('sheet')) {
       return 'Excel Spreadsheet';
-    } else if (mimeType!.contains('powerpoint') || mimeType!.contains('presentation')) {
-      return 'PowerPoint';
-    } else if (mimeType!.contains('text')) {
-      return 'Text File';
-    } else if (mimeType!.contains('zip')) {
-      return 'ZIP Archive';
+    } else if (mimeType.contains('powerpoint') || mimeType.contains('presentation')) {
+      return 'PowerPoint Presentation';
+    } else if (mimeType.contains('text')) {
+      return 'Text Document';
+    } else if (mimeType.contains('zip') || mimeType.contains('rar') || mimeType.contains('archive')) {
+      return 'Archive File';
     } else {
       return 'Document';
     }
   }
 
   String _formatFileSize(int bytes) {
-    const int kb = 1024;
-    const int mb = kb * 1024;
-    const int gb = mb * 1024;
-    
-    if (bytes >= gb) {
-      return '${(bytes / gb).toStringAsFixed(1)} GB';
-    } else if (bytes >= mb) {
-      return '${(bytes / mb).toStringAsFixed(1)} MB';
-    } else if (bytes >= kb) {
-      return '${(bytes / kb).toStringAsFixed(1)} KB';
+    if (bytes < 1024) {
+      return '${bytes}B';
+    } else if (bytes < 1024 * 1024) {
+      return '${(bytes / 1024).toStringAsFixed(1)}KB';
+    } else if (bytes < 1024 * 1024 * 1024) {
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)}MB';
     } else {
-      return '$bytes B';
+      return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)}GB';
     }
-  }
-
-  void _previewDocument(BuildContext context) {
-    // For now, show a dialog indicating preview functionality
-    // In a real app, you might use packages like flutter_pdfview or webview_flutter
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Document Preview'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('File: $fileName'),
-            if (mimeType != null) Text('Type: ${_getFileTypeDisplay()}'),
-            if (fileSize != null) Text('Size: ${_formatFileSize(fileSize!)}'),
-            const SizedBox(height: 16),
-            const Text(
-              'Document preview functionality will be implemented with appropriate viewers for different file types.',
-              style: TextStyle(fontSize: 14),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _downloadDocument(context);
-            },
-            child: const Text('Download'),
-          ),
-        ],
-      ),
-    );
   }
 
   Future<void> _downloadDocument(BuildContext context) async {
     try {
-      final fileName = this.fileName ?? 'document_${DateTime.now().millisecondsSinceEpoch}.pdf';
-      
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Downloading document...'),
+          content: Text('Starting download...'),
           backgroundColor: Colors.blue,
         ),
       );
 
-      final success = await DownloadService().downloadFile(documentUrl, fileName);
+      final success = await DownloadService().downloadFile(widget.documentUrl, widget.fileName);
+      
+      if (!mounted) return;
       
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -266,6 +201,7 @@ class DocumentViewer extends StatelessWidget {
         );
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error downloading document: $e'),
@@ -273,35 +209,5 @@ class DocumentViewer extends StatelessWidget {
         ),
       );
     }
-  }
-
-  /// Static method to show document viewer in fullscreen
-  static void showFullscreen(
-    BuildContext context, {
-    required String documentUrl,
-    required String fileName,
-    String? mimeType,
-    int? fileSize,
-  }) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => Scaffold(
-          appBar: AppBar(
-            title: Text(fileName),
-            backgroundColor: Colors.deepPurple,
-            foregroundColor: Colors.white,
-          ),
-          body: Padding(
-            padding: const EdgeInsets.all(16),
-            child: DocumentViewer(
-              documentUrl: documentUrl,
-              fileName: fileName,
-              mimeType: mimeType,
-              fileSize: fileSize,
-            ),
-          ),
-        ),
-      ),
-    );
   }
 }

@@ -328,15 +328,15 @@ class _ChatScreenState extends State<ChatScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               color: Colors.blue.withOpacity(0.1),
-              child: Row(
+              child: const Row(
                 children: [
-                  SizedBox(
+                  const SizedBox(
                     width: 20,
                     height: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   ),
-                  SizedBox(width: 12),
-                  Text(
+                  const SizedBox(width: 12),
+                  const Text(
                     'Sending media...',
                     style: TextStyle(color: Colors.blue),
                   ),
@@ -536,7 +536,7 @@ class _ChatScreenState extends State<ChatScreen> {
               bottom: MediaQuery.of(context).padding.bottom + 16,
             ),
             child: Row(
-              children: [
+        children: [
           // Media picker button
           IconButton(
             onPressed: _isSendingMedia ? null : _showMediaPicker,
@@ -579,7 +579,7 @@ class _ChatScreenState extends State<ChatScreen> {
           
           // Send button
           Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: Colors.deepPurple,
               shape: BoxShape.circle,
             ),
@@ -600,9 +600,6 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
             ),
           ),
-              ],
-            ),
-          ),
         ],
       ),
     );
@@ -617,7 +614,7 @@ class _ChatScreenState extends State<ChatScreen> {
       decoration: BoxDecoration(
         color: Colors.grey[100],
         borderRadius: BorderRadius.circular(8),
-        border: const Border(
+        border: Border(
           left: BorderSide(color: Colors.deepPurple, width: 3),
         ),
       ),
@@ -629,7 +626,7 @@ class _ChatScreenState extends State<ChatScreen> {
               children: [
                 Text(
                   'Replying to ${_replyingTo!.senderId == _currentUserId ? 'You' : widget.otherUser.name}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                     color: Colors.deepPurple,
@@ -638,9 +635,9 @@ class _ChatScreenState extends State<ChatScreen> {
                 const SizedBox(height: 4),
                 Text(
                   _replyingTo!.content.isNotEmpty ? _replyingTo!.content : 'Media message',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

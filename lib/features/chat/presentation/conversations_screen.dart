@@ -260,7 +260,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
               children: [
                 CircleAvatar(
                   radius: 28,
-                  backgroundColor: Colors.deepPurple.withValues(alpha: 0.1),
+                  backgroundColor: Colors.deepPurple.withOpacity(0.1),
                   backgroundImage: otherUser?.photoUrl != null
                       ? NetworkImage(otherUser!.photoUrl!)
                       : null,
@@ -269,7 +269,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
                           otherUser?.name.isNotEmpty == true
                               ? otherUser!.name[0].toUpperCase()
                               : '?',
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: Colors.deepPurple,
                             fontWeight: FontWeight.bold,
                             fontSize: 20,
@@ -372,7 +372,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
                   ),
                 const SizedBox(height: 4),
                 if (unreadCount > 0)
-                  Icon(
+                  const Icon(
                     Icons.circle,
                     color: Colors.deepPurple,
                     size: 8,
