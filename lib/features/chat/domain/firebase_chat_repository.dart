@@ -2,16 +2,23 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'chat_repository.dart';
 import 'models/conversation_model.dart';
 import 'models/message_model.dart';
+import '../../core/services/media_picker_service.dart';
+import '../../core/services/firebase_storage_repository.dart';
+import 'package:uuid/uuid.dart';
 
 /// Firebase implementation of ChatRepository
 class FirebaseChatRepository implements ChatRepository {
   final FirebaseFirestore _firestore;
+  final FirebaseStorageRepository _storageRepository;
   static const String _conversationsCollection = 'conversations';
   static const String _messagesSubcollection = 'messages';
 
   /// Constructor with dependency injection
-  FirebaseChatRepository({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+  FirebaseChatRepository({
+    FirebaseFirestore? firestore,
+    FirebaseStorageRepository? storageRepository,
+  }) : _firestore = firestore ?? FirebaseFirestore.instance,
+        _storageRepository = storageRepository ?? FirebaseStorageRepository();
 
   /// Get conversations collection reference
   CollectionReference<Map<String, dynamic>> get _conversationsRef =>
@@ -127,6 +134,110 @@ class FirebaseChatRepository implements ChatRepository {
   }
 
   @override
+  Future<MessageModel> sendMediaMessage({
+    required String conversationId,
+    required String senderId,
+    required String receiverId,
+    required PickedMediaFile mediaFile,
+    String? caption,
+    String? replyToMessageId,
+    Function(double)? onUploadProgress,
+  }) async {
+    try {
+      // Generate unique message ID first
+      final messagesRef = _getMessagesRef(conversationId);
+      final messageDoc = messagesRef.doc();
+      final messageId = messageDoc.id;
+
+      // Generate storage path
+      final storagePath = _storageRepository.generateChatMediaPath(
+        conversationId: conversationId,
+        messageId: messageId,
+        fileName: mediaFile.name,
+      );
+
+      // Upload media file
+      String mediaUrl;
+      if (mediaFile.file != null) {
+        mediaUrl = await _storageRepository.uploadFile(
+          path: storagePath,
+          file: mediaFile.file!,
+          fileName: mediaFile.name,
+        );
+      } else if (mediaFile.bytes != null) {
+        mediaUrl = await _storageRepository.uploadBytes(
+          path: storagePath,
+          bytes: mediaFile.bytes!,
+          fileName: mediaFile.name,
+          mimeType: mediaFile.mimeType,
+        );
+      } else {
+        throw Exception('No file or bytes provided');
+      }
+
+      // Determine message type from media type
+      MessageType messageType;
+      switch (mediaFile.type) {
+        case MediaType.image:
+          messageType = MessageType.image;
+          break;
+        case MediaType.video:
+          messageType = MessageType.video;
+          break;
+        case MediaType.audio:
+          messageType = MessageType.audio;
+          break;
+        case MediaType.document:
+        case MediaType.any:
+          messageType = MessageType.file;
+          break;
+      }
+
+      // Create metadata
+      final metadata = <String, dynamic>{
+        'mediaUrl': mediaUrl,
+        'fileName': mediaFile.name,
+        'fileSize': mediaFile.size,
+        'mimeType': mediaFile.mimeType,
+      };
+
+      // Add type-specific metadata
+      if (mediaFile.extension != null) {
+        metadata['extension'] = mediaFile.extension;
+      }
+
+      final message = MessageModel(
+        id: messageId,
+        senderId: senderId,
+        receiverId: receiverId,
+        content: caption ?? mediaFile.name,
+        timestamp: DateTime.now(),
+        messageType: messageType,
+        replyToMessageId: replyToMessageId,
+        metadata: metadata,
+      );
+
+      // Use batch to ensure atomicity
+      final batch = _firestore.batch();
+
+      // Add message
+      batch.set(messageDoc, message.toMap());
+
+      // Update conversation
+      final conversation = await getConversation(conversationId);
+      if (conversation != null) {
+        final updatedConversation = conversation.updateWithMessage(message);
+        batch.update(_conversationsRef.doc(conversationId), updatedConversation.toMap());
+      }
+
+      await batch.commit();
+      return message;
+    } catch (e) {
+      throw Exception('Failed to send media message: $e');
+    }
+  }
+
+  @override
   Stream<List<MessageModel>> getConversationMessages(String conversationId) {
     return _getMessagesRef(conversationId)
         .orderBy('timestamp', descending: true)
@@ -176,6 +287,21 @@ class FirebaseChatRepository implements ChatRepository {
   }
 
   @override
+  Future<void> updateMessageStatus(
+    String conversationId,
+    String messageId,
+    MessageStatus status,
+  ) async {
+    try {
+      await _getMessagesRef(conversationId).doc(messageId).update({
+        'status': status.value,
+      });
+    } catch (e) {
+      throw Exception('Failed to update message status: $e');
+    }
+  }
+
+  @override
   Future<void> updateMessage(String conversationId, MessageModel message) async {
     try {
       await _getMessagesRef(conversationId).doc(message.id).update(message.toMap());
@@ -190,6 +316,22 @@ class FirebaseChatRepository implements ChatRepository {
       await _getMessagesRef(conversationId).doc(messageId).delete();
     } catch (e) {
       throw Exception('Failed to delete message: $e');
+    }
+  }
+
+  @override
+  Future<void> deleteMessageForUser(
+    String conversationId,
+    String messageId,
+    String userId,
+  ) async {
+    try {
+      // Add the user to deletedFor array in the message
+      await _getMessagesRef(conversationId).doc(messageId).update({
+        'deletedFor': FieldValue.arrayUnion([userId]),
+      });
+    } catch (e) {
+      throw Exception('Failed to delete message for user: $e');
     }
   }
 
@@ -248,6 +390,73 @@ class FirebaseChatRepository implements ChatRepository {
       });
     } catch (e) {
       throw Exception('Failed to update conversation metadata: $e');
+    }
+  }
+
+  @override
+  Future<void> muteConversation(String conversationId, String userId) async {
+    try {
+      await _conversationsRef.doc(conversationId).update({
+        'mutedBy': FieldValue.arrayUnion([userId]),
+        'updatedAt': Timestamp.fromDate(DateTime.now()),
+      });
+    } catch (e) {
+      throw Exception('Failed to mute conversation: $e');
+    }
+  }
+
+  @override
+  Future<void> unmuteConversation(String conversationId, String userId) async {
+    try {
+      await _conversationsRef.doc(conversationId).update({
+        'mutedBy': FieldValue.arrayRemove([userId]),
+        'updatedAt': Timestamp.fromDate(DateTime.now()),
+      });
+    } catch (e) {
+      throw Exception('Failed to unmute conversation: $e');
+    }
+  }
+
+  @override
+  Future<void> blockConversation(String conversationId, String userId) async {
+    try {
+      await _conversationsRef.doc(conversationId).update({
+        'blockedBy': FieldValue.arrayUnion([userId]),
+        'updatedAt': Timestamp.fromDate(DateTime.now()),
+      });
+    } catch (e) {
+      throw Exception('Failed to block conversation: $e');
+    }
+  }
+
+  @override
+  Future<void> unblockConversation(String conversationId, String userId) async {
+    try {
+      await _conversationsRef.doc(conversationId).update({
+        'blockedBy': FieldValue.arrayRemove([userId]),
+        'updatedAt': Timestamp.fromDate(DateTime.now()),
+      });
+    } catch (e) {
+      throw Exception('Failed to unblock conversation: $e');
+    }
+  }
+
+  @override
+  Future<void> clearChatForUser(String conversationId, String userId) async {
+    try {
+      // Get all messages and add userId to their deletedFor array
+      final messagesSnapshot = await _getMessagesRef(conversationId).get();
+      final batch = _firestore.batch();
+
+      for (final doc in messagesSnapshot.docs) {
+        batch.update(doc.reference, {
+          'deletedFor': FieldValue.arrayUnion([userId]),
+        });
+      }
+
+      await batch.commit();
+    } catch (e) {
+      throw Exception('Failed to clear chat for user: $e');
     }
   }
 
