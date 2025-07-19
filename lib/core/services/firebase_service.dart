@@ -65,27 +65,51 @@ class FirebaseService implements BackendService {
         }
       }
 
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
+      // Add retry mechanism for initialization
+      int retries = 3;
+      Exception? lastException;
+      
+      for (int i = 0; i < retries; i++) {
+        try {
+          await Firebase.initializeApp(
+            options: DefaultFirebaseOptions.currentPlatform,
+          );
+          
+          _initialized = true;
+          
+          if (kDebugMode) {
+            print('🔥 Firebase initialized successfully ${i > 0 ? 'after ${i + 1} attempts' : ''}');
 
-      _initialized = true;
-
-      if (kDebugMode) {
-        print('🔥 Firebase initialized successfully');
-
-        // Print platform-specific information
-        if (kIsWeb) {
-          print('🌐 Running on Web platform');
-          print('🔑 Project ID: ${DefaultFirebaseOptions.web.projectId}');
-          print('🔗 Auth Domain: ${DefaultFirebaseOptions.web.authDomain}');
-        } else {
-          print('📱 Running on ${defaultTargetPlatform.toString()} platform');
-          final options = DefaultFirebaseOptions.currentPlatform;
-          print('🔑 Project ID: ${options.projectId}');
-          print('🆔 App ID: ${options.appId}');
+            // Print platform-specific information
+            if (kIsWeb) {
+              print('🌐 Running on Web platform');
+              print('🔑 Project ID: ${DefaultFirebaseOptions.web.projectId}');
+              print('🔗 Auth Domain: ${DefaultFirebaseOptions.web.authDomain}');
+            } else {
+              print('📱 Running on ${defaultTargetPlatform.toString()} platform');
+              final options = DefaultFirebaseOptions.currentPlatform;
+              print('🔑 Project ID: ${options.projectId}');
+              print('🆔 App ID: ${options.appId}');
+            }
+          }
+          
+          return; // Success, exit retry loop
+        } catch (e) {
+          lastException = e is Exception ? e : Exception(e.toString());
+          if (kDebugMode) {
+            print('🚨 Firebase initialization attempt ${i + 1} failed: $e');
+          }
+          
+          if (i < retries - 1) {
+            // Wait before retrying
+            await Future.delayed(Duration(milliseconds: 500 * (i + 1)));
+          }
         }
       }
+      
+      // If we get here, all retries failed
+      throw lastException ?? Exception('Failed to initialize Firebase after $retries attempts');
+
     } catch (e, stackTrace) {
       if (kDebugMode) {
         print('🚨 Error initializing Firebase: $e');
