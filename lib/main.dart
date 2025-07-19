@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'core/services/service_locator.dart';
+import 'core/services/logging_service.dart';
 import 'features/auth/presentation/auth_wrapper.dart';
 
 void main() async {
@@ -46,7 +47,7 @@ void main() async {
       }
       
       // Try to continue with a degraded mode
-      print('⚠️ Running in degraded mode due to service initialization failure');
+      LoggingService.warning('⚠️ Running in degraded mode due to service initialization failure');
     }
 
     runApp(const MyApp());
@@ -147,7 +148,7 @@ void main() async {
                           if (kIsWeb) {
                             // For web, reload the page
                             // This would need dart:html import in real implementation
-                            print('🔄 Reloading page...');
+                            LoggingService.info('🔄 Reloading page...');
                           } else {
                             // For mobile, try to restart main
                             main();

@@ -19,7 +19,6 @@ class _GoogleSignInButtonState extends State<GoogleSignInButton>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
-  bool _isPressed = false; // Add the missing _isPressed variable
 
   @override
   void initState() {
@@ -44,23 +43,14 @@ class _GoogleSignInButtonState extends State<GoogleSignInButton>
   }
 
   void _onTapDown(TapDownDetails details) {
-    setState(() {
-      _isPressed = true;
-    });
     _animationController.forward();
   }
 
   void _onTapUp(TapUpDetails details) {
-    setState(() {
-      _isPressed = false;
-    });
     _animationController.reverse();
   }
 
   void _onTapCancel() {
-    setState(() {
-      _isPressed = false;
-    });
     _animationController.reverse();
   }
 

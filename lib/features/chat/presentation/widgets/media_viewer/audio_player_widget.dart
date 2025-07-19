@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:audioplayers/audioplayers.dart';
+import '../../../../core/services/download_service.dart';
 
 class AudioPlayerWidget extends StatefulWidget {
   final String audioUrl;
@@ -17,6 +19,7 @@ class AudioPlayerWidget extends StatefulWidget {
 }
 
 class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
+  late AudioPlayer _audioPlayer;
   bool _isPlaying = false;
   bool _isLoading = false;
   Duration _currentPosition = Duration.zero;
@@ -25,7 +28,51 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   @override
   void initState() {
     super.initState();
+    _audioPlayer = AudioPlayer();
     _totalDuration = widget.duration ?? const Duration(minutes: 3); // Default 3 minutes
+    _initializeAudio();
+  }
+
+  Future<void> _initializeAudio() async {
+    try {
+      // Listen to player state changes
+      _audioPlayer.onPlayerStateChanged.listen((PlayerState state) {
+        if (mounted) {
+          setState(() {
+            _isPlaying = state == PlayerState.playing;
+            _isLoading = state == PlayerState.playing && _currentPosition == Duration.zero;
+          });
+        }
+      });
+
+      // Listen to position changes
+      _audioPlayer.onPositionChanged.listen((Duration position) {
+        if (mounted) {
+          setState(() {
+            _currentPosition = position;
+          });
+        }
+      });
+
+      // Listen to duration changes
+      _audioPlayer.onDurationChanged.listen((Duration duration) {
+        if (mounted) {
+          setState(() {
+            _totalDuration = duration;
+          });
+        }
+      });
+
+      // Set the source
+      await _audioPlayer.setSourceUrl(widget.audioUrl);
+    } catch (e) {
+      // Handle error
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   void _togglePlayPause() {
@@ -38,63 +85,40 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
     });
   }
 
-  void _playAudio() {
-    // TODO: Implement actual audio playback using audioplayers package
-    setState(() {
-      _isLoading = true;
-    });
-
-    // Simulate loading and playing for now
-    Future.delayed(const Duration(milliseconds: 500), () {
+  Future<void> _playAudio() async {
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+      await _audioPlayer.resume();
+    } catch (e) {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _isPlaying = true;
         });
-        
-        // Simulate progress update
-        _simulateProgress();
       }
-    });
-  }
-
-  void _simulateProgress() {
-    if (_isPlaying && _totalDuration.inMilliseconds > 0) {
-      const updateInterval = Duration(milliseconds: 1000);
-      Future.delayed(updateInterval, () {
-        if (mounted && _isPlaying) {
-          setState(() {
-            final newPosition = Duration(
-              milliseconds: _currentPosition.inMilliseconds + 1000,
-            );
-            if (newPosition < _totalDuration) {
-              _currentPosition = newPosition;
-              _simulateProgress(); // Continue updating
-            } else {
-              _currentPosition = _totalDuration;
-              _isPlaying = false; // End of audio
-            }
-          });
-        }
-      });
     }
   }
 
-  void _pauseAudio() {
-    // TODO: Implement audio pause
-    setState(() {
-      _isPlaying = false;
-    });
+
+
+  Future<void> _pauseAudio() async {
+    try {
+      await _audioPlayer.pause();
+    } catch (e) {
+      // Handle error
+    }
   }
 
-  void _seekToPosition(double value) {
-    final position = Duration(
-      milliseconds: (value * _totalDuration.inMilliseconds).round(),
-    );
-    setState(() {
-      _currentPosition = position;
-    });
-    // TODO: Implement actual seeking
+  Future<void> _seekToPosition(double value) async {
+    try {
+      final position = Duration(
+        milliseconds: (value * _totalDuration.inMilliseconds).round(),
+      );
+      await _audioPlayer.seek(position);
+    } catch (e) {
+      // Handle error
+    }
   }
 
   String _formatDuration(Duration duration) {
@@ -233,19 +257,47 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
     );
   }
 
-  void _downloadAudio(BuildContext context) {
-    // TODO: Implement audio download functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Download functionality will be implemented'),
-        backgroundColor: Colors.blue,
-      ),
-    );
+  Future<void> _downloadAudio(BuildContext context) async {
+    try {
+      final fileName = widget.fileName ?? 'audio_${DateTime.now().millisecondsSinceEpoch}.mp3';
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Downloading audio...'),
+          backgroundColor: Colors.blue,
+        ),
+      );
+
+      final success = await DownloadService().downloadFile(widget.audioUrl, fileName);
+      
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Audio downloaded successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to download audio'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error downloading audio: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
   void dispose() {
-    // TODO: Dispose audio player resources
+    _audioPlayer.dispose();
     super.dispose();
   }
 }

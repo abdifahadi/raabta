@@ -80,7 +80,7 @@ class FirebaseService implements BackendService {
       for (int i = 0; i < retries; i++) {
         try {
           if (kDebugMode) {
-            print('🔥 Firebase initialization attempt ${i + 1}/${retries}');
+            print('🔥 Firebase initialization attempt ${i + 1}/$retries');
           }
 
           await Firebase.initializeApp(

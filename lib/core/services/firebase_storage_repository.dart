@@ -1,9 +1,9 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:mime/mime.dart';
 import 'storage_repository.dart';
+import 'logging_service.dart';
 
 /// Firebase Storage implementation of StorageRepository
 class FirebaseStorageRepository implements StorageRepository {
@@ -47,7 +47,7 @@ class FirebaseStorageRepository implements StorageRepository {
       if (kDebugMode) {
         uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
           final progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          print('📊 Upload progress: ${progress.toStringAsFixed(1)}%');
+          LoggingService.debug('📊 Upload progress: ${progress.toStringAsFixed(1)}%');
         });
       }
 
@@ -97,7 +97,7 @@ class FirebaseStorageRepository implements StorageRepository {
       if (kDebugMode) {
         uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
           final progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          print('📊 Upload progress: ${progress.toStringAsFixed(1)}%');
+          LoggingService.debug('📊 Upload progress: ${progress.toStringAsFixed(1)}%');
         });
       }
 

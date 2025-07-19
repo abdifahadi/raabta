@@ -3,9 +3,9 @@
     "short_name": "Raabta",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#6200EA",
-    "theme_color": "#6200EA",
-    "description": "Raabta - Cross-platform chat app",
+    "background_color": "#0175C2",
+    "theme_color": "#0175C2",
+    "description": "Cross-platform chat application",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
