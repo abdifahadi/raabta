@@ -9,6 +9,7 @@ import 'package:raabta/features/auth/domain/user_profile_repository.dart';
 import 'package:raabta/features/auth/domain/firebase_user_profile_repository.dart';
 import 'package:raabta/features/chat/domain/chat_repository.dart';
 import 'package:raabta/features/chat/domain/firebase_chat_repository.dart';
+import 'package:flutter/foundation.dart';
 
 /// Service locator for dependency injection
 /// This allows for easy replacement of services
@@ -21,71 +22,159 @@ class ServiceLocator {
   ServiceLocator._internal();
 
   /// Backend service instance
-  late BackendService _backendService;
+  BackendService? _backendService;
 
   /// Auth provider instance
-  late AuthProvider _authProvider;
+  AuthProvider? _authProvider;
 
   /// User repository instance
-  late UserRepository _userRepository;
+  UserRepository? _userRepository;
 
   /// User profile repository instance
-  late UserProfileRepository _userProfileRepository;
+  UserProfileRepository? _userProfileRepository;
 
   /// Chat repository instance
-  late ChatRepository _chatRepository;
+  ChatRepository? _chatRepository;
 
   /// Storage repository instance
-  late FirebaseStorageRepository _storageRepository;
+  FirebaseStorageRepository? _storageRepository;
 
   /// Media picker service instance
-  late MediaPickerService _mediaPickerService;
+  MediaPickerService? _mediaPickerService;
+
+  /// Track initialization state
+  bool _isInitialized = false;
+  bool _isInitializing = false;
+
+  /// Check if services are initialized
+  bool get isInitialized => _isInitialized;
+  bool get isInitializing => _isInitializing;
 
   /// Initialize services
   Future<void> initialize() async {
-    // Initialize backend service
-    _backendService = FirebaseService();
-    await _backendService.initialize();
+    if (_isInitialized) {
+      if (kDebugMode) {
+        print('🔧 ServiceLocator already initialized');
+      }
+      return;
+    }
 
-    // Initialize auth provider
-    _authProvider = FirebaseAuthService();
+    if (_isInitializing) {
+      if (kDebugMode) {
+        print('🔧 ServiceLocator initialization in progress, waiting...');
+      }
+      // Wait for initialization to complete
+      while (_isInitializing && !_isInitialized) {
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+      return;
+    }
 
-    // Initialize user repository
-    _userRepository = FirebaseUserRepository();
+    _isInitializing = true;
 
-    // Initialize user profile repository
-    _userProfileRepository = FirebaseUserProfileRepository();
+    try {
+      if (kDebugMode) {
+        print('🔧 Initializing ServiceLocator...');
+      }
 
-    // Initialize storage repository
-    _storageRepository = FirebaseStorageRepository();
+      // Initialize backend service
+      _backendService = FirebaseService();
+      await _backendService!.initialize();
 
-    // Initialize chat repository with storage dependency
-    _chatRepository = FirebaseChatRepository(
-      storageRepository: _storageRepository,
-    );
+      // Initialize auth provider
+      _authProvider = FirebaseAuthService();
 
-    // Initialize media picker service
-    _mediaPickerService = MediaPickerService();
+      // Initialize user repository
+      _userRepository = FirebaseUserRepository();
+
+      // Initialize user profile repository
+      _userProfileRepository = FirebaseUserProfileRepository();
+
+      // Initialize storage repository
+      _storageRepository = FirebaseStorageRepository();
+
+      // Initialize chat repository with storage dependency
+      _chatRepository = FirebaseChatRepository(
+        storageRepository: _storageRepository!,
+      );
+
+      // Initialize media picker service
+      _mediaPickerService = MediaPickerService();
+
+      _isInitialized = true;
+      
+      if (kDebugMode) {
+        print('✅ ServiceLocator initialized successfully');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ ServiceLocator initialization failed: $e');
+      }
+      rethrow;
+    } finally {
+      _isInitializing = false;
+    }
   }
 
   /// Get backend service
-  BackendService get backendService => _backendService;
+  BackendService get backendService {
+    if (_backendService == null) {
+      throw StateError('ServiceLocator not initialized. Call initialize() first.');
+    }
+    return _backendService!;
+  }
 
   /// Get auth provider
-  AuthProvider get authProvider => _authProvider;
+  AuthProvider get authProvider {
+    if (_authProvider == null) {
+      throw StateError('ServiceLocator not initialized. Call initialize() first.');
+    }
+    return _authProvider!;
+  }
 
   /// Get user repository
-  UserRepository get userRepository => _userRepository;
+  UserRepository get userRepository {
+    if (_userRepository == null) {
+      throw StateError('ServiceLocator not initialized. Call initialize() first.');
+    }
+    return _userRepository!;
+  }
 
   /// Get user profile repository
-  UserProfileRepository get userProfileRepository => _userProfileRepository;
+  UserProfileRepository get userProfileRepository {
+    if (_userProfileRepository == null) {
+      throw StateError('ServiceLocator not initialized. Call initialize() first.');
+    }
+    return _userProfileRepository!;
+  }
 
   /// Get chat repository
-  ChatRepository get chatRepository => _chatRepository;
+  ChatRepository get chatRepository {
+    if (_chatRepository == null) {
+      throw StateError('ServiceLocator not initialized. Call initialize() first.');
+    }
+    return _chatRepository!;
+  }
 
   /// Get storage repository
-  StorageRepository get storageRepository => _storageRepository;
+  StorageRepository get storageRepository {
+    if (_storageRepository == null) {
+      throw StateError('ServiceLocator not initialized. Call initialize() first.');
+    }
+    return _storageRepository!;
+  }
 
   /// Get media picker service
-  MediaPickerService get mediaPickerService => _mediaPickerService;
+  MediaPickerService get mediaPickerService {
+    if (_mediaPickerService == null) {
+      throw StateError('ServiceLocator not initialized. Call initialize() first.');
+    }
+    return _mediaPickerService!;
+  }
+
+  /// Safe getters that return null if not initialized
+  AuthProvider? get authProviderOrNull => _authProvider;
+  UserRepository? get userRepositoryOrNull => _userRepository;
+  UserProfileRepository? get userProfileRepositoryOrNull => _userProfileRepository;
+  BackendService? get backendServiceOrNull => _backendService;
 }

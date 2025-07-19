@@ -1,11 +1,12 @@
 #!/bin/bash
 
-# Raabta Web Build and Serve Script
-# This script builds the Flutter web app and serves it locally
+# Enhanced Raabta Web Build and Serve Script
+# This script builds the Flutter web app and serves it locally with comprehensive checks
 
 set -e
 
-echo "🚀 Building and serving Raabta web app..."
+echo "🚀 Enhanced Raabta Web Build and Serve Script"
+echo "=============================================="
 
 # Colors for output
 RED='\033[0;31m'
@@ -32,91 +33,137 @@ print_error() {
 }
 
 # Check if Flutter is installed
+print_status "Checking Flutter installation..."
 if ! command -v flutter &> /dev/null; then
     print_error "Flutter is not installed or not in PATH"
-    print_status "Please install Flutter: https://flutter.dev/docs/get-started/install"
+    print_error "Please install Flutter from https://flutter.dev/docs/get-started/install"
     exit 1
 fi
 
-print_success "Flutter found: $(flutter --version | head -1)"
+print_success "Flutter found: $(flutter --version | head -n 1)"
 
-# Check if we're in a Flutter project
+# Check Flutter doctor for web
+print_status "Checking Flutter web setup..."
+if ! flutter doctor | grep -q "Chrome"; then
+    print_warning "Chrome not detected by Flutter doctor"
+    print_warning "Web debugging might be limited"
+fi
+
+# Check if pubspec.yaml exists
 if [ ! -f "pubspec.yaml" ]; then
-    print_error "This doesn't appear to be a Flutter project (no pubspec.yaml found)"
+    print_error "pubspec.yaml not found. Are you in the Flutter project directory?"
     exit 1
 fi
 
-# Clean previous builds
-print_status "Cleaning previous builds..."
-flutter clean
+# Check Firebase configuration
+print_status "Checking Firebase configuration..."
 
-# Get dependencies
-print_status "Getting dependencies..."
+# Check if firebase_options.dart exists
+if [ ! -f "lib/core/config/firebase_options.dart" ]; then
+    print_error "Firebase options file not found at lib/core/config/firebase_options.dart"
+    print_error "Please run 'flutterfire configure' to set up Firebase"
+    exit 1
+else
+    print_success "Firebase options file found"
+fi
+
+# Check web index.html for Firebase scripts
+if grep -q "firebase-app-compat.js" web/index.html; then
+    print_success "Firebase scripts found in web/index.html"
+else
+    print_warning "Firebase scripts not found in web/index.html"
+    print_warning "This might cause Firebase initialization issues on web"
+fi
+
+# Clean and get dependencies
+print_status "Cleaning project and getting dependencies..."
+flutter clean
 flutter pub get
 
-# Analyze code
-print_status "Analyzing code..."
-if flutter analyze --no-fatal-infos; then
-    print_success "Code analysis passed"
-else
-    print_warning "Code analysis found issues, but continuing..."
-fi
+# Check for any immediate issues
+print_status "Running quick health check..."
+flutter analyze --no-fatal-infos
 
-# Build for web
-print_status "Building for web..."
-if flutter build web --release; then
-    print_success "Web build completed successfully"
+# Build for web with optimizations
+print_status "Building Flutter web app..."
+print_status "Build mode: Release (optimized for production)"
+
+# Build with web-specific optimizations
+flutter build web \
+    --web-renderer html \
+    --csp \
+    --source-maps \
+    --dart-define=FLUTTER_WEB_USE_SKIA=false \
+    --dart-define=FLUTTER_WEB_AUTO_DETECT=false
+
+if [ $? -eq 0 ]; then
+    print_success "Web build completed successfully!"
+    
+    # Display build information
+    echo ""
+    echo "📊 Build Information:"
+    echo "===================="
+    echo "📁 Output directory: build/web/"
+    echo "🎯 Renderer: HTML"
+    echo "🔒 CSP enabled: Yes"
+    echo "🗺️  Source maps: Yes"
+    echo "📱 Auto-detect: Disabled"
+    echo "🎨 Skia: Disabled (HTML renderer)"
+    
+    # Check build size
+    if [ -d "build/web" ]; then
+        build_size=$(du -sh build/web | cut -f1)
+        echo "📦 Build size: $build_size"
+    fi
+    
+    echo ""
 else
-    print_error "Web build failed"
+    print_error "Web build failed!"
+    print_error "Please check the error messages above and fix any issues"
     exit 1
 fi
 
-# Check if build directory exists
-if [ ! -d "build/web" ]; then
-    print_error "Build directory not found"
-    exit 1
-fi
+# Check if we should serve the app
+read -p "🤔 Do you want to serve the app locally? (y/N): " serve_choice
 
-# Find an available port
-PORT=8080
-while lsof -Pi :$PORT -sTCP:LISTEN -t >/dev/null ; do
-    PORT=$((PORT + 1))
-done
-
-print_status "Using port $PORT"
-
-# Serve the application
-print_status "Starting web server..."
-cd build/web
-
-# Try different methods to serve the files
-if command -v python3 &> /dev/null; then
-    print_success "Starting Python HTTP server on http://localhost:$PORT"
-    echo ""
-    echo "🌐 Open your browser and go to: http://localhost:$PORT"
-    echo "📱 For mobile testing, use your computer's IP address"
-    echo "🛑 Press Ctrl+C to stop the server"
-    echo ""
-    python3 -m http.server $PORT
-elif command -v python &> /dev/null; then
-    print_success "Starting Python HTTP server on http://localhost:$PORT"
-    echo ""
-    echo "🌐 Open your browser and go to: http://localhost:$PORT"
-    echo "📱 For mobile testing, use your computer's IP address"
-    echo "🛑 Press Ctrl+C to stop the server"
-    echo ""
-    python -m SimpleHTTPServer $PORT
-elif command -v node &> /dev/null && command -v npx &> /dev/null; then
-    print_success "Starting Node.js HTTP server on http://localhost:$PORT"
-    echo ""
-    echo "🌐 Open your browser and go to: http://localhost:$PORT"
-    echo "📱 For mobile testing, use your computer's IP address"
-    echo "🛑 Press Ctrl+C to stop the server"
-    echo ""
-    npx serve -s . -l $PORT
+if [[ $serve_choice =~ ^[Yy]$ ]]; then
+    print_status "Starting local web server..."
+    
+    # Check if python3 is available
+    if command -v python3 &> /dev/null; then
+        print_status "Using Python 3 HTTP server"
+        echo ""
+        print_success "🌐 Web app will be available at: http://localhost:8000"
+        print_success "📱 Mobile access: http://[your-ip]:8000"
+        print_status "Press Ctrl+C to stop the server"
+        echo ""
+        
+        cd build/web
+        python3 -m http.server 8000
+        
+    elif command -v python &> /dev/null; then
+        print_status "Using Python 2 HTTP server"
+        echo ""
+        print_success "🌐 Web app will be available at: http://localhost:8000"
+        print_success "📱 Mobile access: http://[your-ip]:8000"
+        print_status "Press Ctrl+C to stop the server"
+        echo ""
+        
+        cd build/web
+        python -m SimpleHTTPServer 8000
+        
+    else
+        print_warning "Python not found. Cannot start local server."
+        print_status "You can serve the files from build/web/ using any HTTP server"
+        print_status "Example: 'cd build/web && python3 -m http.server 8000'"
+    fi
 else
-    print_error "No suitable HTTP server found"
-    print_status "Please install Python or Node.js to serve the files"
-    print_status "Alternatively, you can use any other HTTP server to serve the files in build/web/"
-    exit 1
+    print_success "Build completed! Files are in build/web/"
+    print_status "To serve manually:"
+    print_status "  cd build/web"
+    print_status "  python3 -m http.server 8000"
+    print_status "  Then open http://localhost:8000"
 fi
+
+echo ""
+print_success "✨ Script completed!"

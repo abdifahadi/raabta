@@ -1,6 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 import 'firebase_service.dart';
 
 /// Abstract class for authentication services
@@ -38,21 +38,47 @@ class FirebaseAuthService implements AuthProvider {
   /// Singleton instance
   factory FirebaseAuthService() => _instance;
 
-  FirebaseAuthService._internal() {
-    // Ensure Firebase is initialized
-    if (!FirebaseService().isInitialized) {
-      throw StateError('Firebase must be initialized before using AuthService');
+  FirebaseAuthService._internal();
+
+  FirebaseAuth get _auth {
+    // Check if Firebase is initialized before accessing
+    final firebaseService = FirebaseService();
+    if (!firebaseService.isInitialized) {
+      if (kDebugMode) {
+        print('⚠️ Firebase not initialized, but AuthService is being accessed');
+      }
+      // Instead of throwing, we'll let Firebase.instance handle the error
+      // This allows for better error handling in the UI
     }
+    return FirebaseAuth.instance;
   }
 
-  final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   @override
-  User? get currentUser => _auth.currentUser;
+  User? get currentUser {
+    try {
+      return _auth.currentUser;
+    } catch (e) {
+      if (kDebugMode) {
+        print('🚨 Error getting current user: $e');
+      }
+      return null;
+    }
+  }
 
   @override
-  Stream<User?> get authStateChanges => _auth.authStateChanges();
+  Stream<User?> get authStateChanges {
+    try {
+      return _auth.authStateChanges();
+    } catch (e) {
+      if (kDebugMode) {
+        print('🚨 Error getting auth state changes: $e');
+      }
+      // Return a stream that emits null to indicate no user
+      return Stream.value(null);
+    }
+  }
 
   @override
   Future<UserCredential> signInWithEmailAndPassword(
