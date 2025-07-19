@@ -1,6 +1,6 @@
 import 'models/conversation_model.dart';
 import 'models/message_model.dart';
-import '../../core/services/media_picker_service.dart';
+import '../../../core/services/media_picker_service.dart';
 
 /// Repository interface for chat operations
 abstract class ChatRepository {

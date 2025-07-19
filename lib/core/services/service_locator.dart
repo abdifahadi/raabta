@@ -56,11 +56,13 @@ class ServiceLocator {
     // Initialize user profile repository
     _userProfileRepository = FirebaseUserProfileRepository();
 
-    // Initialize chat repository
-    _chatRepository = FirebaseChatRepository();
-
     // Initialize storage repository
     _storageRepository = FirebaseStorageRepository();
+
+    // Initialize chat repository with storage dependency
+    _chatRepository = FirebaseChatRepository(
+      storageRepository: _storageRepository,
+    );
 
     // Initialize media picker service
     _mediaPickerService = MediaPickerService();
