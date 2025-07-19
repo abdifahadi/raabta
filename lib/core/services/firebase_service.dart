@@ -53,16 +53,12 @@ class FirebaseService implements BackendService {
         }
         _initialized = true;
         return;
-      } on FirebaseException catch (e) {
-        if (e.code == 'no-app') {
-          // Firebase not initialized yet, continue with initialization
-          if (kDebugMode) {
-            print('🔥 No existing Firebase app found, initializing...');
-          }
-        } else {
-          // Different Firebase error, rethrow
-          rethrow;
+      } catch (e) {
+        // Handle any Firebase initialization errors
+        if (kDebugMode) {
+          print('🔥 No existing Firebase app found, initializing... Error: $e');
         }
+        // Continue with initialization regardless of error type
       }
 
       // Web-specific initialization delay to ensure DOM is ready
@@ -120,9 +116,12 @@ class FirebaseService implements BackendService {
           lastException = e is Exception ? e : Exception(e.toString());
           if (kDebugMode) {
             print('🚨 Firebase initialization attempt ${i + 1} failed: $e');
-            if (e is FirebaseException) {
-              print('🔍 Firebase error code: ${e.code}');
-              print('🔍 Firebase error message: ${e.message}');
+            try {
+              if (e.toString().contains('FirebaseException')) {
+                print('🔍 Firebase error details: $e');
+              }
+            } catch (_) {
+              // Ignore error inspection issues
             }
           }
           
