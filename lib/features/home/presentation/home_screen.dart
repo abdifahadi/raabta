@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:raabta/features/auth/domain/auth_repository.dart';
 import 'package:raabta/features/auth/domain/firebase_auth_repository.dart';
-import 'package:raabta/features/auth/domain/user_repository.dart';
-import 'package:raabta/features/auth/domain/firebase_user_repository.dart';
-import 'package:raabta/features/auth/domain/models/user_model.dart';
+import 'package:raabta/features/auth/domain/user_profile_repository.dart';
+import 'package:raabta/features/auth/domain/models/user_profile_model.dart';
 import 'package:raabta/features/auth/presentation/sign_in_screen.dart';
+import 'package:raabta/features/chat/presentation/conversations_screen.dart';
+import 'package:raabta/core/services/service_locator.dart';
 import 'package:intl/intl.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -16,8 +17,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final AuthRepository _authRepository = FirebaseAuthRepository();
-  final UserRepository _userRepository = FirebaseUserRepository();
-  UserModel? _userModel;
+  final UserProfileRepository _userProfileRepository = ServiceLocator().userProfileRepository;
+  UserProfileModel? _userProfile;
   bool _isLoading = true;
 
   @override
@@ -34,9 +35,9 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final user = _authRepository.currentUser;
       if (user != null) {
-        final userModel = await _userRepository.getUserById(user.uid);
+        final userProfile = await _userProfileRepository.getUserProfile(user.uid);
         setState(() {
-          _userModel = userModel;
+          _userProfile = userProfile;
           _isLoading = false;
         });
       } else {
@@ -75,6 +76,15 @@ class _HomeScreenState extends State<HomeScreen> {
         foregroundColor: Colors.white,
         actions: [
           IconButton(
+            icon: const Icon(Icons.chat),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const ConversationsScreen()),
+              );
+            },
+            tooltip: 'Messages',
+          ),
+          IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
               await _authRepository.signOut();
@@ -84,6 +94,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               }
             },
+            tooltip: 'Sign Out',
           ),
         ],
       ),
@@ -99,21 +110,21 @@ class _HomeScreenState extends State<HomeScreen> {
                     style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 24),
-                  if (user != null && user.photoURL != null)
+                  if (_userProfile?.photoUrl != null || (user != null && user.photoURL != null))
                     CircleAvatar(
                       radius: 60,
-                      backgroundImage: NetworkImage(user.photoURL!),
+                      backgroundImage: NetworkImage(_userProfile?.photoUrl ?? user!.photoURL!),
                     ),
                   const SizedBox(height: 24),
                   Text(
-                    _userModel?.name ?? user?.displayName ?? 'Guest',
+                    _userProfile?.name ?? user?.displayName ?? 'Guest',
                     style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
                   Text(
-                    _userModel?.email ?? user?.email ?? '',
+                    _userProfile?.email ?? user?.email ?? '',
                     style: const TextStyle(fontSize: 16, color: Colors.black54),
                   ),
                   const SizedBox(height: 32),
@@ -140,11 +151,35 @@ class _HomeScreenState extends State<HomeScreen> {
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            _buildInfoRow('User ID:', _userModel?.uid ?? 'N/A'),
-            _buildInfoRow('Created At:', _formatDate(_userModel?.createdAt)),
-            _buildInfoRow('Last Sign In:', _formatDate(_userModel?.lastSignIn)),
+            _buildInfoRow('User ID:', _userProfile?.uid ?? 'N/A'),
+            _buildInfoRow('Created At:', _formatDate(_userProfile?.createdAt)),
+            _buildInfoRow('Last Sign In:', _formatDate(_userProfile?.lastSignIn)),
+            if (_userProfile?.gender != null)
+              _buildInfoRow('Gender:', _userProfile!.gender.displayName),
+            if (_userProfile?.activeHours != null)
+              _buildInfoRow('Active Hours:', _userProfile!.activeHours),
+            if (_userProfile?.bio != null && _userProfile!.bio!.isNotEmpty)
+              _buildInfoRow('Bio:', _userProfile!.bio!),
+            if (_userProfile?.religion != null && _userProfile!.religion!.isNotEmpty)
+              _buildInfoRow('Religion:', _userProfile!.religion!),
+            if (_userProfile?.relationshipStatus != null)
+              _buildInfoRow('Relationship:', _userProfile!.relationshipStatus!.displayName),
+            if (_userProfile?.dateOfBirth != null)
+              _buildInfoRow('Date of Birth:', _formatDate(_userProfile!.dateOfBirth)),
+            _buildInfoRow('Profile Complete:', _userProfile?.isProfileComplete == true ? 'Yes' : 'No'),
           ],
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (context) => const ConversationsScreen()),
+          );
+        },
+        backgroundColor: Colors.deepPurple,
+        foregroundColor: Colors.white,
+        child: const Icon(Icons.chat),
+        tooltip: 'Open Messages',
       ),
     );
   }

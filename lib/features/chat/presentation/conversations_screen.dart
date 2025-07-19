@@ -1,0 +1,388 @@
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:raabta/features/auth/domain/models/user_profile_model.dart';
+import 'package:raabta/features/auth/domain/user_profile_repository.dart';
+import 'package:raabta/features/auth/domain/auth_repository.dart';
+import 'package:raabta/features/auth/domain/firebase_auth_repository.dart';
+import 'package:raabta/features/chat/domain/models/conversation_model.dart';
+import 'package:raabta/features/chat/domain/chat_repository.dart';
+import 'package:raabta/features/chat/presentation/chat_screen.dart';
+import 'package:raabta/features/chat/presentation/user_list_screen.dart';
+import 'package:raabta/core/services/service_locator.dart';
+
+class ConversationsScreen extends StatefulWidget {
+  const ConversationsScreen({super.key});
+
+  @override
+  State<ConversationsScreen> createState() => _ConversationsScreenState();
+}
+
+class _ConversationsScreenState extends State<ConversationsScreen> {
+  final ChatRepository _chatRepository = ServiceLocator().chatRepository;
+  final UserProfileRepository _userProfileRepository = ServiceLocator().userProfileRepository;
+  final AuthRepository _authRepository = FirebaseAuthRepository();
+  
+  String? _currentUserId;
+  Map<String, UserProfileModel> _userCache = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _currentUserId = _authRepository.currentUser?.uid;
+  }
+
+  Future<UserProfileModel?> _getUserProfile(String userId) async {
+    if (_userCache.containsKey(userId)) {
+      return _userCache[userId];
+    }
+
+    try {
+      final user = await _userProfileRepository.getUserProfile(userId);
+      if (user != null) {
+        _userCache[userId] = user;
+      }
+      return user;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  String _formatTimestamp(DateTime timestamp) {
+    final now = DateTime.now();
+    final difference = now.difference(timestamp);
+
+    if (difference.inDays == 0) {
+      // Same day - show time
+      return DateFormat('HH:mm').format(timestamp);
+    } else if (difference.inDays == 1) {
+      // Yesterday
+      return 'Yesterday';
+    } else if (difference.inDays < 7) {
+      // This week - show day name
+      return DateFormat('EEE').format(timestamp);
+    } else {
+      // Older - show date
+      return DateFormat('MM/dd').format(timestamp);
+    }
+  }
+
+  Future<void> _openConversation(ConversationModel conversation) async {
+    if (_currentUserId == null) return;
+
+    try {
+      final otherUserId = conversation.getOtherParticipantId(_currentUserId!);
+      final otherUser = await _getUserProfile(otherUserId);
+      
+      if (otherUser != null && mounted) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => ChatScreen(
+              conversation: conversation,
+              otherUser: otherUser,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to open conversation: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_currentUserId == null) {
+      return const Scaffold(
+        body: Center(
+          child: Text('Please sign in to view conversations'),
+        ),
+      );
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Messages'),
+        backgroundColor: Colors.deepPurple,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const UserListScreen(),
+                ),
+              );
+            },
+            tooltip: 'Start new conversation',
+          ),
+        ],
+      ),
+      body: StreamBuilder<List<ConversationModel>>(
+        stream: _chatRepository.getUserConversations(_currentUserId!),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: Colors.grey[400],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Failed to load conversations',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    snapshot.error.toString(),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[500],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      setState(() {}); // Trigger rebuild
+                    },
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Retry'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepPurple,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          final conversations = snapshot.data ?? [];
+
+          if (conversations.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.chat_bubble_outline,
+                    size: 64,
+                    color: Colors.grey[400],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No conversations yet',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Start a conversation to connect with others',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[500],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const UserListScreen(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.add),
+                    label: const Text('Start Conversation'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepPurple,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return ListView.builder(
+            itemCount: conversations.length,
+            itemBuilder: (context, index) {
+              final conversation = conversations[index];
+              return _buildConversationTile(conversation);
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildConversationTile(ConversationModel conversation) {
+    final otherUserId = conversation.getOtherParticipantId(_currentUserId!);
+    final unreadCount = conversation.getUnreadCount(_currentUserId!);
+    
+    return FutureBuilder<UserProfileModel?>(
+      future: _getUserProfile(otherUserId),
+      builder: (context, userSnapshot) {
+        final otherUser = userSnapshot.data;
+        
+        return Card(
+          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: ListTile(
+            contentPadding: const EdgeInsets.all(12),
+            leading: Stack(
+              children: [
+                CircleAvatar(
+                  radius: 28,
+                  backgroundColor: Colors.deepPurple.withOpacity(0.1),
+                  backgroundImage: otherUser?.photoUrl != null
+                      ? NetworkImage(otherUser!.photoUrl!)
+                      : null,
+                  child: otherUser?.photoUrl == null
+                      ? Text(
+                          otherUser?.name.isNotEmpty == true
+                              ? otherUser!.name[0].toUpperCase()
+                              : '?',
+                          style: TextStyle(
+                            color: Colors.deepPurple,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 20,
+                          ),
+                        )
+                      : null,
+                ),
+                if (unreadCount > 0)
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 20,
+                        minHeight: 20,
+                      ),
+                      child: Text(
+                        unreadCount > 99 ? '99+' : unreadCount.toString(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            title: Text(
+              otherUser?.name ?? 'Loading...',
+              style: TextStyle(
+                fontWeight: unreadCount > 0 ? FontWeight.bold : FontWeight.w600,
+                fontSize: 16,
+              ),
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (conversation.lastMessage != null) ...[
+                  Text(
+                    conversation.lastMessage!,
+                    style: TextStyle(
+                      color: unreadCount > 0 ? Colors.black87 : Colors.grey[600],
+                      fontWeight: unreadCount > 0 ? FontWeight.w500 : FontWeight.normal,
+                      fontSize: 14,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ] else ...[
+                  Text(
+                    'No messages yet',
+                    style: TextStyle(
+                      color: Colors.grey[500],
+                      fontSize: 14,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+                if (otherUser?.activeHours != null) ...[
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.access_time,
+                        size: 12,
+                        color: Colors.grey[500],
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Active: ${otherUser!.activeHours}',
+                        style: TextStyle(
+                          color: Colors.grey[500],
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+            trailing: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (conversation.lastMessageTimestamp != null)
+                  Text(
+                    _formatTimestamp(conversation.lastMessageTimestamp!),
+                    style: TextStyle(
+                      color: unreadCount > 0 ? Colors.deepPurple : Colors.grey[500],
+                      fontSize: 12,
+                      fontWeight: unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
+                    ),
+                  ),
+                const SizedBox(height: 4),
+                if (unreadCount > 0)
+                  Icon(
+                    Icons.circle,
+                    color: Colors.deepPurple,
+                    size: 8,
+                  ),
+              ],
+            ),
+            onTap: () => _openConversation(conversation),
+          ),
+        );
+      },
+    );
+  }
+}
