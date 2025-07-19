@@ -602,7 +602,6 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
         ],
       ),
-          ],
         ),
       ),
     );
@@ -700,6 +699,8 @@ class _ChatScreenState extends State<ChatScreen> {
               onPressed: () async {
                 final newText = editController.text.trim();
                 if (newText.isNotEmpty && newText != message.content) {
+                  final navigator = Navigator.of(context);
+                  final scaffoldMessenger = ScaffoldMessenger.of(context);
                   try {
                     final updatedMessage = message.copyWith(
                       content: newText,
@@ -708,8 +709,8 @@ class _ChatScreenState extends State<ChatScreen> {
                     await _chatRepository.updateMessage(widget.conversation.id, updatedMessage);
                     
                     if (mounted) {
-                      Navigator.of(context).pop();
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      navigator.pop();
+                      scaffoldMessenger.showSnackBar(
                         const SnackBar(
                           content: Text('Message updated successfully'),
                           backgroundColor: Colors.green,
@@ -718,7 +719,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     }
                   } catch (e) {
                     if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      scaffoldMessenger.showSnackBar(
                         SnackBar(
                           content: Text('Failed to update message: $e'),
                           backgroundColor: Colors.red,
@@ -752,12 +753,14 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
             ElevatedButton(
               onPressed: () async {
+                final navigator = Navigator.of(context);
+                final scaffoldMessenger = ScaffoldMessenger.of(context);
                 try {
                   await _chatRepository.deleteMessage(widget.conversation.id, message.id);
                   
                   if (mounted) {
-                    Navigator.of(context).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    navigator.pop();
+                    scaffoldMessenger.showSnackBar(
                       const SnackBar(
                         content: Text('Message deleted successfully'),
                         backgroundColor: Colors.green,
@@ -766,8 +769,8 @@ class _ChatScreenState extends State<ChatScreen> {
                   }
                 } catch (e) {
                   if (mounted) {
-                    Navigator.of(context).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    navigator.pop();
+                    scaffoldMessenger.showSnackBar(
                       SnackBar(
                         content: Text('Failed to delete message: $e'),
                         backgroundColor: Colors.red,
