@@ -25,7 +25,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   @override
   void initState() {
     super.initState();
-    _totalDuration = widget.duration ?? Duration.zero;
+    _totalDuration = widget.duration ?? const Duration(minutes: 3); // Default 3 minutes
   }
 
   void _togglePlayPause() {
@@ -39,20 +39,45 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   }
 
   void _playAudio() {
-    // TODO: Implement audio playback
+    // TODO: Implement actual audio playback using audioplayers package
     setState(() {
       _isLoading = true;
     });
 
-    // Simulate loading and playing
+    // Simulate loading and playing for now
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) {
         setState(() {
           _isLoading = false;
           _isPlaying = true;
         });
+        
+        // Simulate progress update
+        _simulateProgress();
       }
     });
+  }
+
+  void _simulateProgress() {
+    if (_isPlaying && _totalDuration.inMilliseconds > 0) {
+      const updateInterval = Duration(milliseconds: 1000);
+      Future.delayed(updateInterval, () {
+        if (mounted && _isPlaying) {
+          setState(() {
+            final newPosition = Duration(
+              milliseconds: _currentPosition.inMilliseconds + 1000,
+            );
+            if (newPosition < _totalDuration) {
+              _currentPosition = newPosition;
+              _simulateProgress(); // Continue updating
+            } else {
+              _currentPosition = _totalDuration;
+              _isPlaying = false; // End of audio
+            }
+          });
+        }
+      });
+    }
   }
 
   void _pauseAudio() {

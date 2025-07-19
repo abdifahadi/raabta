@@ -257,7 +257,7 @@ class MessageBubble extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(
+          const Icon(
             Icons.error,
             color: Colors.red,
             size: 20,
@@ -266,7 +266,7 @@ class MessageBubble extends StatelessWidget {
           Expanded(
             child: Text(
               errorText,
-              style: TextStyle(
+              style: const TextStyle(
                 color: Colors.red,
                 fontSize: 14,
               ),

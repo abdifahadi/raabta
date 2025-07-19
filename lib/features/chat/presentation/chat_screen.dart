@@ -7,7 +7,7 @@ import 'package:raabta/features/chat/domain/models/conversation_model.dart';
 import 'package:raabta/features/chat/domain/models/message_model.dart';
 import 'package:raabta/features/chat/domain/chat_repository.dart';
 import 'package:raabta/core/services/service_locator.dart';
-import 'package:raabta/core/services/media_picker_service.dart';
+import '../../../core/services/media_picker_service.dart';
 import 'widgets/message_bubble.dart';
 import 'widgets/media_picker_bottom_sheet.dart';
 import 'chat_settings_screen.dart';
@@ -194,9 +194,9 @@ class _ChatScreenState extends State<ChatScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
+          const Text(
             'Message Options',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
             ),

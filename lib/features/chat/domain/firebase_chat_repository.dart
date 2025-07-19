@@ -2,9 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'chat_repository.dart';
 import 'models/conversation_model.dart';
 import 'models/message_model.dart';
-import '../../core/services/media_picker_service.dart';
-import '../../core/services/firebase_storage_repository.dart';
-import 'package:uuid/uuid.dart';
+import '../../../core/services/media_picker_service.dart';
+import '../../../core/services/firebase_storage_repository.dart';
 
 /// Firebase implementation of ChatRepository
 class FirebaseChatRepository implements ChatRepository {
