@@ -23,7 +23,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
   final AuthRepository _authRepository = FirebaseAuthRepository();
   
   String? _currentUserId;
-  Map<String, UserProfileModel> _userCache = {};
+  final Map<String, UserProfileModel> _userCache = {};
 
   @override
   void initState() {

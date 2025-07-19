@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:raabta/features/auth/domain/auth_repository.dart';
 import 'package:raabta/features/auth/domain/firebase_auth_repository.dart';
 import 'package:raabta/features/auth/domain/user_profile_repository.dart';
@@ -37,9 +36,11 @@ class _SignInScreenState extends State<SignInScreen> {
           
           if (existingProfile != null && existingProfile.isProfileComplete) {
             // Profile is complete, go to home
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (context) => const HomeScreen()),
-            );
+            if (mounted) {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (context) => const HomeScreen()),
+              );
+            }
           } else {
             // Profile doesn't exist or is incomplete, go to profile setup
             final initialProfile = existingProfile ?? 
@@ -51,13 +52,15 @@ class _SignInScreenState extends State<SignInScreen> {
                   createdAt: user.metadata.creationTime,
                 );
             
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(
-                builder: (context) => ProfileSetupScreen(
-                  initialProfile: initialProfile,
+            if (mounted) {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(
+                  builder: (context) => ProfileSetupScreen(
+                    initialProfile: initialProfile,
+                  ),
                 ),
-              ),
-            );
+              );
+            }
           }
         }
       }

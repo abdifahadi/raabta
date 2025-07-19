@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:raabta/features/auth/domain/models/user_profile_model.dart';
-import 'package:raabta/features/auth/domain/user_profile_repository.dart';
 import 'package:raabta/features/auth/domain/auth_repository.dart';
 import 'package:raabta/features/auth/domain/firebase_auth_repository.dart';
 import 'package:raabta/features/chat/domain/chat_repository.dart';
@@ -16,7 +15,6 @@ class UserListScreen extends StatefulWidget {
 }
 
 class _UserListScreenState extends State<UserListScreen> {
-  final UserProfileRepository _userProfileRepository = ServiceLocator().userProfileRepository;
   final ChatRepository _chatRepository = ServiceLocator().chatRepository;
   final AuthRepository _authRepository = FirebaseAuthRepository();
   

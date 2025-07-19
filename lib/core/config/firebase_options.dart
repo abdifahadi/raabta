@@ -29,7 +29,7 @@ class DefaultFirebaseOptions {
       case TargetPlatform.linux:
         throw UnsupportedError('Linux is not supported by Firebase.');
       default:
-        throw UnsupportedError('Unknown platform: ${defaultTargetPlatform}');
+        throw UnsupportedError('Unknown platform: $defaultTargetPlatform');
     }
   }
 

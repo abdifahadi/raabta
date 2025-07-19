@@ -135,6 +135,17 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (context) => const ConversationsScreen()),
+          );
+        },
+        backgroundColor: Colors.deepPurple,
+        foregroundColor: Colors.white,
+        tooltip: 'Open Messages',
+        child: const Icon(Icons.chat),
+      ),
     );
   }
 
@@ -169,17 +180,6 @@ class _HomeScreenState extends State<HomeScreen> {
             _buildInfoRow('Profile Complete:', _userProfile?.isProfileComplete == true ? 'Yes' : 'No'),
           ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (context) => const ConversationsScreen()),
-          );
-        },
-        backgroundColor: Colors.deepPurple,
-        foregroundColor: Colors.white,
-        child: const Icon(Icons.chat),
-        tooltip: 'Open Messages',
       ),
     );
   }
