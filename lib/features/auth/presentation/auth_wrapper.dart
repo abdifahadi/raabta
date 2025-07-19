@@ -19,18 +19,273 @@ class AuthWrapper extends StatefulWidget {
 
 class _AuthWrapperState extends State<AuthWrapper> {
   bool _hasTimeout = false;
+  bool _isRetrying = false;
+  late final AuthRepository _authRepository;
+  late final UserProfileRepository _userProfileRepository;
   
   @override
   void initState() {
     super.initState();
-    // Add a timeout to prevent infinite loading
-    Future.delayed(const Duration(seconds: 10), () {
-      if (mounted) {
+    
+    // Initialize repositories
+    _authRepository = FirebaseAuthRepository();
+    _userProfileRepository = ServiceLocator().userProfileRepository;
+    
+    // Reduced timeout for better UX (from 10 seconds to 8 seconds)
+    Future.delayed(const Duration(seconds: 8), () {
+      if (mounted && !_isRetrying) {
         setState(() {
           _hasTimeout = true;
         });
       }
     });
+  }
+
+  void _retry() {
+    setState(() {
+      _hasTimeout = false;
+      _isRetrying = true;
+    });
+    
+    // Reset retry flag after a short delay
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        setState(() {
+          _isRetrying = false;
+        });
+      }
+    });
+    
+    // Add timeout again
+    Future.delayed(const Duration(seconds: 8), () {
+      if (mounted && !_isRetrying) {
+        setState(() {
+          _hasTimeout = true;
+        });
+      }
+    });
+  }
+
+  Widget _buildLoadingScreen({
+    required String title,
+    required String subtitle,
+    Color? backgroundColor,
+  }) {
+    return Scaffold(
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: backgroundColor != null 
+              ? [backgroundColor, backgroundColor.withOpacity(0.8)]
+              : [const Color(0xFF667eea), const Color(0xFF764ba2)],
+          ),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // App logo with animation
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.8, end: 1.0),
+                duration: const Duration(milliseconds: 1000),
+                curve: Curves.easeInOut,
+                builder: (context, scale, child) => Transform.scale(
+                  scale: scale,
+                  child: Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(50),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.chat_bubble_outline,
+                      size: 50,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 32),
+              // Loading spinner with custom animation
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.0, end: 1.0),
+                duration: const Duration(milliseconds: 800),
+                builder: (context, opacity, child) => Opacity(
+                  opacity: opacity,
+                  child: const SizedBox(
+                    width: 32,
+                    height: 32,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 3,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              // Title with fade-in animation
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.0, end: 1.0),
+                duration: const Duration(milliseconds: 1200),
+                builder: (context, opacity, child) => Opacity(
+                  opacity: opacity,
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              // Subtitle with delayed fade-in
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.0, end: 1.0),
+                duration: const Duration(milliseconds: 1400),
+                builder: (context, opacity, child) => Opacity(
+                  opacity: opacity,
+                  child: Text(
+                    subtitle,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.white.withOpacity(0.9),
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorScreen({
+    required String title,
+    required String message,
+    required VoidCallback onRetry,
+    VoidCallback? onSignIn,
+  }) {
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFFFF6B6B), Color(0xFFFFE66D)],
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Error icon
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(40),
+                    ),
+                    child: const Icon(
+                      Icons.wifi_off,
+                      size: 40,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // Title
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  // Message
+                  Container(
+                    constraints: const BoxConstraints(maxWidth: 350),
+                    child: Text(
+                      message,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Colors.white.withOpacity(0.9),
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  // Action buttons
+                  Column(
+                    children: [
+                      // Primary button
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: onRetry,
+                          icon: const Icon(Icons.refresh, size: 20),
+                          label: const Text('Try Again'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: const Color(0xFFFF6B6B),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 2,
+                          ),
+                        ),
+                      ),
+                      if (onSignIn != null) ...[
+                        const SizedBox(height: 12),
+                        // Secondary button
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: onSignIn,
+                            icon: const Icon(Icons.login, size: 20),
+                            label: const Text('Go to Sign In'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.white,
+                              side: BorderSide(color: Colors.white.withOpacity(0.7)),
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -41,67 +296,22 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
     // Show timeout message if loading takes too long
     if (_hasTimeout) {
-      return Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.timer_off,
-                size: 64,
-                color: Colors.orange,
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Loading is taking longer than expected',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Please check your internet connection and try again.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () {
-                  setState(() {
-                    _hasTimeout = false;
-                  });
-                  // Try again
-                  Future.delayed(const Duration(seconds: 10), () {
-                    if (mounted) {
-                      setState(() {
-                        _hasTimeout = true;
-                      });
-                    }
-                  });
-                },
-                child: const Text('Try Again'),
-              ),
-              const SizedBox(height: 8),
-              TextButton(
-                onPressed: () {
-                  // Force go to sign in screen
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(
-                      builder: (context) => const SignInScreen(),
-                    ),
-                  );
-                },
-                child: const Text('Go to Sign In'),
-              ),
-            ],
-          ),
-        ),
+      return _buildErrorScreen(
+        title: 'Connection Timeout',
+        message: 'Loading is taking longer than expected. Please check your internet connection and try again.',
+        onRetry: _retry,
+        onSignIn: () {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => const SignInScreen(),
+            ),
+          );
+        },
       );
     }
 
-    final AuthRepository authRepository = FirebaseAuthRepository();
-    final UserProfileRepository userProfileRepository = ServiceLocator().userProfileRepository;
-
     return StreamBuilder<User?>(
-      stream: authRepository.authStateChanges,
+      stream: _authRepository.authStateChanges,
       builder: (context, snapshot) {
         if (kDebugMode) {
           print('🔐 Auth state change: ${snapshot.connectionState}, hasData: ${snapshot.hasData}, data: ${snapshot.data}');
@@ -112,53 +322,20 @@ class _AuthWrapperState extends State<AuthWrapper> {
           if (kDebugMode) {
             print('🚨 Auth stream error: ${snapshot.error}');
           }
-          return Scaffold(
-            body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.error_outline,
-                    size: 64,
-                    color: Colors.red,
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Authentication Error',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text(
-                      'Error: ${snapshot.error}',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 14),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      // Try to sign out and restart auth
-                      authRepository.signOut();
-                    },
-                    child: const Text('Try Again'),
-                  ),
-                  const SizedBox(height: 8),
-                  TextButton(
-                    onPressed: () {
-                      // Force go to sign in screen
-                      Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(
-                          builder: (context) => const SignInScreen(),
-                        ),
-                      );
-                    },
-                    child: const Text('Go to Sign In'),
-                  ),
-                ],
-              ),
-            ),
+          return _buildErrorScreen(
+            title: 'Authentication Error',
+            message: 'We encountered an issue with authentication services. Please try again or contact support if the problem persists.',
+            onRetry: () {
+              _authRepository.signOut();
+              _retry();
+            },
+            onSignIn: () {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(
+                  builder: (context) => const SignInScreen(),
+                ),
+              );
+            },
           );
         }
 
@@ -167,40 +344,9 @@ class _AuthWrapperState extends State<AuthWrapper> {
           if (kDebugMode) {
             print('🔐 Waiting for auth state...');
           }
-          return Scaffold(
-            body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Add app logo/icon here
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColor,
-                      borderRadius: BorderRadius.circular(40),
-                    ),
-                    child: const Icon(
-                      Icons.chat,
-                      size: 40,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  const CircularProgressIndicator(),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Loading Raabta...',
-                    style: TextStyle(fontSize: 16),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Please wait while we set things up',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                ],
-              ),
-            ),
+          return _buildLoadingScreen(
+            title: 'Loading Raabta...',
+            subtitle: 'Please wait while we set things up',
           );
         }
 
@@ -214,7 +360,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
           
           // Check if user profile exists and is complete
           return FutureBuilder(
-            future: userProfileRepository.getUserProfile(user.uid),
+            future: _userProfileRepository.getUserProfile(user.uid),
             builder: (context, profileSnapshot) {
               if (kDebugMode) {
                 print('🔐 Profile check: ${profileSnapshot.connectionState}, hasData: ${profileSnapshot.hasData}');
@@ -224,40 +370,17 @@ class _AuthWrapperState extends State<AuthWrapper> {
                 if (kDebugMode) {
                   print('🚨 Profile fetch error: ${profileSnapshot.error}');
                 }
-                return Scaffold(
-                  body: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.error_outline,
-                          size: 64,
-                          color: Colors.red,
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Profile Loading Error',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 8),
-                        Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Text(
-                            'Error: ${profileSnapshot.error}',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(fontSize: 14),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: () {
-                            authRepository.signOut();
-                          },
-                          child: const Text('Sign Out'),
-                        ),
-                      ],
-                    ),
-                  ),
+                return _buildErrorScreen(
+                  title: 'Profile Loading Error',
+                  message: 'We couldn\'t load your profile. This might be a temporary issue with our servers.',
+                  onRetry: () {
+                    setState(() {
+                      // Trigger rebuild to retry profile loading
+                    });
+                  },
+                  onSignIn: () {
+                    _authRepository.signOut();
+                  },
                 );
               }
               
@@ -265,41 +388,9 @@ class _AuthWrapperState extends State<AuthWrapper> {
                 if (kDebugMode) {
                   print('🔐 Loading user profile...');
                 }
-                // Show loading while checking profile
-                return Scaffold(
-                  body: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Add app logo/icon here
-                        Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).primaryColor,
-                            borderRadius: BorderRadius.circular(40),
-                          ),
-                          child: const Icon(
-                            Icons.chat,
-                            size: 40,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        const CircularProgressIndicator(),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Loading profile...',
-                          style: TextStyle(fontSize: 16),
-                        ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Setting up your account',
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                  ),
+                return _buildLoadingScreen(
+                  title: 'Loading profile...',
+                  subtitle: 'Setting up your account',
                 );
               }
               
@@ -308,19 +399,33 @@ class _AuthWrapperState extends State<AuthWrapper> {
                 if (kDebugMode) {
                   print('🔐 Profile is complete, showing home screen');
                 }
-                // Profile is complete, show home
-                return const HomeScreen();
+                // Profile is complete, show home with smooth transition
+                return TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0.0, end: 1.0),
+                  duration: const Duration(milliseconds: 300),
+                  builder: (context, opacity, child) => Opacity(
+                    opacity: opacity,
+                    child: const HomeScreen(),
+                  ),
+                );
               } else {
                 if (kDebugMode) {
                   print('🔐 Profile incomplete or missing, showing profile setup');
                 }
                 // Profile doesn't exist or is incomplete, show profile setup
                 if (profile != null) {
-                  return ProfileSetupScreen(initialProfile: profile);
+                  return TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    duration: const Duration(milliseconds: 300),
+                    builder: (context, opacity, child) => Opacity(
+                      opacity: opacity,
+                      child: ProfileSetupScreen(initialProfile: profile),
+                    ),
+                  );
                 } else {
                   // Create initial profile and show setup
                   return FutureBuilder(
-                    future: userProfileRepository.createInitialProfile(
+                    future: _userProfileRepository.createInitialProfile(
                       uid: user.uid,
                       displayName: user.displayName,
                       email: user.email,
@@ -332,49 +437,22 @@ class _AuthWrapperState extends State<AuthWrapper> {
                         if (kDebugMode) {
                           print('🚨 Profile creation error: ${createSnapshot.error}');
                         }
-                        // Error creating profile, sign out
-                        authRepository.signOut();
-                        return const SignInScreen();
+                        return _buildErrorScreen(
+                          title: 'Profile Creation Error',
+                          message: 'We couldn\'t create your profile. Please try signing in again.',
+                          onRetry: () {
+                            _authRepository.signOut();
+                          },
+                        );
                       }
                       
                       if (createSnapshot.connectionState == ConnectionState.waiting) {
                         if (kDebugMode) {
                           print('🔐 Creating initial profile...');
                         }
-                        return Scaffold(
-                          body: Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                // Add app logo/icon here
-                                Container(
-                                  width: 80,
-                                  height: 80,
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context).primaryColor,
-                                    borderRadius: BorderRadius.circular(40),
-                                  ),
-                                  child: const Icon(
-                                    Icons.chat,
-                                    size: 40,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                const SizedBox(height: 24),
-                                const CircularProgressIndicator(),
-                                const SizedBox(height: 16),
-                                const Text(
-                                  'Setting up profile...',
-                                  style: TextStyle(fontSize: 16),
-                                ),
-                                const SizedBox(height: 8),
-                                const Text(
-                                  'Almost ready!',
-                                  style: TextStyle(fontSize: 12, color: Colors.grey),
-                                ),
-                              ],
-                            ),
-                          ),
+                        return _buildLoadingScreen(
+                          title: 'Setting up profile...',
+                          subtitle: 'Almost ready!',
                         );
                       }
                       
@@ -382,13 +460,20 @@ class _AuthWrapperState extends State<AuthWrapper> {
                         if (kDebugMode) {
                           print('🔐 Initial profile created, showing setup screen');
                         }
-                        return ProfileSetupScreen(initialProfile: createSnapshot.data!);
+                        return TweenAnimationBuilder<double>(
+                          tween: Tween(begin: 0.0, end: 1.0),
+                          duration: const Duration(milliseconds: 300),
+                          builder: (context, opacity, child) => Opacity(
+                            opacity: opacity,
+                            child: ProfileSetupScreen(initialProfile: createSnapshot.data!),
+                          ),
+                        );
                       } else {
                         if (kDebugMode) {
                           print('🚨 Failed to create initial profile, signing out');
                         }
                         // Error creating profile, sign out
-                        authRepository.signOut();
+                        _authRepository.signOut();
                         return const SignInScreen();
                       }
                     },
@@ -403,7 +488,14 @@ class _AuthWrapperState extends State<AuthWrapper> {
         if (kDebugMode) {
           print('🔐 User is not signed in, showing sign in screen');
         }
-        return const SignInScreen();
+        return TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0.0, end: 1.0),
+          duration: const Duration(milliseconds: 300),
+          builder: (context, opacity, child) => Opacity(
+            opacity: opacity,
+            child: const SignInScreen(),
+          ),
+        );
       },
     );
   }
