@@ -163,7 +163,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                 child: Container(
                   width: 40,
                   height: 40,
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: Colors.deepPurple,
                     shape: BoxShape.circle,
                   ),
@@ -258,10 +258,11 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   }
 
   Future<void> _downloadAudio(BuildContext context) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
     try {
       final fileName = widget.fileName ?? 'audio_${DateTime.now().millisecondsSinceEpoch}.mp3';
       
-      ScaffoldMessenger.of(context).showSnackBar(
+      scaffoldMessenger.showSnackBar(
         const SnackBar(
           content: Text('Downloading audio...'),
           backgroundColor: Colors.blue,
@@ -273,14 +274,14 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
       if (!mounted) return;
       
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        scaffoldMessenger.showSnackBar(
           const SnackBar(
             content: Text('Audio downloaded successfully'),
             backgroundColor: Colors.green,
           ),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
+        scaffoldMessenger.showSnackBar(
           const SnackBar(
             content: Text('Failed to download audio'),
             backgroundColor: Colors.red,
@@ -288,13 +289,14 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
         );
       }
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error downloading audio: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text('Error downloading audio: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 

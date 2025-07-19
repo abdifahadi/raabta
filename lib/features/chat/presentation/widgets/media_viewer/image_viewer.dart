@@ -77,8 +77,10 @@ class _ImageViewerState extends State<ImageViewer> {
   }
 
   Future<void> _downloadImage(BuildContext context) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
     try {
-      ScaffoldMessenger.of(context).showSnackBar(
+      
+      scaffoldMessenger.showSnackBar(
         const SnackBar(
           content: Text('Starting download...'),
           backgroundColor: Colors.blue,
@@ -90,14 +92,14 @@ class _ImageViewerState extends State<ImageViewer> {
       if (!mounted) return;
       
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        scaffoldMessenger.showSnackBar(
           const SnackBar(
             content: Text('Image downloaded successfully'),
             backgroundColor: Colors.green,
           ),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
+        scaffoldMessenger.showSnackBar(
           const SnackBar(
             content: Text('Failed to download image'),
             backgroundColor: Colors.red,
@@ -105,48 +107,35 @@ class _ImageViewerState extends State<ImageViewer> {
         );
       }
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error downloading image: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text('Error downloading image: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
   Future<void> _shareImage(BuildContext context) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
     try {
       await Share.share(
         widget.imageUrl,
         subject: widget.fileName != null ? 'Shared Image: ${widget.fileName}' : 'Shared Image',
       );
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error sharing image: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text('Error sharing image: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
-  /// Static method to show image in fullscreen
-  static void show(
-    BuildContext context, {
-    required String imageUrl,
-    String? heroTag,
-    String? fileName,
-  }) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => ImageViewer(
-          imageUrl: imageUrl,
-          heroTag: heroTag,
-          fileName: fileName,
-        ),
-      ),
-    );
-  }
+
 }
