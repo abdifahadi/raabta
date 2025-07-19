@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:raabta/features/auth/domain/auth_repository.dart';
 import 'package:raabta/features/auth/domain/firebase_auth_repository.dart';
 import 'package:raabta/features/auth/domain/user_profile_repository.dart';
+import 'package:raabta/features/auth/domain/firebase_user_profile_repository.dart';
 import 'package:raabta/features/auth/presentation/sign_in_screen.dart';
 import 'package:raabta/features/auth/presentation/profile_setup_screen.dart';
 import 'package:raabta/features/home/presentation/home_screen.dart';
@@ -13,7 +14,9 @@ import 'package:raabta/core/services/service_locator.dart';
 
 /// A wrapper widget that handles authentication state changes
 class AuthWrapper extends StatefulWidget {
-  const AuthWrapper({super.key});
+  final bool servicesInitialized;
+  
+  const AuthWrapper({super.key, this.servicesInitialized = true});
 
   @override
   State<AuthWrapper> createState() => _AuthWrapperState();
@@ -24,6 +27,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
   bool _isRetrying = false;
   bool _isFirstLaunch = true;
   bool _isCheckingFirstLaunch = true;
+  bool _hasInitializationError = false;
+  String _errorMessage = '';
   late final AuthRepository _authRepository;
   late final UserProfileRepository _userProfileRepository;
   
@@ -31,21 +36,49 @@ class _AuthWrapperState extends State<AuthWrapper> {
   void initState() {
     super.initState();
     
-    // Initialize repositories
-    _authRepository = FirebaseAuthRepository();
-    _userProfileRepository = ServiceLocator().userProfileRepository;
-    
-    // Check if this is first launch
-    _checkFirstLaunch();
-    
-    // Reduced timeout for better UX (from 10 seconds to 8 seconds)
-    Future.delayed(const Duration(seconds: 8), () {
-      if (mounted && !_isRetrying) {
-        setState(() {
-          _hasTimeout = true;
-        });
+    _initializeRepositories();
+  }
+
+  /// Initialize repositories with error handling
+  void _initializeRepositories() {
+    try {
+      // Initialize repositories safely
+      _authRepository = FirebaseAuthRepository();
+      
+      // For user profile repository, check if services are initialized
+      if (widget.servicesInitialized && ServiceLocator().isInitialized) {
+        _userProfileRepository = ServiceLocator().userProfileRepository;
+      } else {
+        // Create instance directly if ServiceLocator is not ready
+        _userProfileRepository = FirebaseUserProfileRepository();
+        if (kDebugMode) {
+          print('ℹ️ Creating UserProfileRepository directly due to uninitialized services');
+        }
       }
-    });
+      
+      // Check if this is first launch
+      _checkFirstLaunch();
+      
+      // Reduced timeout for better UX (from 10 seconds to 8 seconds)
+      Future.delayed(const Duration(seconds: 8), () {
+        if (mounted && !_isRetrying) {
+          setState(() {
+            _hasTimeout = true;
+          });
+        }
+      });
+      
+    } catch (e, stackTrace) {
+      if (kDebugMode) {
+        print('🚨 AuthWrapper initialization error: $e');
+        print('🔍 Stack trace: $stackTrace');
+      }
+      
+      setState(() {
+        _hasInitializationError = true;
+        _errorMessage = e.toString();
+      });
+    }
   }
 
   Future<void> _checkFirstLaunch() async {
@@ -119,7 +152,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: backgroundColor != null 
-              ? [backgroundColor, backgroundColor.withValues(alpha: 0.8)]
+              ? [backgroundColor, backgroundColor.withOpacity(0.8)]
               : [const Color(0xFF667eea), const Color(0xFF764ba2)],
           ),
         ),
@@ -138,11 +171,11 @@ class _AuthWrapperState extends State<AuthWrapper> {
                     width: 100,
                     height: 100,
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
+                      color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(50),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
+                          color: Colors.black.withOpacity(0.1),
                           blurRadius: 20,
                           offset: const Offset(0, 10),
                         ),
@@ -202,7 +235,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.white.withValues(alpha: 0.9),
+                      color: Colors.white.withOpacity(0.9),
                       height: 1.4,
                     ),
                   ),
@@ -242,7 +275,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
                     width: 80,
                     height: 80,
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
+                      color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(40),
                     ),
                     child: const Icon(
@@ -271,7 +304,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 15,
-                        color: Colors.white.withValues(alpha: 0.9),
+                        color: Colors.white.withOpacity(0.9),
                         height: 1.5,
                       ),
                     ),
@@ -309,7 +342,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
                             label: const Text('Go to Sign In'),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: Colors.white,
-                              side: BorderSide(color: Colors.white.withValues(alpha: 0.7)),
+                              side: BorderSide(color: Colors.white.withOpacity(0.7)),
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -333,6 +366,24 @@ class _AuthWrapperState extends State<AuthWrapper> {
   Widget build(BuildContext context) {
     if (kDebugMode) {
       print('🔐 Building AuthWrapper');
+    }
+
+    // Show initialization error screen if repositories failed to initialize
+    if (_hasInitializationError) {
+      return _buildErrorScreen(
+        title: 'Initialization Error',
+        message: _errorMessage,
+        onRetry: () {
+          _initializeRepositories(); // Retry initialization
+        },
+        onSignIn: () {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => const SignInScreen(),
+            ),
+          );
+        },
+      );
     }
 
     // Show loading while checking first launch

@@ -26,17 +26,19 @@ void main() async {
     };
 
     // Initialize services with comprehensive error handling
+    bool servicesInitialized = false;
     try {
       if (kDebugMode) {
         print('⚙️ Initializing services...');
       }
       
       await ServiceLocator().initialize();
+      servicesInitialized = true;
       
       if (kDebugMode) {
         print('✅ Services initialized successfully');
-        final firebaseService = ServiceLocator().backendService;
-        if (firebaseService.isInitialized) {
+        final firebaseService = ServiceLocator().backendServiceOrNull;
+        if (firebaseService?.isInitialized == true) {
           print('🔥 Firebase service is ready');
         }
       }
@@ -46,11 +48,11 @@ void main() async {
         print('🔍 Service Stack Trace: $serviceStackTrace');
       }
       
-      // Try to continue with a degraded mode
+      // Continue without fully initialized services - the app can handle this
       LoggingService.warning('⚠️ Running in degraded mode due to service initialization failure');
     }
 
-    runApp(const MyApp());
+    runApp(MyApp(servicesInitialized: servicesInitialized));
     
     if (kDebugMode) {
       print('✅ App started successfully');
@@ -87,7 +89,7 @@ void main() async {
                     width: 100,
                     height: 100,
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
+                      color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(50),
                     ),
                     child: const Icon(
@@ -114,7 +116,7 @@ void main() async {
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.white.withValues(alpha: 0.9),
+                        color: Colors.white.withOpacity(0.9),
                         height: 1.4,
                       ),
                     ),
@@ -125,7 +127,7 @@ void main() async {
                       padding: const EdgeInsets.all(16.0),
                       margin: const EdgeInsets.symmetric(horizontal: 20),
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.3),
+                        color: Colors.black.withOpacity(0.3),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -147,8 +149,8 @@ void main() async {
                           // Try to restart the app
                           if (kIsWeb) {
                             // For web, reload the page
-                            // This would need dart:html import in real implementation
                             LoggingService.info('🔄 Reloading page...');
+                            // Would need dart:html import for window.location.reload()
                           } else {
                             // For mobile, try to restart main
                             main();
@@ -159,45 +161,6 @@ void main() async {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
                           foregroundColor: Colors.red[600],
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 12,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(25),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      OutlinedButton.icon(
-                        onPressed: () {
-                          // Show more details or help
-                          showDialog(
-                            context: MyApp.navigatorKey.currentContext!,
-                            builder: (context) => AlertDialog(
-                              title: const Text('Troubleshooting'),
-                              content: const Text(
-                                'Try these steps:\n\n'
-                                '1. Check your internet connection\n'
-                                '2. Clear browser cache and cookies\n'
-                                '3. Try a different browser\n'
-                                '4. Disable browser extensions\n'
-                                '5. Contact support if issue persists',
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.of(context).pop(),
-                                  child: const Text('OK'),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.help_outline),
-                        label: const Text('Help'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          side: const BorderSide(color: Colors.white),
                           padding: const EdgeInsets.symmetric(
                             horizontal: 24,
                             vertical: 12,
@@ -220,7 +183,9 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final bool servicesInitialized;
+  
+  const MyApp({super.key, this.servicesInitialized = true});
 
   // Global navigator key for error dialogs
   static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -255,15 +220,15 @@ class MyApp extends StatelessWidget {
             ),
           ),
         ),
-        cardTheme: const CardThemeData(
+        cardTheme: const CardTheme(
           elevation: 2,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.all(Radius.circular(12)),
           ),
         ),
       ),
-      home: const SafeArea(
-        child: AuthWrapper(),
+      home: SafeArea(
+        child: AuthWrapper(servicesInitialized: servicesInitialized),
       ),
       // Enhanced error builder for better error handling
       builder: (context, widget) {
@@ -336,7 +301,7 @@ class MyApp extends StatelessWidget {
                         Navigator.of(context).pushReplacement(
                           MaterialPageRoute(
                             builder: (context) => const SafeArea(
-                              child: AuthWrapper(),
+                              child: AuthWrapper(servicesInitialized: true),
                             ),
                           ),
                         );
@@ -345,7 +310,7 @@ class MyApp extends StatelessWidget {
                         Navigator.of(context).pushReplacement(
                           MaterialPageRoute(
                             builder: (context) => const SafeArea(
-                              child: AuthWrapper(),
+                              child: AuthWrapper(servicesInitialized: true),
                             ),
                           ),
                         );
