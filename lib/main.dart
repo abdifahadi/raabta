@@ -255,10 +255,10 @@ class MyApp extends StatelessWidget {
             ),
           ),
         ),
-        cardTheme: CardThemeData(
+        cardTheme: const CardTheme(
           elevation: 2,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.all(Radius.circular(12)),
           ),
         ),
       ),

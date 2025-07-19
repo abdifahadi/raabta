@@ -173,8 +173,10 @@ class _DocumentViewerState extends State<DocumentViewer> {
   }
 
   Future<void> _downloadDocument(BuildContext context) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
     try {
-      ScaffoldMessenger.of(context).showSnackBar(
+      
+      scaffoldMessenger.showSnackBar(
         const SnackBar(
           content: Text('Starting download...'),
           backgroundColor: Colors.blue,
@@ -186,14 +188,14 @@ class _DocumentViewerState extends State<DocumentViewer> {
       if (!mounted) return;
       
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        scaffoldMessenger.showSnackBar(
           const SnackBar(
             content: Text('Document downloaded successfully'),
             backgroundColor: Colors.green,
           ),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
+        scaffoldMessenger.showSnackBar(
           const SnackBar(
             content: Text('Failed to download document'),
             backgroundColor: Colors.red,
@@ -201,13 +203,14 @@ class _DocumentViewerState extends State<DocumentViewer> {
         );
       }
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error downloading document: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text('Error downloading document: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 }

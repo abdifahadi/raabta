@@ -275,10 +275,11 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
   }
 
   Future<void> _downloadVideo(BuildContext context) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
     try {
       final fileName = widget.fileName ?? 'video_${DateTime.now().millisecondsSinceEpoch}.mp4';
       
-      ScaffoldMessenger.of(context).showSnackBar(
+      scaffoldMessenger.showSnackBar(
         const SnackBar(
           content: Text('Downloading video...'),
           backgroundColor: Colors.blue,
@@ -290,14 +291,14 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
       if (!mounted) return;
       
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        scaffoldMessenger.showSnackBar(
           const SnackBar(
             content: Text('Video downloaded successfully'),
             backgroundColor: Colors.green,
           ),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
+        scaffoldMessenger.showSnackBar(
           const SnackBar(
             content: Text('Failed to download video'),
             backgroundColor: Colors.red,
@@ -305,40 +306,16 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
         );
       }
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error downloading video: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text('Error downloading video: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
-  /// Static method to show video in fullscreen
-  static void showFullscreen(
-    BuildContext context, {
-    required String videoUrl,
-    String? fileName,
-  }) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => Scaffold(
-          backgroundColor: Colors.black,
-          appBar: AppBar(
-            backgroundColor: Colors.black87,
-            foregroundColor: Colors.white,
-            title: Text(fileName ?? 'Video'),
-          ),
-          body: Center(
-            child: VideoPlayerWidget(
-              videoUrl: videoUrl,
-              fileName: fileName,
-              autoPlay: true,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+
 }

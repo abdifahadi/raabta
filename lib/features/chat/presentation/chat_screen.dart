@@ -328,7 +328,7 @@ class _ChatScreenState extends State<ChatScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               color: Colors.blue.withOpacity(0.1),
-              child: Row(
+              child: const Row(
                 children: [
                   SizedBox(
                     width: 20,
