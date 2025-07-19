@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/services/download_service.dart';
 
 class DocumentViewer extends StatelessWidget {
   final String documentUrl;
@@ -236,14 +237,42 @@ class DocumentViewer extends StatelessWidget {
     );
   }
 
-  void _downloadDocument(BuildContext context) {
-    // TODO: Implement document download functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Download functionality will be implemented'),
-        backgroundColor: Colors.blue,
-      ),
-    );
+  Future<void> _downloadDocument(BuildContext context) async {
+    try {
+      final fileName = this.fileName ?? 'document_${DateTime.now().millisecondsSinceEpoch}.pdf';
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Downloading document...'),
+          backgroundColor: Colors.blue,
+        ),
+      );
+
+      final success = await DownloadService().downloadFile(documentUrl, fileName);
+      
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Document downloaded successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to download document'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error downloading document: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   /// Static method to show document viewer in fullscreen

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:share_plus/share_plus.dart';
+import '../../../../core/services/download_service.dart';
 
 class ImageViewer extends StatelessWidget {
   final String imageUrl;
@@ -92,24 +94,58 @@ class ImageViewer extends StatelessWidget {
     );
   }
 
-  void _downloadImage(BuildContext context) {
-    // TODO: Implement image download functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Download functionality will be implemented'),
-        backgroundColor: Colors.blue,
-      ),
-    );
+  Future<void> _downloadImage(BuildContext context) async {
+    try {
+      final fileName = this.fileName ?? 'image_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Downloading image...'),
+          backgroundColor: Colors.blue,
+        ),
+      );
+
+      final success = await DownloadService().downloadFile(imageUrl, fileName);
+      
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Image downloaded successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to download image'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error downloading image: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
-  void _shareImage(BuildContext context) {
-    // TODO: Implement image sharing functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Share functionality will be implemented'),
-        backgroundColor: Colors.green,
-      ),
-    );
+  Future<void> _shareImage(BuildContext context) async {
+    try {
+      await Share.share(
+        imageUrl,
+        subject: fileName != null ? 'Shared Image: $fileName' : 'Shared Image',
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error sharing image: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   /// Static method to show image viewer

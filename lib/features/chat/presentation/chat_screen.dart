@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:raabta/features/auth/domain/models/user_profile_model.dart';
 import 'package:raabta/features/auth/domain/auth_repository.dart';
@@ -32,10 +33,12 @@ class _ChatScreenState extends State<ChatScreen> {
   
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final FocusNode _textFocusNode = FocusNode();
   
   bool _isLoading = false;
   bool _isSendingMedia = false;
   String? _currentUserId;
+  MessageModel? _replyingTo;
 
   @override
   void initState() {
@@ -48,6 +51,7 @@ class _ChatScreenState extends State<ChatScreen> {
   void dispose() {
     _messageController.dispose();
     _scrollController.dispose();
+    _textFocusNode.dispose();
     super.dispose();
   }
 
@@ -70,9 +74,11 @@ class _ChatScreenState extends State<ChatScreen> {
 
     // Clear input immediately for better UX
     _messageController.clear();
-
+    final replyingToMessage = _replyingTo;
+    
     setState(() {
       _isLoading = true;
+      _replyingTo = null; // Clear reply after sending
     });
 
     try {
@@ -82,6 +88,7 @@ class _ChatScreenState extends State<ChatScreen> {
         receiverId: widget.otherUser.uid,
         content: messageText,
         messageType: MessageType.text,
+        replyToMessageId: replyingToMessage?.id,
       );
 
       // Scroll to bottom after sending
@@ -211,7 +218,6 @@ class _ChatScreenState extends State<ChatScreen> {
               title: const Text('Edit'),
               onTap: () {
                 Navigator.of(context).pop();
-                // TODO: Implement edit functionality
                 _showEditDialog(message);
               },
             ),
@@ -230,7 +236,6 @@ class _ChatScreenState extends State<ChatScreen> {
             title: const Text('Reply'),
             onTap: () {
               Navigator.of(context).pop();
-              // TODO: Implement reply functionality
               _replyToMessage(message);
             },
           ),
@@ -240,7 +245,6 @@ class _ChatScreenState extends State<ChatScreen> {
             title: const Text('Forward'),
             onTap: () {
               Navigator.of(context).pop();
-              // TODO: Implement forward functionality
               _forwardMessage(message);
             },
           ),
@@ -250,7 +254,6 @@ class _ChatScreenState extends State<ChatScreen> {
             title: const Text('Copy'),
             onTap: () {
               Navigator.of(context).pop();
-              // TODO: Implement copy functionality
               _copyMessage(message);
             },
           ),
@@ -508,12 +511,6 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Widget _buildMessageInput() {
     return Container(
-      padding: EdgeInsets.only(
-        left: 16,
-        right: 16,
-        top: 16,
-        bottom: MediaQuery.of(context).padding.bottom + 16,
-      ),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
@@ -524,7 +521,21 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Reply preview
+          if (_replyingTo != null) _buildReplyPreview(),
+          
+          // Message input
+          Container(
+            padding: EdgeInsets.only(
+              left: 16,
+              right: 16,
+              top: 16,
+              bottom: MediaQuery.of(context).padding.bottom + 16,
+            ),
+            child: Row(
         children: [
           // Media picker button
           IconButton(
@@ -542,8 +553,9 @@ class _ChatScreenState extends State<ChatScreen> {
           Expanded(
             child: TextField(
               controller: _messageController,
+              focusNode: _textFocusNode,
               decoration: InputDecoration(
-                hintText: 'Type a message...',
+                hintText: _replyingTo != null ? 'Reply to message...' : 'Type a message...',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),
                   borderSide: BorderSide.none,
@@ -590,57 +602,255 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
         ],
       ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReplyPreview() {
+    if (_replyingTo == null) return const SizedBox.shrink();
+    
+    return Container(
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(8),
+        border: Border(
+          left: BorderSide(color: Colors.deepPurple, width: 3),
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Replying to ${_replyingTo!.senderName ?? 'Unknown'}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.deepPurple,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _replyingTo!.text ?? 'Media message',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: () {
+              setState(() {
+                _replyingTo = null;
+              });
+            },
+            icon: const Icon(Icons.close, size: 20),
+            color: Colors.grey[600],
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          ),
+        ],
+      ),
     );
   }
 
   // Placeholder methods for future implementation
   void _showEditDialog(MessageModel message) {
-    // TODO: Implement edit message functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Edit message functionality will be implemented'),
-        backgroundColor: Colors.blue,
-      ),
+    if (message.text == null || message.text!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Only text messages can be edited'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    final TextEditingController editController = TextEditingController(text: message.text);
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Edit Message'),
+          content: TextField(
+            controller: editController,
+            maxLines: null,
+            decoration: const InputDecoration(
+              hintText: 'Enter your message...',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final newText = editController.text.trim();
+                if (newText.isNotEmpty && newText != message.text) {
+                  try {
+                    final updatedMessage = message.copyWith(
+                      text: newText,
+                      isEdited: true,
+                    );
+                    
+                    await _chatRepository.updateMessage(updatedMessage);
+                    
+                    if (mounted) {
+                      Navigator.of(context).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Message updated successfully'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Failed to update message: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                } else {
+                  Navigator.of(context).pop();
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
     );
   }
 
   void _deleteMessage(MessageModel message) {
-    // TODO: Implement delete message functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Delete message functionality will be implemented'),
-        backgroundColor: Colors.red,
-      ),
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete Message'),
+          content: const Text('Are you sure you want to delete this message? This action cannot be undone.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                try {
+                  await _chatRepository.deleteMessage(message.id);
+                  
+                  if (mounted) {
+                    Navigator.of(context).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Message deleted successfully'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    Navigator.of(context).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed to delete message: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
     );
   }
 
   void _replyToMessage(MessageModel message) {
-    // TODO: Implement reply to message functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Reply functionality will be implemented'),
-        backgroundColor: Colors.green,
-      ),
-    );
+    setState(() {
+      _replyingTo = message;
+    });
+    
+    // Focus on the text input
+    _textFocusNode.requestFocus();
   }
 
   void _forwardMessage(MessageModel message) {
-    // TODO: Implement forward message functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Forward message functionality will be implemented'),
-        backgroundColor: Colors.orange,
-      ),
+    // For now, show a dialog indicating forward functionality
+    // In a real app, this would show a list of contacts/chats to forward to
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Forward Message'),
+          content: const Text('Forward functionality is not yet implemented. This would typically show a list of contacts or chats to forward the message to.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
     );
   }
 
-  void _copyMessage(MessageModel message) {
-    // TODO: Implement copy message functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Copy message functionality will be implemented'),
-        backgroundColor: Colors.grey,
-      ),
-    );
+  Future<void> _copyMessage(MessageModel message) async {
+    try {
+      String textToCopy = '';
+      
+      if (message.text != null && message.text!.isNotEmpty) {
+        textToCopy = message.text!;
+      } else if (message.mediaUrl != null) {
+        textToCopy = message.mediaUrl!;
+      } else {
+        textToCopy = 'Message content';
+      }
+      
+      await Clipboard.setData(ClipboardData(text: textToCopy));
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Message copied to clipboard'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to copy message: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }

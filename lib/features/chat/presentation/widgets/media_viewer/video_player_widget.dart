@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
+import '../../../../core/services/download_service.dart';
 
 class VideoPlayerWidget extends StatefulWidget {
   final String videoUrl;
@@ -273,18 +274,45 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     );
   }
 
-  void _downloadVideo(BuildContext context) {
-    // TODO: Implement video download functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Download functionality will be implemented'),
-        backgroundColor: Colors.blue,
-      ),
-    );
+  Future<void> _downloadVideo(BuildContext context) async {
+    try {
+      final fileName = widget.fileName ?? 'video_${DateTime.now().millisecondsSinceEpoch}.mp4';
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Downloading video...'),
+          backgroundColor: Colors.blue,
+        ),
+      );
+
+      final success = await DownloadService().downloadFile(widget.videoUrl, fileName);
+      
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Video downloaded successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to download video'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error downloading video: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   /// Static method to show video in fullscreen
-  // ignore: unused_element
   static void showFullscreen(
     BuildContext context, {
     required String videoUrl,
