@@ -32,41 +32,16 @@
   <title>Raabta</title>
   <link rel="manifest" href="manifest.json">
 
-  <script>
-    // The value below is injected by flutter build, do not touch.
-    const serviceWorkerVersion = null;
-  </script>
   <!-- This script adds the flutter initialization JS code -->
   <script src="flutter.js" defer></script>
 </head>
 <body>
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js"></script>
-  
-  <script>
-    // Firebase configuration
-    const firebaseConfig = {
-      apiKey: "AIzaSyAfaX4V-FvnvyYJTBuI3PBVgIOy83O7Ehc",
-      authDomain: "abdifahadi-raabta.firebaseapp.com",
-      projectId: "abdifahadi-raabta",
-      storageBucket: "abdifahadi-raabta.firebasestorage.app",
-      messagingSenderId: "507820378047",
-      appId: "1:507820378047:web:a78393966656f46391c30a",
-      measurementId: "G-W8DF9B0CB8"
-    };
-    
-    // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
-  </script>
-  
   <script>
     window.addEventListener('load', function(ev) {
       // Download main.dart.js
-      _flutter.loader.loadEntrypoint({
-        serviceWorker: {
-          serviceWorkerVersion: serviceWorkerVersion,
+      _flutter.loader.load({
+        serviceWorkerSettings: {
+          serviceWorkerVersion: {{flutter_service_worker_version}},
         },
         onEntrypointLoaded: function(engineInitializer) {
           engineInitializer.initializeEngine().then(function(appRunner) {
