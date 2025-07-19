@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
-import '../../../core/services/media_picker_service.dart';
+import '../../../../core/services/media_picker_service.dart';
 
 class MediaPickerBottomSheet extends StatelessWidget {
   final Function(PickedMediaFile) onMediaSelected;
@@ -138,9 +138,9 @@ class MediaPickerBottomSheet extends StatelessWidget {
             width: 60,
             height: 60,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: color.withOpacity(0.3)),
+              border: Border.all(color: color.withValues(alpha: 0.3)),
             ),
             child: Icon(
               icon,
@@ -171,11 +171,15 @@ class MediaPickerBottomSheet extends StatelessWidget {
       );
       
       if (pickedFile != null) {
-        Navigator.of(context).pop();
+        if (context.mounted) {
+          Navigator.of(context).pop();
+        }
         onMediaSelected(pickedFile);
       }
     } catch (e) {
-      _showError(context, 'Failed to pick from camera: ${e.toString()}');
+      if (context.mounted) {
+        _showError(context, 'Failed to pick from camera: ${e.toString()}');
+      }
     }
   }
 
@@ -188,11 +192,15 @@ class MediaPickerBottomSheet extends StatelessWidget {
       );
       
       if (pickedFile != null) {
-        Navigator.of(context).pop();
+        if (context.mounted) {
+          Navigator.of(context).pop();
+        }
         onMediaSelected(pickedFile);
       }
     } catch (e) {
-      _showError(context, 'Failed to pick from gallery: ${e.toString()}');
+      if (context.mounted) {
+        _showError(context, 'Failed to pick from gallery: ${e.toString()}');
+      }
     }
   }
 

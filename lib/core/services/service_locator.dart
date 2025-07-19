@@ -36,7 +36,7 @@ class ServiceLocator {
   late ChatRepository _chatRepository;
 
   /// Storage repository instance
-  late StorageRepository _storageRepository;
+  late FirebaseStorageRepository _storageRepository;
 
   /// Media picker service instance
   late MediaPickerService _mediaPickerService;
