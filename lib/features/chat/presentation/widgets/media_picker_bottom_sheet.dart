@@ -212,12 +212,14 @@ class MediaPickerBottomSheet extends StatelessWidget {
         maxDuration: const Duration(minutes: 10), // 10 minute limit
       );
       
-      if (pickedFile != null) {
+      if (pickedFile != null && context.mounted) {
         Navigator.of(context).pop();
         onMediaSelected(pickedFile);
       }
     } catch (e) {
-      _showError(context, 'Failed to pick video: ${e.toString()}');
+      if (context.mounted) {
+        _showError(context, 'Failed to pick video: ${e.toString()}');
+      }
     }
   }
 
@@ -229,12 +231,14 @@ class MediaPickerBottomSheet extends StatelessWidget {
         type: FileType.custom,
       );
       
-      if (pickedFile != null) {
+      if (pickedFile != null && context.mounted) {
         Navigator.of(context).pop();
         onMediaSelected(pickedFile);
       }
     } catch (e) {
-      _showError(context, 'Failed to pick document: ${e.toString()}');
+      if (context.mounted) {
+        _showError(context, 'Failed to pick document: ${e.toString()}');
+      }
     }
   }
 
@@ -246,12 +250,14 @@ class MediaPickerBottomSheet extends StatelessWidget {
         type: FileType.custom,
       );
       
-      if (pickedFile != null) {
+      if (pickedFile != null && context.mounted) {
         Navigator.of(context).pop();
         onMediaSelected(pickedFile);
       }
     } catch (e) {
-      _showError(context, 'Failed to pick audio: ${e.toString()}');
+      if (context.mounted) {
+        _showError(context, 'Failed to pick audio: ${e.toString()}');
+      }
     }
   }
 
@@ -262,12 +268,14 @@ class MediaPickerBottomSheet extends StatelessWidget {
         type: FileType.any,
       );
       
-      if (pickedFile != null) {
+      if (pickedFile != null && context.mounted) {
         Navigator.of(context).pop();
         onMediaSelected(pickedFile);
       }
     } catch (e) {
-      _showError(context, 'Failed to pick file: ${e.toString()}');
+      if (context.mounted) {
+        _showError(context, 'Failed to pick file: ${e.toString()}');
+      }
     }
   }
 

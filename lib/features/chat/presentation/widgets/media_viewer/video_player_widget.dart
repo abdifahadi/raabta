@@ -284,6 +284,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
   }
 
   /// Static method to show video in fullscreen
+  // ignore: unused_element
   static void showFullscreen(
     BuildContext context, {
     required String videoUrl,
