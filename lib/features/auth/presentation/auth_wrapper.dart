@@ -10,13 +10,91 @@ import 'package:raabta/features/home/presentation/home_screen.dart';
 import 'package:raabta/core/services/service_locator.dart';
 
 /// A wrapper widget that handles authentication state changes
-class AuthWrapper extends StatelessWidget {
+class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
+
+  @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
+  bool _hasTimeout = false;
+  
+  @override
+  void initState() {
+    super.initState();
+    // Add a timeout to prevent infinite loading
+    Future.delayed(const Duration(seconds: 10), () {
+      if (mounted) {
+        setState(() {
+          _hasTimeout = true;
+        });
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     if (kDebugMode) {
       print('🔐 Building AuthWrapper');
+    }
+
+    // Show timeout message if loading takes too long
+    if (_hasTimeout) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.timer_off,
+                size: 64,
+                color: Colors.orange,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Loading is taking longer than expected',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Please check your internet connection and try again.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    _hasTimeout = false;
+                  });
+                  // Try again
+                  Future.delayed(const Duration(seconds: 10), () {
+                    if (mounted) {
+                      setState(() {
+                        _hasTimeout = true;
+                      });
+                    }
+                  });
+                },
+                child: const Text('Try Again'),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () {
+                  // Force go to sign in screen
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(
+                      builder: (context) => const SignInScreen(),
+                    ),
+                  );
+                },
+                child: const Text('Go to Sign In'),
+              ),
+            ],
+          ),
+        ),
+      );
     }
 
     final AuthRepository authRepository = FirebaseAuthRepository();
@@ -50,10 +128,13 @@ class AuthWrapper extends StatelessWidget {
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    'Error: ${snapshot.error}',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 14),
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(
+                      'Error: ${snapshot.error}',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 14),
+                    ),
                   ),
                   const SizedBox(height: 16),
                   ElevatedButton(
@@ -62,6 +143,18 @@ class AuthWrapper extends StatelessWidget {
                       authRepository.signOut();
                     },
                     child: const Text('Try Again'),
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: () {
+                      // Force go to sign in screen
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(
+                          builder: (context) => const SignInScreen(),
+                        ),
+                      );
+                    },
+                    child: const Text('Go to Sign In'),
                   ),
                 ],
               ),
@@ -74,14 +167,37 @@ class AuthWrapper extends StatelessWidget {
           if (kDebugMode) {
             print('🔐 Waiting for auth state...');
           }
-          return const Scaffold(
+          return Scaffold(
             body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Loading...'),
+                  // Add app logo/icon here
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).primaryColor,
+                      borderRadius: BorderRadius.circular(40),
+                    ),
+                    child: const Icon(
+                      Icons.chat,
+                      size: 40,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Loading Raabta...',
+                    style: TextStyle(fontSize: 16),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Please wait while we set things up',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
                 ],
               ),
             ),
@@ -124,10 +240,13 @@ class AuthWrapper extends StatelessWidget {
                           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 8),
-                        Text(
-                          'Error: ${profileSnapshot.error}',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 14),
+                        Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Text(
+                            'Error: ${profileSnapshot.error}',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 14),
+                          ),
                         ),
                         const SizedBox(height: 16),
                         ElevatedButton(
@@ -147,14 +266,37 @@ class AuthWrapper extends StatelessWidget {
                   print('🔐 Loading user profile...');
                 }
                 // Show loading while checking profile
-                return const Scaffold(
+                return Scaffold(
                   body: Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        CircularProgressIndicator(),
-                        SizedBox(height: 16),
-                        Text('Loading profile...'),
+                        // Add app logo/icon here
+                        Container(
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).primaryColor,
+                            borderRadius: BorderRadius.circular(40),
+                          ),
+                          child: const Icon(
+                            Icons.chat,
+                            size: 40,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        const CircularProgressIndicator(),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Loading profile...',
+                          style: TextStyle(fontSize: 16),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Setting up your account',
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
                       ],
                     ),
                   ),
@@ -199,14 +341,37 @@ class AuthWrapper extends StatelessWidget {
                         if (kDebugMode) {
                           print('🔐 Creating initial profile...');
                         }
-                        return const Scaffold(
+                        return Scaffold(
                           body: Center(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                CircularProgressIndicator(),
-                                SizedBox(height: 16),
-                                Text('Setting up profile...'),
+                                // Add app logo/icon here
+                                Container(
+                                  width: 80,
+                                  height: 80,
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).primaryColor,
+                                    borderRadius: BorderRadius.circular(40),
+                                  ),
+                                  child: const Icon(
+                                    Icons.chat,
+                                    size: 40,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+                                const CircularProgressIndicator(),
+                                const SizedBox(height: 16),
+                                const Text(
+                                  'Setting up profile...',
+                                  style: TextStyle(fontSize: 16),
+                                ),
+                                const SizedBox(height: 8),
+                                const Text(
+                                  'Almost ready!',
+                                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                                ),
                               ],
                             ),
                           ),

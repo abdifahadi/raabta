@@ -41,6 +41,7 @@ void main() async {
     // Still try to run the app with a fallback UI
     runApp(
       MaterialApp(
+        title: 'Raabta - Error',
         home: Scaffold(
           body: Center(
             child: Column(
@@ -57,10 +58,13 @@ void main() async {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  'Error: $e',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 14),
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text(
+                    'Error: $e',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 14),
+                  ),
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton(
@@ -100,6 +104,7 @@ class MyApp extends StatelessWidget {
       ),
       // Add error builder for better error handling
       builder: (context, widget) {
+        // Handle widget errors gracefully
         ErrorWidget.builder = (FlutterErrorDetails errorDetails) {
           if (kDebugMode) {
             print('🚨 Widget Error: ${errorDetails.exception}');
