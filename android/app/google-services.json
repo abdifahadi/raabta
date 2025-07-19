@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "507820378047",
+    "project_id": "abdifahadi-raabta",
+    "storage_bucket": "abdifahadi-raabta.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:507820378047:android:a4f93cac4c6b024491c30a",
+        "android_client_info": {
+          "package_name": "com.abdifahadi.raabta"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "507820378047-rdh09700ie2mqv9k8v912si4eifja4pu.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.abdifahadi.raabta",
+            "certificate_hash": "d28d37cc4c7f55f7dbac7db584b86768133342d5"
+          }
+        },
+        {
+          "client_id": "507820378047-02jr0foca833j7d7n43ds8iedu3j38n5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDg5RQb6HY0dBOtYGKsy_uWsvnCCrEObdo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "507820378047-02jr0foca833j7d7n43ds8iedu3j38n5.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
