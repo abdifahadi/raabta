@@ -119,7 +119,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: backgroundColor != null 
-              ? [backgroundColor, backgroundColor.withOpacity(0.8)]
+              ? [backgroundColor, backgroundColor.withValues(alpha: 0.8)]
               : [const Color(0xFF667eea), const Color(0xFF764ba2)],
           ),
         ),
@@ -138,11 +138,11 @@ class _AuthWrapperState extends State<AuthWrapper> {
                     width: 100,
                     height: 100,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(50),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withValues(alpha: 0.1),
                           blurRadius: 20,
                           offset: const Offset(0, 10),
                         ),
@@ -202,7 +202,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withValues(alpha: 0.9),
                       height: 1.4,
                     ),
                   ),
@@ -242,7 +242,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
                     width: 80,
                     height: 80,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(40),
                     ),
                     child: const Icon(
@@ -271,7 +271,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 15,
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withValues(alpha: 0.9),
                         height: 1.5,
                       ),
                     ),
@@ -309,7 +309,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
                             label: const Text('Go to Sign In'),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: Colors.white,
-                              side: BorderSide(color: Colors.white.withOpacity(0.7)),
+                              side: BorderSide(color: Colors.white.withValues(alpha: 0.7)),
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
