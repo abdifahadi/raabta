@@ -169,7 +169,6 @@ class FirebaseStorageRepository implements StorageRepository {
     required String fileName,
   }) {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final extension = fileName.split('.').last;
     return 'chat_media/$conversationId/$messageId/${timestamp}_$fileName';
   }
 

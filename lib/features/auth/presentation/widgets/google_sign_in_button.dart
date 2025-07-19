@@ -19,7 +19,6 @@ class _GoogleSignInButtonState extends State<GoogleSignInButton>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
-  bool _isPressed = false;
 
   @override
   void initState() {
