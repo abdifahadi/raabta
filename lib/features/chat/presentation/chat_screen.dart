@@ -617,7 +617,7 @@ class _ChatScreenState extends State<ChatScreen> {
       decoration: BoxDecoration(
         color: Colors.grey[100],
         borderRadius: BorderRadius.circular(8),
-        border: Border(
+        border: const Border(
           left: BorderSide(color: Colors.deepPurple, width: 3),
         ),
       ),
@@ -629,7 +629,7 @@ class _ChatScreenState extends State<ChatScreen> {
               children: [
                 Text(
                   'Replying to ${_replyingTo!.senderId == _currentUserId ? 'You' : widget.otherUser.name}',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                     color: Colors.deepPurple,
@@ -638,9 +638,9 @@ class _ChatScreenState extends State<ChatScreen> {
                 const SizedBox(height: 4),
                 Text(
                   _replyingTo!.content.isNotEmpty ? _replyingTo!.content : 'Media message',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
