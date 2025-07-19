@@ -6,9 +6,9 @@ class WebDownloadService {
   static void downloadFile(Uint8List bytes, String fileName) {
     final blob = html.Blob([bytes]);
     final url = html.Url.createObjectUrlFromBlob(blob);
-    final anchor = html.AnchorElement(href: url)
-      ..setAttribute("download", fileName)
-      ..click();
+    final anchor = html.AnchorElement(href: url);
+    anchor.setAttribute("download", fileName);
+    anchor.click();
     html.Url.revokeObjectUrl(url);
   }
 }

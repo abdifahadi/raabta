@@ -328,15 +328,15 @@ class _ChatScreenState extends State<ChatScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               color: Colors.blue.withOpacity(0.1),
-              child: Row(
+              child: const Row(
                 children: [
-                  SizedBox(
+                  const SizedBox(
                     width: 20,
                     height: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   ),
-                  SizedBox(width: 12),
-                  Text(
+                  const SizedBox(width: 12),
+                  const Text(
                     'Sending media...',
                     style: TextStyle(color: Colors.blue),
                   ),
@@ -536,7 +536,7 @@ class _ChatScreenState extends State<ChatScreen> {
               bottom: MediaQuery.of(context).padding.bottom + 16,
             ),
             child: Row(
-              children: [
+        children: [
           // Media picker button
           IconButton(
             onPressed: _isSendingMedia ? null : _showMediaPicker,
@@ -579,7 +579,7 @@ class _ChatScreenState extends State<ChatScreen> {
           
           // Send button
           Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: Colors.deepPurple,
               shape: BoxShape.circle,
             ),
@@ -598,9 +598,6 @@ class _ChatScreenState extends State<ChatScreen> {
                       Icons.send,
                       color: Colors.white,
                     ),
-            ),
-          ),
-              ],
             ),
           ),
         ],
