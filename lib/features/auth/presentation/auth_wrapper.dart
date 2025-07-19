@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:raabta/features/auth/domain/auth_repository.dart';
 import 'package:raabta/features/auth/domain/firebase_auth_repository.dart';
 import 'package:raabta/features/auth/domain/user_profile_repository.dart';
@@ -10,45 +11,174 @@ import 'package:raabta/core/services/service_locator.dart';
 
 /// A wrapper widget that handles authentication state changes
 class AuthWrapper extends StatelessWidget {
-  final AuthRepository _authRepository = FirebaseAuthRepository();
-  final UserProfileRepository _userProfileRepository = ServiceLocator().userProfileRepository;
-
-  AuthWrapper({super.key});
+  const AuthWrapper({super.key});
 
   @override
   Widget build(BuildContext context) {
+    if (kDebugMode) {
+      print('🔐 Building AuthWrapper');
+    }
+
+    final AuthRepository authRepository = FirebaseAuthRepository();
+    final UserProfileRepository userProfileRepository = ServiceLocator().userProfileRepository;
+
     return StreamBuilder<User?>(
-      stream: _authRepository.authStateChanges,
+      stream: authRepository.authStateChanges,
       builder: (context, snapshot) {
+        if (kDebugMode) {
+          print('🔐 Auth state change: ${snapshot.connectionState}, hasData: ${snapshot.hasData}, data: ${snapshot.data}');
+        }
+
+        // Handle errors
+        if (snapshot.hasError) {
+          if (kDebugMode) {
+            print('🚨 Auth stream error: ${snapshot.error}');
+          }
+          return Scaffold(
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: Colors.red,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Authentication Error',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Error: ${snapshot.error}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      // Try to sign out and restart auth
+                      authRepository.signOut();
+                    },
+                    child: const Text('Try Again'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        // Show loading while waiting for auth state
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          if (kDebugMode) {
+            print('🔐 Waiting for auth state...');
+          }
+          return const Scaffold(
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Loading...'),
+                ],
+              ),
+            ),
+          );
+        }
+
         // If the snapshot has user data, then the user is signed in
         if (snapshot.hasData && snapshot.data != null) {
           final user = snapshot.data!;
           
+          if (kDebugMode) {
+            print('🔐 User is signed in: ${user.uid}');
+          }
+          
           // Check if user profile exists and is complete
           return FutureBuilder(
-            future: _userProfileRepository.getUserProfile(user.uid),
+            future: userProfileRepository.getUserProfile(user.uid),
             builder: (context, profileSnapshot) {
+              if (kDebugMode) {
+                print('🔐 Profile check: ${profileSnapshot.connectionState}, hasData: ${profileSnapshot.hasData}');
+              }
+
+              if (profileSnapshot.hasError) {
+                if (kDebugMode) {
+                  print('🚨 Profile fetch error: ${profileSnapshot.error}');
+                }
+                return Scaffold(
+                  body: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.error_outline,
+                          size: 64,
+                          color: Colors.red,
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Profile Loading Error',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Error: ${profileSnapshot.error}',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () {
+                            authRepository.signOut();
+                          },
+                          child: const Text('Sign Out'),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+              
               if (profileSnapshot.connectionState == ConnectionState.waiting) {
+                if (kDebugMode) {
+                  print('🔐 Loading user profile...');
+                }
                 // Show loading while checking profile
                 return const Scaffold(
                   body: Center(
-                    child: CircularProgressIndicator(),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(height: 16),
+                        Text('Loading profile...'),
+                      ],
+                    ),
                   ),
                 );
               }
               
               final profile = profileSnapshot.data;
               if (profile != null && profile.isProfileComplete) {
+                if (kDebugMode) {
+                  print('🔐 Profile is complete, showing home screen');
+                }
                 // Profile is complete, show home
                 return const HomeScreen();
               } else {
+                if (kDebugMode) {
+                  print('🔐 Profile incomplete or missing, showing profile setup');
+                }
                 // Profile doesn't exist or is incomplete, show profile setup
                 if (profile != null) {
                   return ProfileSetupScreen(initialProfile: profile);
                 } else {
                   // Create initial profile and show setup
                   return FutureBuilder(
-                    future: _userProfileRepository.createInitialProfile(
+                    future: userProfileRepository.createInitialProfile(
                       uid: user.uid,
                       displayName: user.displayName,
                       email: user.email,
@@ -56,19 +186,44 @@ class AuthWrapper extends StatelessWidget {
                       createdAt: user.metadata.creationTime,
                     ),
                     builder: (context, createSnapshot) {
+                      if (createSnapshot.hasError) {
+                        if (kDebugMode) {
+                          print('🚨 Profile creation error: ${createSnapshot.error}');
+                        }
+                        // Error creating profile, sign out
+                        authRepository.signOut();
+                        return const SignInScreen();
+                      }
+                      
                       if (createSnapshot.connectionState == ConnectionState.waiting) {
+                        if (kDebugMode) {
+                          print('🔐 Creating initial profile...');
+                        }
                         return const Scaffold(
                           body: Center(
-                            child: CircularProgressIndicator(),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                CircularProgressIndicator(),
+                                SizedBox(height: 16),
+                                Text('Setting up profile...'),
+                              ],
+                            ),
                           ),
                         );
                       }
                       
                       if (createSnapshot.hasData) {
+                        if (kDebugMode) {
+                          print('🔐 Initial profile created, showing setup screen');
+                        }
                         return ProfileSetupScreen(initialProfile: createSnapshot.data!);
                       } else {
+                        if (kDebugMode) {
+                          print('🚨 Failed to create initial profile, signing out');
+                        }
                         // Error creating profile, sign out
-                        _authRepository.signOut();
+                        authRepository.signOut();
                         return const SignInScreen();
                       }
                     },
@@ -80,6 +235,9 @@ class AuthWrapper extends StatelessWidget {
         }
 
         // Otherwise, the user is not signed in
+        if (kDebugMode) {
+          print('🔐 User is not signed in, showing sign in screen');
+        }
         return const SignInScreen();
       },
     );
