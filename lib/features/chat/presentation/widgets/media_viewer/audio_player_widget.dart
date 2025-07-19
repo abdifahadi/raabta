@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 // import 'package:audioplayers/audioplayers.dart';  // Temporarily disabled for web compatibility
 import '../../../../../core/services/download_service.dart';
+import '../../../../../core/services/logging_service.dart';
 
 class AudioPlayerWidget extends StatefulWidget {
   final String audioUrl;
@@ -40,7 +41,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.deepPurple.withOpacity(0.1),
+                  color: Colors.deepPurple.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(
@@ -85,7 +86,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.blue.withOpacity(0.1),
+              color: Colors.blue.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Column(
@@ -123,7 +124,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                         label: const Text('Open', style: TextStyle(fontSize: 12)),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 8),
-                          side: BorderSide(color: Colors.deepPurple),
+                          side: const BorderSide(color: Colors.deepPurple),
                           foregroundColor: Colors.deepPurple,
                         ),
                       ),
@@ -170,7 +171,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
       // Use html package for web or url_launcher for other platforms
       final uri = Uri.parse(widget.audioUrl);
       // In a real implementation, you'd use url_launcher here
-      print('Opening audio in new tab: ${uri.toString()}');
+      LoggingService.info('Opening audio in new tab: ${uri.toString()}');
       
       // Fallback: Show snackbar with URL
       ScaffoldMessenger.of(context).showSnackBar(
@@ -202,7 +203,8 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
         _isDownloading = true;
       });
 
-      final success = await DownloadService.downloadFile(
+      final downloadService = DownloadService();
+      final success = await downloadService.downloadFile(
         widget.audioUrl,
         widget.fileName ?? 'audio_file.mp3',
       );
