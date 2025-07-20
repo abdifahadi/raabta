@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'core/services/service_locator.dart';
 import 'core/services/logging_service.dart';
+import 'core/services/notification_service.dart';
+import 'core/services/notification_handler.dart';
 import 'features/auth/presentation/auth_wrapper.dart';
 
 void main() async {
   // Add error handling and logging
   try {
     WidgetsFlutterBinding.ensureInitialized();
+    
+    // Set up FCM background message handler
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
     
     if (kDebugMode) {
       print('🚀 Starting Raabta app...');
@@ -195,6 +201,9 @@ class MyApp extends StatelessWidget {
     if (kDebugMode) {
       print('🏗️ Building MyApp widget');
     }
+    
+    // Initialize notification handler with navigator key
+    NotificationHandler().initialize(navigatorKey);
     
     return MaterialApp(
       navigatorKey: navigatorKey,
