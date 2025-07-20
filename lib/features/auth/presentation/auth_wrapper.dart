@@ -18,39 +18,22 @@ import 'package:raabta/features/call/presentation/widgets/call_manager.dart';
 
 /// A wrapper widget that handles authentication state changes
 class AuthWrapper extends StatefulWidget {
-  final bool servicesInitialized;
-  
-  const AuthWrapper({super.key, this.servicesInitialized = true});
+  const AuthWrapper({super.key});
 
   @override
   State<AuthWrapper> createState() => _AuthWrapperState();
 }
 
 class _AuthWrapperState extends State<AuthWrapper> {
-  bool _hasTimeout = false;
-  bool _isRetrying = false;
   bool _isFirstLaunch = true;
   bool _isCheckingFirstLaunch = true;
-  bool _hasInitializationError = false;
-  // TODO: Removed unused field '_hasAuthStreamError' - was only set but never read
-  String _errorMessage = '';
-  late final AuthRepository _authRepository;
   late final UserProfileRepository _userProfileRepository;
-  Timer? _timeoutTimer;
-  StreamSubscription<User?>? _authStreamSubscription;
   
   @override
   void initState() {
     super.initState();
-    
     _initializeRepositories();
-  }
-
-  @override
-  void dispose() {
-    _timeoutTimer?.cancel();
-    _authStreamSubscription?.cancel();
-    super.dispose();
+    _checkFirstLaunch();
   }
 
   /// Initialize repositories with error handling
@@ -60,11 +43,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
         log('🔐 AuthWrapper: Initializing repositories...');
       }
       
-      // Initialize repositories safely
-      _authRepository = FirebaseAuthRepository();
-      
       // For user profile repository, check if services are initialized
-      if (widget.servicesInitialized && ServiceLocator().isInitialized) {
+      if (ServiceLocator().isInitialized) {
         _userProfileRepository = ServiceLocator().userProfileRepository;
         if (kDebugMode) {
           log('🔐 Using UserProfileRepository from ServiceLocator');
@@ -77,42 +57,15 @@ class _AuthWrapperState extends State<AuthWrapper> {
         }
       }
       
-      // Check if this is first launch
-      _checkFirstLaunch();
-      
-      // Set up timeout with shorter duration for web
-      _setupTimeout();
-      
     } catch (e, stackTrace) {
       if (kDebugMode) {
         log('🚨 AuthWrapper initialization error: $e');
         log('🔍 Stack trace: $stackTrace');
       }
       
-      setState(() {
-        _hasInitializationError = true;
-        _errorMessage = e.toString();
-      });
+      // Fallback to direct initialization
+      _userProfileRepository = FirebaseUserProfileRepository();
     }
-  }
-
-  /// Set up timeout mechanism
-  void _setupTimeout() {
-    _timeoutTimer?.cancel();
-    
-    // Reduced timeout for better UX - shorter for web
-    final timeoutDuration = kIsWeb ? const Duration(seconds: 6) : const Duration(seconds: 8);
-    
-    _timeoutTimer = Timer(timeoutDuration, () {
-      if (mounted && !_isRetrying && !_hasTimeout) {
-        if (kDebugMode) {
-          log('⏰ AuthWrapper timeout after ${timeoutDuration.inSeconds} seconds');
-        }
-        setState(() {
-          _hasTimeout = true;
-        });
-      }
-    });
   }
 
   Future<void> _checkFirstLaunch() async {
@@ -156,56 +109,15 @@ class _AuthWrapperState extends State<AuthWrapper> {
     }
   }
 
-  void _retry() {
-    if (kDebugMode) {
-      log('🔄 AuthWrapper: Retrying...');
-    }
-    
-    setState(() {
-      _hasTimeout = false;
-      _isRetrying = true;
-    });
-    
-    // Reset timeout
-    _setupTimeout();
-    
-    // Reset retry flag after a short delay
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (mounted) {
-        setState(() {
-          _isRetrying = false;
-        });
-      }
-    });
-  }
-
-  /// Show sign in screen as fallback
-  void _showSignInFallback() {
-    if (kDebugMode) {
-      log('🔄 AuthWrapper: Showing sign-in fallback');
-    }
-    
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (context) => const SignInScreen(),
-      ),
-    );
-  }
-
-  Widget _buildLoadingScreen({
-    required String title,
-    required String subtitle,
-    Color? backgroundColor,
-  }) {
+  /// Splash screen component for loading states
+  Widget _buildSplashScreen() {
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: backgroundColor != null 
-              ? [backgroundColor, backgroundColor.withValues(alpha: 0.8)]
-              : [const Color(0xFF667eea), const Color(0xFF764ba2)],
+            colors: [Color(0xFF667eea), Color(0xFF764ba2)],
           ),
         ),
         child: Center(
@@ -265,9 +177,9 @@ class _AuthWrapperState extends State<AuthWrapper> {
                 duration: const Duration(milliseconds: 1200),
                 builder: (context, opacity, child) => Opacity(
                   opacity: opacity,
-                  child: Text(
-                    title,
-                    style: const TextStyle(
+                  child: const Text(
+                    'Loading Raabta...',
+                    style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w600,
                       color: Colors.white,
@@ -283,7 +195,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
                 builder: (context, opacity, child) => Opacity(
                   opacity: opacity,
                   child: Text(
-                    subtitle,
+                    'Please wait while we set things up',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 14,
@@ -300,12 +212,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
     );
   }
 
-  Widget _buildErrorScreen({
-    required String title,
-    required String message,
-    required VoidCallback onRetry,
-    VoidCallback? onSignIn,
-  }) {
+  /// Error screen component for error states
+  Widget _buildErrorScreen() {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -331,16 +239,16 @@ class _AuthWrapperState extends State<AuthWrapper> {
                       borderRadius: BorderRadius.circular(40),
                     ),
                     child: const Icon(
-                      Icons.wifi_off,
+                      Icons.error_outline,
                       size: 40,
                       color: Colors.white,
                     ),
                   ),
                   const SizedBox(height: 24),
                   // Title
-                  Text(
-                    title,
-                    style: const TextStyle(
+                  const Text(
+                    'Authentication Error',
+                    style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
@@ -352,7 +260,9 @@ class _AuthWrapperState extends State<AuthWrapper> {
                   Container(
                     constraints: const BoxConstraints(maxWidth: 350),
                     child: Text(
-                      message,
+                      kIsWeb 
+                        ? 'We encountered an issue with authentication services on the web. This might be due to browser settings or network issues.'
+                        : 'We encountered an issue with authentication services. Please try again or contact support if the problem persists.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 15,
@@ -369,9 +279,16 @@ class _AuthWrapperState extends State<AuthWrapper> {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton.icon(
-                          onPressed: onRetry,
-                          icon: const Icon(Icons.refresh, size: 20),
-                          label: const Text('Try Again'),
+                          onPressed: () {
+                            // Navigate to login screen
+                            Navigator.of(context).pushReplacement(
+                              MaterialPageRoute(
+                                builder: (context) => const SignInScreen(),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.login, size: 20),
+                          label: const Text('Go to Sign In'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.white,
                             foregroundColor: const Color(0xFFFF6B6B),
@@ -383,26 +300,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
                           ),
                         ),
                       ),
-                      if (onSignIn != null) ...[
-                        const SizedBox(height: 12),
-                        // Secondary button
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: onSignIn,
-                            icon: const Icon(Icons.login, size: 20),
-                            label: const Text('Go to Sign In'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.white,
-                              side: BorderSide(color: Colors.white.withValues(alpha: 0.7)),
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
                     ],
                   ),
                 ],
@@ -420,30 +317,9 @@ class _AuthWrapperState extends State<AuthWrapper> {
       log('🔐 Building AuthWrapper');
     }
 
-    // Show initialization error screen if repositories failed to initialize
-    if (_hasInitializationError) {
-      return _buildErrorScreen(
-        title: 'Initialization Error',
-        message: _errorMessage,
-        onRetry: () {
-          _initializeRepositories(); // Retry initialization
-        },
-        onSignIn: () {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (context) => const SignInScreen(),
-            ),
-          );
-        },
-      );
-    }
-
     // Show loading while checking first launch
     if (_isCheckingFirstLaunch) {
-      return _buildLoadingScreen(
-        title: 'Loading Raabta...',
-        subtitle: 'Please wait while we set things up',
-      );
+      return _buildSplashScreen();
     }
 
     // Show welcome screen for first-time users
@@ -454,88 +330,38 @@ class _AuthWrapperState extends State<AuthWrapper> {
       return const WelcomeScreen();
     }
 
-    // Show timeout message if loading takes too long
-    if (_hasTimeout) {
-      return _buildErrorScreen(
-        title: 'Connection Timeout',
-        message: 'Loading is taking longer than expected. Please check your internet connection and try again.',
-        onRetry: _retry,
-        onSignIn: () {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (context) => const SignInScreen(),
-            ),
-          );
-        },
-      );
-    }
-
-    // Create auth stream with timeout and error handling
+    // Main authentication flow with StreamBuilder
     return StreamBuilder<User?>(
-      stream: _authRepository.authStateChanges.timeout(
-        kIsWeb ? const Duration(seconds: 10) : const Duration(seconds: 15),
-        onTimeout: (sink) {
-          if (kDebugMode) {
-            log('⏰ Auth stream timeout - providing fallback');
-          }
-          sink.add(null); // Fallback to no user
-        },
-      ).handleError((error) {
-        if (kDebugMode) {
-          log('🚨 Auth stream error handled: $error');
-        }
-      }),
+      stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
         if (kDebugMode) {
           log('🔐 Auth state change: ${snapshot.connectionState}, hasData: ${snapshot.hasData}, data: ${snapshot.data?.uid ?? 'null'}');
         }
 
-        // Handle errors with more specific messaging
-        if (snapshot.hasError) {
+        // Show loading while waiting for auth state
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return _buildSplashScreen();
+        } 
+        // Show error screen if there's an error
+        else if (snapshot.hasError) {
           if (kDebugMode) {
             log('🚨 Auth stream error: ${snapshot.error}');
           }
-          return _buildErrorScreen(
-            title: 'Authentication Error',
-            message: kIsWeb 
-              ? 'We encountered an issue with authentication services on the web. This might be due to browser settings or network issues. Please try refreshing the page or signing in manually.'
-              : 'We encountered an issue with authentication services. Please try again or contact support if the problem persists.',
-            onRetry: () {
-              _authRepository.signOut();
-              _retry();
-            },
-            onSignIn: _showSignInFallback,
-          );
-        }
-
-        // Show loading while waiting for auth state with timeout consideration
-        if (snapshot.connectionState == ConnectionState.waiting) {
+          return _buildErrorScreen();
+        } 
+        // Show login screen if user is not authenticated
+        else if (!snapshot.hasData) {
           if (kDebugMode) {
-            log('🔐 Waiting for auth state... (Web: $kIsWeb)');
+            log('🔐 User is not signed in, showing login screen');
           }
           
-          // For web, show additional loading states after some time
-          if (_hasTimeout) {
-            return _buildErrorScreen(
-              title: 'Loading Taking Too Long',
-              message: kIsWeb 
-                ? 'Authentication is taking longer than expected on the web. This might be due to slow network or browser settings.'
-                : 'Authentication is taking longer than expected.',
-              onRetry: _retry,
-              onSignIn: _showSignInFallback,
-            );
-          }
+          // Remove FCM token when user signs out
+          _handleUserSignOut();
           
-          return _buildLoadingScreen(
-            title: 'Checking authentication...',
-            subtitle: kIsWeb 
-              ? 'Initializing web authentication...'
-              : 'Please wait a moment',
-          );
-        }
-
-        // If the snapshot has user data, then the user is signed in
-        if (snapshot.hasData && snapshot.data != null) {
+          return const SignInScreen();
+        } 
+        // User is authenticated, check profile and show home screen
+        else {
           final user = snapshot.data!;
           
           if (kDebugMode) {
@@ -554,28 +380,14 @@ class _AuthWrapperState extends State<AuthWrapper> {
                 if (kDebugMode) {
                   log('🚨 Profile fetch error: ${profileSnapshot.error}');
                 }
-                return _buildErrorScreen(
-                  title: 'Profile Loading Error',
-                  message: 'We couldn\'t load your profile. This might be a temporary issue with our servers.',
-                  onRetry: () {
-                    setState(() {
-                      // Trigger rebuild to retry profile loading
-                    });
-                  },
-                  onSignIn: () {
-                    _authRepository.signOut();
-                  },
-                );
+                return _buildErrorScreen();
               }
               
               if (profileSnapshot.connectionState == ConnectionState.waiting) {
                 if (kDebugMode) {
                   log('🔐 Loading user profile...');
                 }
-                return _buildLoadingScreen(
-                  title: 'Loading profile...',
-                  subtitle: 'Setting up your account',
-                );
+                return _buildSplashScreen();
               }
               
               final profile = profileSnapshot.data;
@@ -587,29 +399,15 @@ class _AuthWrapperState extends State<AuthWrapper> {
                 // Update FCM token for signed-in user
                 _updateFCMTokenForUser(user.uid);
                 
-                // Profile is complete, show home with smooth transition
-                return TweenAnimationBuilder<double>(
-                  tween: Tween(begin: 0.0, end: 1.0),
-                  duration: const Duration(milliseconds: 300),
-                  builder: (context, opacity, child) => Opacity(
-                    opacity: opacity,
-                    child: const CallManager(child: HomeScreen()),
-                  ),
-                );
+                // Profile is complete, show home screen
+                return const CallManager(child: HomeScreen());
               } else {
                 if (kDebugMode) {
                   log('🔐 Profile incomplete or missing, showing profile setup');
                 }
                 // Profile doesn't exist or is incomplete, show profile setup
                 if (profile != null) {
-                  return TweenAnimationBuilder<double>(
-                    tween: Tween(begin: 0.0, end: 1.0),
-                    duration: const Duration(milliseconds: 300),
-                    builder: (context, opacity, child) => Opacity(
-                      opacity: opacity,
-                      child: ProfileSetupScreen(initialProfile: profile),
-                    ),
-                  );
+                  return ProfileSetupScreen(initialProfile: profile);
                 } else {
                   // Create initial profile and show setup
                   return FutureBuilder(
@@ -625,43 +423,26 @@ class _AuthWrapperState extends State<AuthWrapper> {
                         if (kDebugMode) {
                           log('🚨 Profile creation error: ${createSnapshot.error}');
                         }
-                        return _buildErrorScreen(
-                          title: 'Profile Creation Error',
-                          message: 'We couldn\'t create your profile. Please try signing in again.',
-                          onRetry: () {
-                            _authRepository.signOut();
-                          },
-                        );
+                        return _buildErrorScreen();
                       }
                       
                       if (createSnapshot.connectionState == ConnectionState.waiting) {
                         if (kDebugMode) {
                           log('🔐 Creating initial profile...');
                         }
-                        return _buildLoadingScreen(
-                          title: 'Setting up profile...',
-                          subtitle: 'Almost ready!',
-                        );
+                        return _buildSplashScreen();
                       }
                       
                       if (createSnapshot.hasData) {
                         if (kDebugMode) {
                           log('🔐 Initial profile created, showing setup screen');
                         }
-                        return TweenAnimationBuilder<double>(
-                          tween: Tween(begin: 0.0, end: 1.0),
-                          duration: const Duration(milliseconds: 300),
-                          builder: (context, opacity, child) => Opacity(
-                            opacity: opacity,
-                            child: ProfileSetupScreen(initialProfile: createSnapshot.data!),
-                          ),
-                        );
+                        return ProfileSetupScreen(initialProfile: createSnapshot.data!);
                       } else {
                         if (kDebugMode) {
                           log('🚨 Failed to create initial profile, signing out');
                         }
-                        // Error creating profile, sign out
-                        _authRepository.signOut();
+                        // Error creating profile, show sign in
                         return const SignInScreen();
                       }
                     },
@@ -671,23 +452,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
             },
           );
         }
-
-        // Otherwise, the user is not signed in
-        if (kDebugMode) {
-          log('🔐 User is not signed in, showing sign in screen');
-        }
-        
-        // Remove FCM token when user signs out
-        _handleUserSignOut();
-        
-        return TweenAnimationBuilder<double>(
-          tween: Tween(begin: 0.0, end: 1.0),
-          duration: const Duration(milliseconds: 300),
-          builder: (context, opacity, child) => Opacity(
-            opacity: opacity,
-            child: const SignInScreen(),
-          ),
-        );
       },
     );
   }
