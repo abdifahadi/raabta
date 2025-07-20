@@ -9,7 +9,7 @@ import 'package:raabta/features/chat/domain/models/group_model.dart';
 import 'package:raabta/features/chat/domain/group_chat_repository.dart';
 import 'package:raabta/core/services/service_locator.dart';
 import 'package:raabta/core/services/media_picker_service.dart';
-import 'package:raabta/core/services/firebase_storage_repository.dart';
+import 'package:raabta/core/services/storage_repository.dart';
 
 class GroupInfoScreen extends StatefulWidget {
   final GroupModel group;
@@ -28,7 +28,7 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
   final UserProfileRepository _userProfileRepository = ServiceLocator().userProfileRepository;
   final AuthRepository _authRepository = FirebaseAuthRepository();
   final MediaPickerService _mediaPickerService = ServiceLocator().mediaPickerService;
-  final FirebaseStorageRepository _storageRepository = ServiceLocator().storageRepository;
+  final StorageRepository _storageRepository = ServiceLocator().storageRepository;
   
   final TextEditingController _groupNameController = TextEditingController();
   
@@ -469,9 +469,9 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                               CircleAvatar(
                                 radius: 60,
                                 backgroundImage: _newGroupPhotoBytes != null
-                                    ? MemoryImage(_newGroupPhotoBytes!)
+                                    ? MemoryImage(_newGroupPhotoBytes!) as ImageProvider
                                     : (_currentGroup!.photoUrl != null
-                                        ? NetworkImage(_currentGroup!.photoUrl!)
+                                        ? NetworkImage(_currentGroup!.photoUrl!) as ImageProvider
                                         : null),
                                 child: (_newGroupPhotoBytes == null && _currentGroup!.photoUrl == null)
                                     ? Icon(
@@ -528,7 +528,7 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                         Text(
                           'Created ${_formatDate(_currentGroup!.createdAt)}',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
                       ],

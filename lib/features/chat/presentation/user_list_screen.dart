@@ -102,18 +102,7 @@ class _UserListScreenState extends State<UserListScreen> {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => CallDialerScreen(
-          targetUser: profile.UserProfile(
-            uid: user.uid,
-            displayName: user.name,
-            email: user.email,
-            photoUrl: user.photoUrl,
-            bio: user.bio,
-            phoneNumber: user.phoneNumber,
-            isProfileComplete: user.isProfileComplete,
-            activeHours: user.activeHours,
-            createdAt: user.createdAt,
-            updatedAt: user.updatedAt,
-          ),
+          targetUser: user,
         ),
       ),
     );
@@ -123,18 +112,7 @@ class _UserListScreenState extends State<UserListScreen> {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => CallDialerScreen(
-          targetUser: profile.UserProfile(
-            uid: user.uid,
-            displayName: user.name,
-            email: user.email,
-            photoUrl: user.photoUrl,
-            bio: user.bio,
-            phoneNumber: user.phoneNumber,
-            isProfileComplete: user.isProfileComplete,
-            activeHours: user.activeHours,
-            createdAt: user.createdAt,
-            updatedAt: user.updatedAt,
-          ),
+          targetUser: user,
         ),
       ),
     );

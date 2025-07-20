@@ -107,4 +107,16 @@ class FirebaseUserProfileRepository implements UserProfileRepository {
       throw Exception('Failed to mark profile as complete: $e');
     }
   }
+
+  @override
+  Future<List<UserProfileModel>> getAllUsers() async {
+    try {
+      final querySnapshot = await _usersCollection.get();
+      return querySnapshot.docs
+          .map((doc) => UserProfileModel.fromMap(doc.data()))
+          .toList();
+    } catch (e) {
+      throw Exception('Failed to get all users: $e');
+    }
+  }
 }

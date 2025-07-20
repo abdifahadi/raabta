@@ -74,11 +74,13 @@ class UserProfileModel {
   final String email;
   final DateTime createdAt;
   final DateTime lastSignIn;
+  final DateTime updatedAt;
 
   // Required fields for profile setup
   final String name;
   final Gender gender;
-  final String activeHours; // e.g., "9 AM - 6 PM"
+  final String activeHours;
+  final String? phoneNumber; // e.g., "9 AM - 6 PM"
 
   // Optional fields
   final String? photoUrl;
@@ -95,9 +97,11 @@ class UserProfileModel {
     required this.email,
     required this.createdAt,
     required this.lastSignIn,
+    required this.updatedAt,
     required this.name,
     required this.gender,
     required this.activeHours,
+    this.phoneNumber,
     this.photoUrl,
     this.bio,
     this.religion,
@@ -105,6 +109,9 @@ class UserProfileModel {
     this.dateOfBirth,
     required this.isProfileComplete,
   });
+
+  /// Display name for UI (same as name)
+  String get displayName => name;
 
   /// Create a UserProfileModel from Firebase user data (for initial setup)
   factory UserProfileModel.fromFirebaseUser({
@@ -122,9 +129,11 @@ class UserProfileModel {
       name: displayName ?? 'User',
       gender: Gender.preferNotToSay, // Default value
       activeHours: '9 AM - 6 PM', // Default value
+      phoneNumber: null,
       photoUrl: photoURL,
       createdAt: createdAt ?? now,
       lastSignIn: now,
+      updatedAt: now,
       isProfileComplete: false, // Needs to be completed
       dateOfBirth: dateOfBirth,
     );
@@ -137,9 +146,11 @@ class UserProfileModel {
       'email': email,
       'createdAt': Timestamp.fromDate(createdAt),
       'lastSignIn': Timestamp.fromDate(lastSignIn),
+      'updatedAt': Timestamp.fromDate(updatedAt),
       'name': name,
       'gender': gender.name,
       'activeHours': activeHours,
+      'phoneNumber': phoneNumber,
       'photoUrl': photoUrl,
       'bio': bio,
       'religion': religion,
@@ -156,9 +167,11 @@ class UserProfileModel {
       email: map['email'] as String,
       createdAt: (map['createdAt'] as Timestamp).toDate(),
       lastSignIn: (map['lastSignIn'] as Timestamp).toDate(),
+      updatedAt: map['updatedAt'] != null ? (map['updatedAt'] as Timestamp).toDate() : (map['lastSignIn'] as Timestamp).toDate(),
       name: map['name'] as String,
       gender: Gender.fromString(map['gender'] as String?) ?? Gender.preferNotToSay,
       activeHours: map['activeHours'] as String? ?? '9 AM - 6 PM',
+      phoneNumber: map['phoneNumber'] as String?,
       photoUrl: map['photoUrl'] as String?,
       bio: map['bio'] as String?,
       religion: map['religion'] as String?,
@@ -174,9 +187,11 @@ class UserProfileModel {
     String? email,
     DateTime? createdAt,
     DateTime? lastSignIn,
+    DateTime? updatedAt,
     String? name,
     Gender? gender,
     String? activeHours,
+    String? phoneNumber,
     String? photoUrl,
     String? bio,
     String? religion,
@@ -189,9 +204,11 @@ class UserProfileModel {
       email: email ?? this.email,
       createdAt: createdAt ?? this.createdAt,
       lastSignIn: lastSignIn ?? this.lastSignIn,
+      updatedAt: updatedAt ?? this.updatedAt,
       name: name ?? this.name,
       gender: gender ?? this.gender,
       activeHours: activeHours ?? this.activeHours,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
       photoUrl: photoUrl ?? this.photoUrl,
       bio: bio ?? this.bio,
       religion: religion ?? this.religion,

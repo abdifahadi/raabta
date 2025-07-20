@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/foundation.dart';
@@ -12,6 +13,13 @@ enum MediaType {
   any;
 }
 
+/// Media source enum
+enum MediaSource {
+  camera,
+  gallery,
+  file;
+}
+
 /// Picked media file information
 class PickedMediaFile {
   final File? file;
@@ -21,6 +29,9 @@ class PickedMediaFile {
   final int? size;
   final String? mimeType;
   final MediaType type;
+  final double? width;
+  final double? height;
+  final int? duration; // Duration in milliseconds
 
   PickedMediaFile({
     this.file,
@@ -30,6 +41,9 @@ class PickedMediaFile {
     this.size,
     this.mimeType,
     required this.type,
+    this.width,
+    this.height,
+    this.duration,
   });
 
   /// Check if file is an image
@@ -364,5 +378,31 @@ class MediaPickerService {
       case MediaType.any:
         return 100.0; // 100 MB
     }
+  }
+
+  /// Pick a single media file from the specified source
+  Future<PickedMediaFile?> pickSingleMedia({
+    required MediaSource source,
+    MediaType type = MediaType.image,
+  }) async {
+    switch (source) {
+      case MediaSource.camera:
+        if (type == MediaType.image) {
+          return await pickImage(source: ImageSource.camera);
+        } else if (type == MediaType.video) {
+          return await pickVideo(source: ImageSource.camera);
+        }
+        break;
+      case MediaSource.gallery:
+        if (type == MediaType.image) {
+          return await pickImage(source: ImageSource.gallery);
+        } else if (type == MediaType.video) {
+          return await pickVideo(source: ImageSource.gallery);
+        }
+        break;
+      case MediaSource.file:
+        return await pickFile();
+    }
+    return null;
   }
 }
