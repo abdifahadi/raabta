@@ -367,7 +367,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> with SingleTi
                             fontWeight: FontWeight.bold,
                             fontSize: 20,
                           ),
-                        ),
+                        )
                       : null,
                 ),
                 if (unreadCount > 0)
@@ -608,7 +608,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> with SingleTi
           children: [
             CircleAvatar(
               radius: 28,
-                             backgroundColor: Colors.deepPurple.withValues(alpha: 0.1),
+              backgroundColor: Colors.deepPurple.withValues(alpha: 0.1),
               backgroundImage: group.photoUrl != null
                   ? NetworkImage(group.photoUrl!)
                   : null,
