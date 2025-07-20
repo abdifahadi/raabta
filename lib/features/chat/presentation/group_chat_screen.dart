@@ -639,10 +639,17 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
             onPressed: () async {
               Navigator.pop(context);
               try {
-                await _groupChatRepository.deleteMessage(
-                  widget.group.id,
-                  message.id,
-                );
+                // TODO: Implement message deletion in GroupChatRepository
+                // await _groupChatRepository.deleteMessage(
+                //   widget.group.id,
+                //   message.id,
+                // );
+                
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Message deletion not yet implemented')),
+                  );
+                }
               } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
