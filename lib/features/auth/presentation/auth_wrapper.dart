@@ -12,6 +12,7 @@ import 'package:raabta/features/home/presentation/home_screen.dart';
 import 'package:raabta/features/onboarding/presentation/welcome_screen.dart';
 import 'package:raabta/core/services/service_locator.dart';
 import 'package:raabta/core/services/notification_handler.dart';
+import 'package:raabta/features/call/presentation/widgets/call_manager.dart';
 
 /// A wrapper widget that handles authentication state changes
 class AuthWrapper extends StatefulWidget {
@@ -518,7 +519,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
                   duration: const Duration(milliseconds: 300),
                   builder: (context, opacity, child) => Opacity(
                     opacity: opacity,
-                    child: const HomeScreen(),
+                    child: const CallManager(child: HomeScreen()),
                   ),
                 );
               } else {

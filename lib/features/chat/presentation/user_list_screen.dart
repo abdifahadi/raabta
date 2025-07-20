@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:raabta/features/auth/domain/models/user_profile_model.dart';
+import 'package:raabta/features/auth/domain/models/user_profile_model.dart' as profile;
 import 'package:raabta/features/auth/domain/auth_repository.dart';
 import 'package:raabta/features/auth/domain/firebase_auth_repository.dart';
 import 'package:raabta/features/chat/domain/chat_repository.dart';
 import 'package:raabta/features/chat/presentation/chat_screen.dart';
+import 'package:raabta/features/call/presentation/screens/call_dialer_screen.dart';
 import 'package:raabta/core/services/service_locator.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -94,6 +96,48 @@ class _UserListScreenState extends State<UserListScreen> {
         );
       }
     }
+  }
+
+  void _startVideoCall(UserProfileModel user) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => CallDialerScreen(
+          targetUser: profile.UserProfile(
+            uid: user.uid,
+            displayName: user.name,
+            email: user.email,
+            photoUrl: user.photoUrl,
+            bio: user.bio,
+            phoneNumber: user.phoneNumber,
+            isProfileComplete: user.isProfileComplete,
+            activeHours: user.activeHours,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _startAudioCall(UserProfileModel user) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => CallDialerScreen(
+          targetUser: profile.UserProfile(
+            uid: user.uid,
+            displayName: user.name,
+            email: user.email,
+            photoUrl: user.photoUrl,
+            bio: user.bio,
+            phoneNumber: user.phoneNumber,
+            isProfileComplete: user.isProfileComplete,
+            activeHours: user.activeHours,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt,
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _startConversation(UserProfileModel user) async {
@@ -331,11 +375,41 @@ class _UserListScreenState extends State<UserListScreen> {
             ),
           ],
         ),
-        trailing: const Icon(
-          Icons.chat_bubble_outline,
-          color: Colors.deepPurple,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Video call button
+            IconButton(
+              onPressed: () => _startVideoCall(user),
+              icon: const Icon(
+                Icons.videocam,
+                color: Colors.blue,
+                size: 20,
+              ),
+              tooltip: 'Video Call',
+            ),
+            // Audio call button
+            IconButton(
+              onPressed: () => _startAudioCall(user),
+              icon: const Icon(
+                Icons.call,
+                color: Colors.green,
+                size: 20,
+              ),
+              tooltip: 'Audio Call',
+            ),
+            // Chat button
+            IconButton(
+              onPressed: () => _startConversation(user),
+              icon: const Icon(
+                Icons.chat_bubble_outline,
+                color: Colors.deepPurple,
+                size: 20,
+              ),
+              tooltip: 'Chat',
+            ),
+          ],
         ),
-        onTap: () => _startConversation(user),
       ),
     );
   }

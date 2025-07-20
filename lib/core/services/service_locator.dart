@@ -13,6 +13,9 @@ import 'package:raabta/features/chat/domain/chat_repository.dart';
 import 'package:raabta/features/chat/domain/firebase_chat_repository.dart';
 import 'package:raabta/features/chat/domain/group_chat_repository.dart';
 import 'package:raabta/features/chat/domain/firebase_group_chat_repository.dart';
+import 'package:raabta/features/call/domain/repositories/call_repository.dart';
+import 'package:raabta/features/call/data/firebase_call_repository.dart';
+import 'call_service.dart';
 import 'package:flutter/foundation.dart';
 
 /// Service locator for dependency injection
@@ -54,6 +57,12 @@ class ServiceLocator {
 
   /// Encryption key manager instance
   EncryptionKeyManager? _encryptionKeyManager;
+
+  /// Call repository instance
+  CallRepository? _callRepository;
+
+  /// Call service instance
+  CallService? _callService;
 
   /// Track initialization state
   bool _isInitialized = false;
@@ -127,6 +136,13 @@ class ServiceLocator {
       // Initialize notification service
       _notificationService = NotificationService();
       await _notificationService!.initialize();
+
+      // Initialize call repository
+      _callRepository = FirebaseCallRepository();
+
+      // Initialize call service
+      _callService = CallService();
+      await _callService!.initialize();
 
       _isInitialized = true;
       
@@ -223,6 +239,22 @@ class ServiceLocator {
     return _encryptionKeyManager!;
   }
 
+  /// Get call repository
+  CallRepository get callRepository {
+    if (_callRepository == null) {
+      throw StateError('ServiceLocator not initialized. Call initialize() first.');
+    }
+    return _callRepository!;
+  }
+
+  /// Get call service
+  CallService get callService {
+    if (_callService == null) {
+      throw StateError('ServiceLocator not initialized. Call initialize() first.');
+    }
+    return _callService!;
+  }
+
   /// Safe getters that return null if not initialized
   AuthProvider? get authProviderOrNull => _authProvider;
   UserRepository? get userRepositoryOrNull => _userRepository;
@@ -230,4 +262,6 @@ class ServiceLocator {
   BackendService? get backendServiceOrNull => _backendService;
   NotificationService? get notificationServiceOrNull => _notificationService;
   EncryptionKeyManager? get encryptionKeyManagerOrNull => _encryptionKeyManager;
+  CallRepository? get callRepositoryOrNull => _callRepository;
+  CallService? get callServiceOrNull => _callService;
 }
