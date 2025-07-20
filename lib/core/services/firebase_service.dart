@@ -60,13 +60,27 @@ class FirebaseService implements BackendService {
       // Check if Firebase is already initialized (should be from main.dart)
       try {
         final app = Firebase.app();
-        log('🔥 Firebase app already exists: ${app.name}');
+        log('🔥 Firebase app already exists: ${app.name} - Project: ${app.options.projectId}');
+        
+        // Additional verification that Firebase is truly ready
+        if (kIsWeb) {
+          log('🌐 Verifying web Firebase readiness...');
+          // For web, we can do additional checks here if needed
+        }
+        
         _initialized = true;
         _isInitializing = false;
+        
+        if (kDebugMode) {
+          log('✅ Firebase service initialization completed (using existing app)');
+        }
         return;
       } catch (e) {
         // No existing app, this should not happen now since main.dart initializes Firebase
-        log('⚠️ Firebase not initialized yet, this is unexpected. Attempting initialization...');
+        log('⚠️ Firebase not initialized yet, this is unexpected. Attempting fallback initialization...');
+        if (kDebugMode) {
+          log('🔍 Firebase app check error: $e');
+        }
       }
 
       // Fallback initialization if Firebase was not initialized in main.dart

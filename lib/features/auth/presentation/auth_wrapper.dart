@@ -155,10 +155,13 @@ class _AuthWrapperState extends State<AuthWrapper> {
         if (snapshot.hasError) {
           if (kDebugMode) {
             log('🚨 Auth stream error: ${snapshot.error}');
+            log('🚨 Auth stream stack trace: ${snapshot.stackTrace}');
           }
           return ErrorScreen(
             title: 'Authentication Error',
             message: 'Failed to connect to authentication services. Please check your internet connection and try again.',
+            error: snapshot.error,
+            stackTrace: snapshot.stackTrace,
             onRetry: () {
               // Retry by refreshing the auth state
               setState(() {
@@ -187,10 +190,13 @@ class _AuthWrapperState extends State<AuthWrapper> {
               if (profileSnapshot.hasError) {
                 if (kDebugMode) {
                   log('🚨 Profile fetch error: ${profileSnapshot.error}');
+                  log('🚨 Profile fetch stack trace: ${profileSnapshot.stackTrace}');
                 }
                 return ErrorScreen(
                   title: 'Profile Error',
                   message: 'Failed to load user profile. Please try again.',
+                  error: profileSnapshot.error,
+                  stackTrace: profileSnapshot.stackTrace,
                   onRetry: () {
                     setState(() {
                       // This will trigger a rebuild and restart the profile check
@@ -241,10 +247,13 @@ class _AuthWrapperState extends State<AuthWrapper> {
                       if (createSnapshot.hasError) {
                         if (kDebugMode) {
                           log('🚨 Profile creation error: ${createSnapshot.error}');
+                          log('🚨 Profile creation stack trace: ${createSnapshot.stackTrace}');
                         }
                         return ErrorScreen(
                           title: 'Profile Creation Error',
                           message: 'Failed to create user profile. Please try signing in again.',
+                          error: createSnapshot.error,
+                          stackTrace: createSnapshot.stackTrace,
                           onRetry: () {
                             // Sign out and go back to login
                             FirebaseAuth.instance.signOut();
