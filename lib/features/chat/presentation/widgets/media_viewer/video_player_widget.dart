@@ -176,10 +176,10 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Colors.black.withOpacity( 0.7),
+            Colors.black.withValues(alpha: 0.7),
             Colors.transparent,
             Colors.transparent,
-            Colors.black.withOpacity( 0.7),
+            Colors.black.withValues(alpha: 0.7),
           ],
         ),
       ),
@@ -220,7 +220,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity( 0.6),
+                  color: Colors.black.withValues(alpha: 0.6),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
