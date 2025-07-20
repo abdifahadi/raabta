@@ -5,6 +5,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../models/notification_payload.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import 'package:raabta/core/services/service_locator.dart';
 
 /// Abstract interface for notification services
 abstract class NotificationServiceInterface {
@@ -166,7 +169,8 @@ class NotificationService implements NotificationServiceInterface {
     _firebaseMessaging.onTokenRefresh.listen((String token) {
       if (kDebugMode) print('🔄 FCM Token refreshed: $token');
       _currentToken = token;
-      // TODO: Update token in Firestore when user repository is available
+      // Update token in Firestore when user is available
+      _updateTokenInFirestore(token);
     });
   }
 
@@ -382,9 +386,26 @@ class NotificationService implements NotificationServiceInterface {
     _onNotificationTapController.close();
     _onForegroundMessageController.close();
   }
+
+  /// Update FCM token in Firestore for the current user
+  Future<void> _updateTokenInFirestore(String token) async {
+    try {
+      final authService = ServiceLocator().authProviderOrNull;
+      if (authService?.currentUser != null) {
+        final userId = authService!.currentUser!.uid;
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .update({'fcmToken': token});
+        if (kDebugMode) print('✅ FCM token updated in Firestore');
+      }
+    } catch (e) {
+      if (kDebugMode) print('❌ Failed to update FCM token in Firestore: $e');
+    }
+  }
 }
 
-/// Background message handler - must be a top-level function
+/// Background message handler for Firebase messaging
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   if (kDebugMode) {

@@ -97,7 +97,12 @@ class NotificationHandler {
       // Check if already on the same chat screen
       final currentRoute = ModalRoute.of(context)?.settings.name;
       if (currentRoute == '/chat') {
-        // TODO: Check if it's the same conversation and return if so
+        // Check if it's the same conversation and return if so
+        final currentArgs = ModalRoute.of(context)?.settings.arguments;
+        if (currentArgs is Map<String, dynamic> && 
+            currentArgs['conversationId'] == conversationId) {
+          return; // Already on the same conversation
+        }
         Navigator.of(context).pop(); // Pop current chat if different
       }
 

@@ -301,7 +301,8 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
           onReply: () => _replyToMessage(message),
           onLongPress: () {
             HapticFeedback.lightImpact();
-            // TODO: Show message options menu
+            // Show message options menu
+            _showMessageOptionsMenu(message);
           },
         ),
       ],
@@ -575,6 +576,82 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                 ],
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showMessageOptionsMenu(MessageModel message) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.reply),
+              title: const Text('Reply'),
+              onTap: () {
+                Navigator.pop(context);
+                _replyToMessage(message);
+              },
+            ),
+            if (message.senderId == _currentUserId)
+              ListTile(
+                leading: const Icon(Icons.delete, color: Colors.red),
+                title: const Text('Delete', style: TextStyle(color: Colors.red)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _deleteMessage(message);
+                },
+              ),
+            ListTile(
+              leading: const Icon(Icons.copy),
+              title: const Text('Copy'),
+              onTap: () {
+                Navigator.pop(context);
+                Clipboard.setData(ClipboardData(text: message.content));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Message copied to clipboard')),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _deleteMessage(MessageModel message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Message'),
+        content: const Text('Are you sure you want to delete this message?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              try {
+                await _groupChatRepository.deleteMessage(
+                  widget.group.id,
+                  message.id,
+                );
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to delete message: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
