@@ -88,9 +88,8 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
   Future<void> _pickNewGroupPhoto() async {
     try {
       final mediaFile = await _mediaPickerService.pickSingleMedia(
-        context: context,
-        mediaType: MediaType.image,
         source: MediaSource.gallery,
+        type: MediaType.image,
       );
 
       if (mediaFile != null) {
@@ -596,7 +595,7 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            if (profile?.email != null) Text(profile!.email!),
+                            if (profile?.email != null) Text(profile.email!),
                             if (isAdmin)
                               Text(
                                 'Admin',

@@ -26,7 +26,6 @@ class _CallScreenState extends State<CallScreen> {
   Timer? _controlsTimer;
   int _remoteUid = 0;
   bool _remoteVideoMuted = false;
-  bool _remoteAudioMuted = false;
   
   // Call duration
   Timer? _durationTimer;
@@ -128,7 +127,6 @@ class _CallScreenState extends State<CallScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
     final isVideoCall = widget.call.callType == CallType.video;
 
     return Scaffold(

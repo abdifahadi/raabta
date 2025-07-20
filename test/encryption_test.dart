@@ -7,7 +7,7 @@ void main() {
     test('AES encryption and decryption should work correctly', () {
       // Generate a test key
       final key = EncryptionUtils.generateEncryptionKey();
-      final plainText = 'Hello, this is a test message for E2EE!';
+      const plainText = 'Hello, this is a test message for E2EE!';
 
       // Encrypt the message
       final encrypted = EncryptionUtils.encryptWithAES(plainText, key);
@@ -26,7 +26,7 @@ void main() {
     test('Encryption with different keys should produce different results', () {
       final key1 = EncryptionUtils.generateEncryptionKey();
       final key2 = EncryptionUtils.generateEncryptionKey();
-      final plainText = 'Test message';
+      const plainText = 'Test message';
 
       final encrypted1 = EncryptionUtils.encryptWithAES(plainText, key1);
       final encrypted2 = EncryptionUtils.encryptWithAES(plainText, key2);
@@ -42,7 +42,7 @@ void main() {
     test('Decryption with wrong key should fail', () {
       final key1 = EncryptionUtils.generateEncryptionKey();
       final key2 = EncryptionUtils.generateEncryptionKey();
-      final plainText = 'Secret message';
+      const plainText = 'Secret message';
 
       final encrypted = EncryptionUtils.encryptWithAES(plainText, key1);
 
@@ -52,7 +52,7 @@ void main() {
 
     test('Key validation should work correctly', () {
       final validKey = EncryptionUtils.generateEncryptionKey();
-      final invalidKey = 'this_is_not_a_valid_key';
+      const invalidKey = 'this_is_not_a_valid_key';
 
       expect(EncryptionUtils.isValidEncryptionKey(validKey), isTrue);
       expect(EncryptionUtils.isValidEncryptionKey(invalidKey), isFalse);
@@ -60,7 +60,7 @@ void main() {
 
     test('Encrypted data validation should work correctly', () {
       final key = EncryptionUtils.generateEncryptionKey();
-      final plainText = 'Test message';
+      const plainText = 'Test message';
       final encrypted = EncryptionUtils.encryptWithAES(plainText, key);
 
       expect(EncryptionUtils.isValidEncryptedData(encrypted), isTrue);
@@ -91,7 +91,7 @@ void main() {
 
     test('Unicode and special characters should be encrypted correctly', () {
       final key = EncryptionUtils.generateEncryptionKey();
-      final plainText = 'Hello 🌍! Special chars: àáâãäå æç èéêë 中文 العربية';
+      const plainText = 'Hello 🌍! Special chars: àáâãäå æç èéêë 中文 العربية';
 
       final encrypted = EncryptionUtils.encryptWithAES(plainText, key);
       final decrypted = EncryptionUtils.decryptWithAES(encrypted, key);
@@ -103,7 +103,7 @@ void main() {
       final key = EncryptionUtils.generateEncryptionKey();
       
       // Test empty message
-      final emptyMessage = '';
+      const emptyMessage = '';
       final encryptedEmpty = EncryptionUtils.encryptWithAES(emptyMessage, key);
       final decryptedEmpty = EncryptionUtils.decryptWithAES(encryptedEmpty, key);
       expect(decryptedEmpty, equals(emptyMessage));

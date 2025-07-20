@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
 import 'group_chat_repository.dart';
 import 'models/group_model.dart';
 import 'models/message_model.dart';
@@ -304,7 +303,7 @@ class FirebaseGroupChatRepository implements GroupChatRepository {
 
       // Add duration for audio/video
       if (mediaFile.duration != null) {
-        metadata['durationMs'] = mediaFile.duration!.inMilliseconds;
+        metadata['durationMs'] = mediaFile.duration!;
       }
 
       // Send message with media metadata

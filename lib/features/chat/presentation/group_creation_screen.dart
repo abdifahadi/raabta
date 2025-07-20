@@ -29,7 +29,7 @@ class _GroupCreationScreenState extends State<GroupCreationScreen> {
   final FocusNode _groupNameFocusNode = FocusNode();
   
   List<UserProfileModel> _availableUsers = [];
-  List<UserProfileModel> _selectedMembers = [];
+  final List<UserProfileModel> _selectedMembers = [];
   bool _isLoading = false;
   bool _isCreatingGroup = false;
   PickedMediaFile? _selectedGroupPhoto;
@@ -78,9 +78,8 @@ class _GroupCreationScreenState extends State<GroupCreationScreen> {
   Future<void> _pickGroupPhoto() async {
     try {
       final mediaFile = await _mediaPickerService.pickSingleMedia(
-        context: context,
-        mediaType: MediaType.image,
         source: MediaSource.gallery,
+        type: MediaType.image,
       );
 
       if (mediaFile != null) {
