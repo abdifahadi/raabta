@@ -37,7 +37,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
     _checkFirstLaunch();
   }
 
-  /// Initialize repositories with error handling
+  /// Initialize repositories with error handling and null safety
   void _initializeRepositories() {
     try {
       if (kDebugMode) {
@@ -45,17 +45,30 @@ class _AuthWrapperState extends State<AuthWrapper> {
       }
       
       // For user profile repository, check if services are initialized
-      if (ServiceLocator().isInitialized) {
-        _userProfileRepository = ServiceLocator().userProfileRepository;
-        if (kDebugMode) {
-          log('🔐 Using UserProfileRepository from ServiceLocator');
+      try {
+        if (ServiceLocator().isInitialized) {
+          _userProfileRepository = ServiceLocator().userProfileRepository;
+          if (kDebugMode) {
+            log('🔐 Using UserProfileRepository from ServiceLocator');
+          }
+        } else {
+          // Create instance directly if ServiceLocator is not ready
+          _userProfileRepository = FirebaseUserProfileRepository();
+          if (kDebugMode) {
+            log('ℹ️ Creating UserProfileRepository directly due to uninitialized services');
+          }
         }
-      } else {
-        // Create instance directly if ServiceLocator is not ready
+      } catch (serviceLocatorError) {
+        if (kDebugMode) {
+          log('⚠️ ServiceLocator access failed: $serviceLocatorError');
+        }
+        // Fallback to direct initialization
         _userProfileRepository = FirebaseUserProfileRepository();
-        if (kDebugMode) {
-          log('ℹ️ Creating UserProfileRepository directly due to uninitialized services');
-        }
+      }
+      
+      // Verify the repository was initialized successfully
+      if (kDebugMode) {
+        log('✅ UserProfileRepository initialized: ${_userProfileRepository.runtimeType}');
       }
       
     } catch (e, stackTrace) {
@@ -64,8 +77,18 @@ class _AuthWrapperState extends State<AuthWrapper> {
         log('🔍 Stack trace: $stackTrace');
       }
       
-      // Fallback to direct initialization
-      _userProfileRepository = FirebaseUserProfileRepository();
+      // Final fallback to direct initialization
+      try {
+        _userProfileRepository = FirebaseUserProfileRepository();
+        if (kDebugMode) {
+          log('🔄 Emergency fallback: UserProfileRepository created directly');
+        }
+      } catch (fallbackError) {
+        if (kDebugMode) {
+          log('🚨 Critical: Failed to initialize UserProfileRepository even with fallback: $fallbackError');
+        }
+        rethrow; // This should not happen, but rethrow if it does
+      }
     }
   }
 

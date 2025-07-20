@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../../domain/models/call_model.dart';
 import '../../../../core/services/service_locator.dart';
 import '../screens/incoming_call_screen.dart';
@@ -84,7 +85,9 @@ class _CallManagerState extends State<CallManager> {
         });
       }
     } catch (e) {
-      debugPrint('Error setting up call listeners: $e');
+      if (kDebugMode) {
+        debugPrint('Error setting up call listeners: $e');
+      }
     }
   }
 
