@@ -270,7 +270,7 @@ class _ChatScreenState extends State<ChatScreen> {
           children: [
             CircleAvatar(
               radius: 18,
-              backgroundColor: Colors.deepPurple.withOpacity( 0.1),
+              backgroundColor: Colors.deepPurple.withValues(alpha: 0.1),
               backgroundImage: widget.otherUser.photoUrl != null
                   ? NetworkImage(widget.otherUser.photoUrl!)
                   : null,
@@ -327,7 +327,7 @@ class _ChatScreenState extends State<ChatScreen> {
           if (_isSendingMedia)
             Container(
               padding: const EdgeInsets.all(16),
-              color: Colors.blue.withOpacity( 0.1),
+              color: Colors.blue.withValues(alpha: 0.1),
               child: const Row(
                 children: [
                   SizedBox(
@@ -517,7 +517,7 @@ class _ChatScreenState extends State<ChatScreen> {
           BoxShadow(
             offset: const Offset(0, -2),
             blurRadius: 4,
-            color: Colors.black.withOpacity( 0.1),
+            color: Colors.black.withValues(alpha: 0.1),
           ),
         ],
       ),
