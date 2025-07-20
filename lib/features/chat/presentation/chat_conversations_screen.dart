@@ -367,7 +367,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> with SingleTi
                             fontWeight: FontWeight.bold,
                             fontSize: 20,
                           ),
-                        )
+                        ),
                       : null,
                 ),
                 if (unreadCount > 0)
