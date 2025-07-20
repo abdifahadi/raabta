@@ -164,7 +164,7 @@ class _CallScreenState extends State<CallScreen> {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: Colors.white.withOpacity(0.3),
+                color: Colors.white.withValues(alpha: 0.3),
                 width: 3,
               ),
             ),
@@ -219,7 +219,7 @@ class _CallScreenState extends State<CallScreen> {
           Text(
             _getCallStatusText(),
             style: TextStyle(
-              color: Colors.white.withOpacity(0.8),
+              color: Colors.white.withValues(alpha: 0.8),
               fontSize: 14,
             ),
           ),
@@ -238,7 +238,7 @@ class _CallScreenState extends State<CallScreen> {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: Colors.white.withOpacity(0.3),
+            color: Colors.white.withValues(alpha: 0.3),
             width: 2,
           ),
         ),
@@ -284,7 +284,7 @@ class _CallScreenState extends State<CallScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Colors.black.withOpacity(0.8),
+              Colors.black.withValues(alpha: 0.8),
               Colors.transparent,
             ],
           ),
@@ -314,7 +314,7 @@ class _CallScreenState extends State<CallScreen> {
                   Text(
                     _getCallStatusText(),
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.8),
+                      color: Colors.white.withValues(alpha: 0.8),
                       fontSize: 14,
                     ),
                   ),
@@ -355,7 +355,7 @@ class _CallScreenState extends State<CallScreen> {
             begin: Alignment.bottomCenter,
             end: Alignment.topCenter,
             colors: [
-              Colors.black.withOpacity(0.8),
+              Colors.black.withValues(alpha: 0.8),
               Colors.transparent,
             ],
           ),
@@ -424,10 +424,10 @@ class _CallScreenState extends State<CallScreen> {
         width: 60,
         height: 60,
         decoration: BoxDecoration(
-          color: color ?? (isActive ? Colors.white.withOpacity(0.2) : Colors.red.withOpacity(0.8)),
+          color: color ?? (isActive ? Colors.white.withValues(alpha: 0.2) : Colors.red.withValues(alpha: 0.8)),
           shape: BoxShape.circle,
           border: Border.all(
-            color: Colors.white.withOpacity(0.3),
+            color: Colors.white.withValues(alpha: 0.3),
             width: 1,
           ),
         ),
@@ -464,7 +464,7 @@ class _CallScreenState extends State<CallScreen> {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: Colors.white.withOpacity(0.3),
+                color: Colors.white.withValues(alpha: 0.3),
                 width: 3,
               ),
             ),

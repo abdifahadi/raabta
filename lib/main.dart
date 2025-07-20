@@ -7,7 +7,7 @@ import 'dart:developer';
 import 'core/config/firebase_options.dart';
 import 'core/services/service_locator.dart';
 import 'core/services/logging_service.dart';
-import 'core/services/notification_service.dart';
+
 import 'core/services/notification_handler.dart';
 import 'features/auth/presentation/auth_wrapper.dart';
 
@@ -179,7 +179,7 @@ void main() async {
                     width: 100,
                     height: 100,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(50),
                     ),
                     child: const Icon(
@@ -208,7 +208,7 @@ void main() async {
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withValues(alpha: 0.9),
                         height: 1.4,
                       ),
                     ),
@@ -219,7 +219,7 @@ void main() async {
                       padding: const EdgeInsets.all(16.0),
                       margin: const EdgeInsets.symmetric(horizontal: 20),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.3),
+                        color: Colors.black.withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -249,9 +249,9 @@ void main() async {
                         },
                         icon: const Icon(Icons.refresh),
                         label: Text(kIsWeb ? 'Refresh Page' : 'Retry'),
-                        style: ElevatedButton.styleFrom(
+                        style: const ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
-                          foregroundColor: Colors.red[600],
+                          foregroundColor: Color(0xFFE53935),
                           padding: const EdgeInsets.symmetric(
                             horizontal: 24,
                             vertical: 12,
@@ -277,7 +277,7 @@ void main() async {
 Future<void> setupLocator() async {
   try {
     // Reduced timeout for web platforms
-    final timeout = kIsWeb ? const Duration(seconds: 5) : const Duration(seconds: 10);
+    const timeout = kIsWeb ? Duration(seconds: 5) : Duration(seconds: 10);
     
     await ServiceLocator().initialize().timeout(
       timeout,
@@ -341,10 +341,10 @@ class MyApp extends StatelessWidget {
             ),
           ),
         ),
-        cardTheme: CardTheme(
+        cardTheme: const CardThemeData(
           elevation: 2,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.all(Radius.circular(12)),
           ),
         ),
       ),
