@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:raabta/features/auth/domain/models/user_profile_model.dart';
-import 'package:raabta/features/auth/domain/models/user_profile_model.dart' as profile;
 import 'package:raabta/features/auth/domain/auth_repository.dart';
 import 'package:raabta/features/auth/domain/firebase_auth_repository.dart';
 import 'package:raabta/features/chat/domain/chat_repository.dart';

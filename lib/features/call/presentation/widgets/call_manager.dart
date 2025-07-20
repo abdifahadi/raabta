@@ -21,7 +21,6 @@ class _CallManagerState extends State<CallManager> {
   StreamSubscription? _incomingCallsSubscription;
   StreamSubscription? _currentCallSubscription;
   CallModel? _currentIncomingCall;
-  CallModel? _currentActiveCall;
   
   // Navigation key for overlay navigation
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();

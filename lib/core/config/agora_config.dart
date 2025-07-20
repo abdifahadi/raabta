@@ -28,7 +28,7 @@ class AgoraConfig {
   static String generateChannelName(String callerId, String receiverId) {
     // Sort IDs to ensure consistent channel names regardless of who initiates
     final sortedIds = [callerId, receiverId]..sort();
-    return '${channelPrefix}${sortedIds[0]}_${sortedIds[1]}';
+    return '$channelPrefix${sortedIds[0]}_${sortedIds[1]}';
   }
   
   // Generate unique call ID

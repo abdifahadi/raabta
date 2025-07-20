@@ -605,7 +605,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> with SingleTi
                   ? NetworkImage(group.photoUrl!)
                   : null,
               child: group.photoUrl == null
-                  ? Icon(
+                  ? const Icon(
                       Icons.group,
                       color: Colors.deepPurple,
                       size: 32,

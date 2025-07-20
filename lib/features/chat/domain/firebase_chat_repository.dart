@@ -509,6 +509,7 @@ class FirebaseChatRepository implements ChatRepository {
   }
 
   /// Save FCM token for a user
+  @override
   Future<void> saveFCMToken(String userId, String token) async {
     try {
       final tokenDoc = _firestore
@@ -530,6 +531,7 @@ class FirebaseChatRepository implements ChatRepository {
   }
 
   /// Remove FCM token for a user
+  @override
   Future<void> removeFCMToken(String userId, String token) async {
     try {
       await _firestore
@@ -544,6 +546,7 @@ class FirebaseChatRepository implements ChatRepository {
   }
 
   /// Get active FCM tokens for a user
+  @override
   Future<List<String>> getFCMTokens(String userId) async {
     try {
       final snapshot = await _firestore
@@ -562,6 +565,7 @@ class FirebaseChatRepository implements ChatRepository {
   }
 
   /// Clean up old FCM tokens (older than 30 days)
+  @override
   Future<void> cleanupOldFCMTokens(String userId) async {
     try {
       final cutoffDate = DateTime.now().subtract(const Duration(days: 30));

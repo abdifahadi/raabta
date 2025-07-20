@@ -162,7 +162,7 @@ class GroupModel {
     Map<String, dynamic>? metadata,
   }) {
     final now = DateTime.now();
-    final groupId = 'group_${now.millisecondsSinceEpoch}_${creatorId}';
+    final groupId = 'group_${now.millisecondsSinceEpoch}_$creatorId';
     
     // Creator is always a member and admin
     final allMembers = [creatorId, ...members.where((id) => id != creatorId)];

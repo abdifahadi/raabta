@@ -166,7 +166,7 @@ class _CallDialerScreenState extends State<CallDialerScreen>
 
                     // Name
                     Text(
-                      widget.targetUser.displayName ?? 'Unknown User',
+                      widget.targetUser.displayName,
                       style: theme.textTheme.headlineMedium?.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -180,7 +180,7 @@ class _CallDialerScreenState extends State<CallDialerScreen>
                     // Email or phone
                     if (widget.targetUser.email?.isNotEmpty == true)
                       Text(
-                        widget.targetUser.email!,
+                        widget.targetUser.email,
                         style: theme.textTheme.titleMedium?.copyWith(
                           color: Colors.white70,
                           fontSize: 16,
@@ -329,10 +329,10 @@ class _CallDialerScreenState extends State<CallDialerScreen>
       final call = await callService.startCall(
         receiverId: widget.targetUser.uid,
         callType: callType,
-        callerName: currentUserProfile.displayName ?? 'Unknown',
-        callerPhotoUrl: currentUserProfile.photoUrl ?? '',
-        receiverName: widget.targetUser.displayName ?? 'Unknown',
-        receiverPhotoUrl: widget.targetUser.photoUrl ?? '',
+        callerName: currentUserProfile.displayName,
+        callerPhotoUrl: currentUserProfile.photoUrl,
+        receiverName: widget.targetUser.displayName,
+        receiverPhotoUrl: widget.targetUser.photoUrl,
       );
 
       // Navigate to call screen
