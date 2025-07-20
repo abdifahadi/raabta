@@ -108,16 +108,30 @@ class ServiceLocator {
       // Initialize backend service with timeout
       _backendService = FirebaseService();
       
-      // Add timeout for Firebase initialization
-      await _backendService!.initialize().timeout(
-        kIsWeb ? const Duration(seconds: 8) : const Duration(seconds: 12),
-        onTimeout: () {
+      // Add timeout for Firebase initialization with better web handling
+      try {
+        await _backendService!.initialize().timeout(
+          kIsWeb ? const Duration(seconds: 5) : const Duration(seconds: 10),
+          onTimeout: () {
+            if (kDebugMode) {
+              log('⏰ Firebase initialization timeout in ServiceLocator');
+            }
+            throw TimeoutException('Firebase initialization timeout', kIsWeb ? const Duration(seconds: 5) : const Duration(seconds: 10));
+          },
+        );
+      } catch (e) {
+        if (kDebugMode) {
+          log('❌ Firebase service initialization failed: $e');
+        }
+        // For web, continue with degraded mode instead of throwing
+        if (kIsWeb) {
           if (kDebugMode) {
-            log('⏰ Firebase initialization timeout in ServiceLocator');
+            log('🌐 Web: Continuing with degraded Firebase services');
           }
-          throw TimeoutException('Firebase initialization timeout', kIsWeb ? const Duration(seconds: 8) : const Duration(seconds: 12));
-        },
-      );
+        } else {
+          rethrow;
+        }
+      }
 
       // Initialize auth provider
       _authProvider = FirebaseAuthService();
