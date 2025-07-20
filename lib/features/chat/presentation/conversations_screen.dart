@@ -5,8 +5,12 @@ import 'package:raabta/features/auth/domain/user_profile_repository.dart';
 import 'package:raabta/features/auth/domain/auth_repository.dart';
 import 'package:raabta/features/auth/domain/firebase_auth_repository.dart';
 import 'package:raabta/features/chat/domain/models/conversation_model.dart';
+import 'package:raabta/features/chat/domain/models/group_model.dart';
 import 'package:raabta/features/chat/domain/chat_repository.dart';
+import 'package:raabta/features/chat/domain/group_chat_repository.dart';
 import 'package:raabta/features/chat/presentation/chat_screen.dart';
+import 'package:raabta/features/chat/presentation/group_chat_screen.dart';
+import 'package:raabta/features/chat/presentation/group_creation_screen.dart';
 import 'package:raabta/features/chat/presentation/user_list_screen.dart';
 import 'package:raabta/core/services/service_locator.dart';
 
@@ -17,18 +21,27 @@ class ConversationsScreen extends StatefulWidget {
   State<ConversationsScreen> createState() => _ConversationsScreenState();
 }
 
-class _ConversationsScreenState extends State<ConversationsScreen> {
+class _ConversationsScreenState extends State<ConversationsScreen> with SingleTickerProviderStateMixin {
   final ChatRepository _chatRepository = ServiceLocator().chatRepository;
+  final GroupChatRepository _groupChatRepository = ServiceLocator().groupChatRepository;
   final UserProfileRepository _userProfileRepository = ServiceLocator().userProfileRepository;
   final AuthRepository _authRepository = FirebaseAuthRepository();
   
+  late TabController _tabController;
   String? _currentUserId;
   final Map<String, UserProfileModel> _userCache = {};
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _currentUserId = _authRepository.currentUser?.uid;
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   Future<UserProfileModel?> _getUserProfile(String userId) async {
@@ -95,6 +108,64 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
     }
   }
 
+  Future<void> _openGroupChat(GroupModel group) async {
+    if (_currentUserId == null) return;
+
+    try {
+      if (mounted) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => GroupChatScreen(group: group),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to open group chat: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showCreateOptions() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.person_add),
+            title: const Text('New Chat'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const UserListScreen(),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.group_add),
+            title: const Text('New Group'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const GroupCreationScreen(),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_currentUserId == null) {
@@ -114,20 +185,34 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.edit),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const UserListScreen(),
-                ),
-              );
-            },
+            onPressed: _showCreateOptions,
             tooltip: 'Start new conversation',
           ),
         ],
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'Chats', icon: Icon(Icons.chat)),
+            Tab(text: 'Groups', icon: Icon(Icons.group)),
+          ],
+        ),
       ),
-      body: StreamBuilder<List<ConversationModel>>(
-        stream: _chatRepository.getUserConversations(_currentUserId!),
-        builder: (context, snapshot) {
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          // Direct Messages Tab
+          _buildDirectMessagesTab(),
+          // Groups Tab
+          _buildGroupsTab(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDirectMessagesTab() {
+    return StreamBuilder<List<ConversationModel>>(
+      stream: _chatRepository.getUserConversations(_currentUserId!),
+      builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -260,7 +345,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
               children: [
                 CircleAvatar(
                   radius: 28,
-                  backgroundColor: Colors.deepPurple.withValues(alpha: 0.1),
+                  backgroundColor: Colors.deepPurple.withOpacity(0.1),
                   backgroundImage: otherUser?.photoUrl != null
                       ? NetworkImage(otherUser!.photoUrl!)
                       : null,
@@ -383,6 +468,243 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildGroupsTab() {
+    return StreamBuilder<List<GroupModel>>(
+      stream: _groupChatRepository.getGroupsForUser(_currentUserId!),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  size: 64,
+                  color: Colors.grey[400],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Failed to load groups',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  snapshot.error.toString(),
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[500],
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    setState(() {}); // Trigger rebuild
+                  },
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Retry'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.deepPurple,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final groups = snapshot.data ?? [];
+
+        if (groups.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.group_outlined,
+                  size: 64,
+                  color: Colors.grey[400],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No groups yet',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Create a group to chat with multiple people',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[500],
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const GroupCreationScreen(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text('Create Group'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.deepPurple,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          itemCount: groups.length,
+          itemBuilder: (context, index) {
+            final group = groups[index];
+            return _buildGroupTile(group);
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildGroupTile(GroupModel group) {
+    final unreadCount = group.getUnreadCount(_currentUserId!);
+    
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(12),
+        leading: Stack(
+          children: [
+            CircleAvatar(
+              radius: 28,
+                             backgroundColor: Colors.deepPurple.withOpacity(0.1),
+              backgroundImage: group.photoUrl != null
+                  ? NetworkImage(group.photoUrl!)
+                  : null,
+              child: group.photoUrl == null
+                  ? Icon(
+                      Icons.group,
+                      color: Colors.deepPurple,
+                      size: 32,
+                    )
+                  : null,
+            ),
+            if (unreadCount > 0)
+              Positioned(
+                right: 0,
+                top: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: const BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                  ),
+                  constraints: const BoxConstraints(
+                    minWidth: 20,
+                    minHeight: 20,
+                  ),
+                  child: Text(
+                    unreadCount > 99 ? '99+' : unreadCount.toString(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        title: Text(
+          group.name,
+          style: TextStyle(
+            fontWeight: unreadCount > 0 ? FontWeight.bold : FontWeight.w600,
+            fontSize: 16,
+          ),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${group.members.length} members',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 12,
+              ),
+            ),
+            if (group.lastMessage != null) ...[
+              const SizedBox(height: 2),
+              Text(
+                group.lastMessagePreview,
+                style: TextStyle(
+                  color: unreadCount > 0 ? Colors.black87 : Colors.grey[600],
+                  fontWeight: unreadCount > 0 ? FontWeight.w500 : FontWeight.normal,
+                  fontSize: 14,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ] else ...[
+              const SizedBox(height: 2),
+              Text(
+                'No messages yet',
+                style: TextStyle(
+                  color: Colors.grey[500],
+                  fontSize: 14,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ],
+        ),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            if (group.lastMessageTimestamp != null)
+              Text(
+                _formatTimestamp(group.lastMessageTimestamp!),
+                style: TextStyle(
+                  color: unreadCount > 0 ? Colors.deepPurple : Colors.grey[500],
+                  fontSize: 12,
+                  fontWeight: unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+            const SizedBox(height: 4),
+            if (unreadCount > 0)
+              const Icon(
+                Icons.circle,
+                color: Colors.deepPurple,
+                size: 8,
+              ),
+          ],
+        ),
+        onTap: () => _openGroupChat(group),
+      ),
     );
   }
 }
