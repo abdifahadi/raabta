@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:permission_handler/permission_handler.dart';
 import '../../features/call/domain/models/call_model.dart';
 import '../../features/call/domain/repositories/call_repository.dart';
@@ -83,6 +83,14 @@ class CallService {
       }
 
       // Initialize Agora RTC Engine
+      if (kIsWeb) {
+        // For web platform, the Agora SDK requires additional setup
+        // Ensure iris-web-rtc script is loaded in index.html
+        if (kDebugMode) {
+          print('📱 Initializing Agora for web platform');
+        }
+      }
+      
       _engine = createAgoraRtcEngine();
       await _engine!.initialize(const RtcEngineContext(
         appId: AgoraConfig.appId,
@@ -243,6 +251,14 @@ class CallService {
   /// Request necessary permissions
   Future<bool> requestPermissions(CallType callType) async {
     try {
+      // On web, permissions are handled differently by the browser
+      if (kIsWeb) {
+        if (kDebugMode) {
+          print('📱 Web platform: permissions handled by browser');
+        }
+        return true; // Assume granted on web, browser will prompt if needed
+      }
+      
       final permissions = <Permission>[
         Permission.microphone,
       ];
