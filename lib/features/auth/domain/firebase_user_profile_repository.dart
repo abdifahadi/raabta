@@ -5,7 +5,7 @@ import 'user_profile_repository.dart';
 /// Firebase implementation of UserProfileRepository
 class FirebaseUserProfileRepository implements UserProfileRepository {
   final FirebaseFirestore _firestore;
-  final String _collectionPath = 'users';
+  static const String _collectionPath = 'users';
 
   /// Constructor with dependency injection
   FirebaseUserProfileRepository({FirebaseFirestore? firestore})

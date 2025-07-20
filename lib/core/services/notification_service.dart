@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -52,12 +53,12 @@ class NotificationService implements NotificationServiceInterface {
   @override
   Future<void> initialize() async {
     if (_isInitialized) {
-      if (kDebugMode) print('🔔 NotificationService already initialized');
+      if (kDebugMode) log('🔔 NotificationService already initialized');
       return;
     }
 
     try {
-      if (kDebugMode) print('🔔 Initializing NotificationService...');
+      if (kDebugMode) log('🔔 Initializing NotificationService...');
 
       // Initialize local notifications first
       await _initializeLocalNotifications();
@@ -67,7 +68,7 @@ class NotificationService implements NotificationServiceInterface {
 
       // Get initial FCM token
       _currentToken = await _firebaseMessaging.getToken();
-      if (kDebugMode) print('🔑 FCM Token: $_currentToken');
+      if (kDebugMode) log('🔑 FCM Token: $_currentToken');
 
       // Set up FCM message handlers
       await _setupFCMHandlers();
@@ -76,9 +77,9 @@ class NotificationService implements NotificationServiceInterface {
       await _handleInitialMessage();
 
       _isInitialized = true;
-      if (kDebugMode) print('✅ NotificationService initialized successfully');
+      if (kDebugMode) log('✅ NotificationService initialized successfully');
     } catch (e) {
-      if (kDebugMode) print('❌ NotificationService initialization failed: $e');
+      if (kDebugMode) log('❌ NotificationService initialization failed: $e');
       rethrow;
     }
   }
@@ -141,10 +142,10 @@ class NotificationService implements NotificationServiceInterface {
     // Handle foreground messages
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       if (kDebugMode) {
-        print('🔔 Received foreground message: ${message.messageId}');
-        print('📱 Title: ${message.notification?.title}');
-        print('📱 Body: ${message.notification?.body}');
-        print('📱 Data: ${message.data}');
+        log('🔔 Received foreground message: ${message.messageId}');
+        log('📱 Title: ${message.notification?.title}');
+        log('📱 Body: ${message.notification?.body}');
+        log('📱 Data: ${message.data}');
       }
 
       final payload = _createNotificationPayload(message);
@@ -157,7 +158,7 @@ class NotificationService implements NotificationServiceInterface {
     // Handle background messages (when app is in background but not terminated)
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       if (kDebugMode) {
-        print('🔔 App opened from background notification: ${message.messageId}');
+        log('🔔 App opened from background notification: ${message.messageId}');
       }
 
       final payload = _createNotificationPayload(message);
@@ -166,7 +167,7 @@ class NotificationService implements NotificationServiceInterface {
 
     // Handle token refresh
     _firebaseMessaging.onTokenRefresh.listen((String token) {
-      if (kDebugMode) print('🔄 FCM Token refreshed: $token');
+      if (kDebugMode) log('🔄 FCM Token refreshed: $token');
       _currentToken = token;
       // Update token in Firestore when user is available
       _updateTokenInFirestore(token);
@@ -178,7 +179,7 @@ class NotificationService implements NotificationServiceInterface {
     final RemoteMessage? initialMessage = await _firebaseMessaging.getInitialMessage();
     if (initialMessage != null) {
       if (kDebugMode) {
-        print('🔔 App opened from terminated state with notification: ${initialMessage.messageId}');
+        log('🔔 App opened from terminated state with notification: ${initialMessage.messageId}');
       }
 
       final payload = _createNotificationPayload(initialMessage);
@@ -192,8 +193,8 @@ class NotificationService implements NotificationServiceInterface {
   /// Handle local notification taps
   void _onNotificationResponse(NotificationResponse response) {
     if (kDebugMode) {
-      print('🔔 Local notification tapped: ${response.id}');
-      print('📱 Payload: ${response.payload}');
+      log('🔔 Local notification tapped: ${response.id}');
+      log('📱 Payload: ${response.payload}');
     }
 
     if (response.payload != null) {
@@ -202,7 +203,7 @@ class NotificationService implements NotificationServiceInterface {
         final payload = NotificationPayload.fromMap(data);
         _onNotificationTapController.add(payload);
       } catch (e) {
-        if (kDebugMode) print('❌ Error parsing notification payload: $e');
+        if (kDebugMode) log('❌ Error parsing notification payload: $e');
       }
     }
   }
@@ -245,7 +246,7 @@ class NotificationService implements NotificationServiceInterface {
       _currentToken ??= await _firebaseMessaging.getToken();
       return _currentToken;
     } catch (e) {
-      if (kDebugMode) print('❌ Error getting FCM token: $e');
+      if (kDebugMode) log('❌ Error getting FCM token: $e');
       return null;
     }
   }
@@ -265,21 +266,21 @@ class NotificationService implements NotificationServiceInterface {
       );
 
       if (kDebugMode) {
-        print('🔔 FCM Permission status: ${settings.authorizationStatus}');
+        log('🔔 FCM Permission status: ${settings.authorizationStatus}');
       }
 
       // For Android 13+, also request notification permission
       if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.android)) {
         final status = await Permission.notification.request();
         if (kDebugMode) {
-          print('🔔 Android notification permission: $status');
+          log('🔔 Android notification permission: $status');
         }
         return status.isGranted && settings.authorizationStatus == AuthorizationStatus.authorized;
       }
 
       return settings.authorizationStatus == AuthorizationStatus.authorized;
     } catch (e) {
-      if (kDebugMode) print('❌ Error requesting notification permission: $e');
+      if (kDebugMode) log('❌ Error requesting notification permission: $e');
       return false;
     }
   }
@@ -292,9 +293,9 @@ class NotificationService implements NotificationServiceInterface {
 
     try {
       await _firebaseMessaging.subscribeToTopic(topic);
-      if (kDebugMode) print('✅ Subscribed to topic: $topic');
+      if (kDebugMode) log('✅ Subscribed to topic: $topic');
     } catch (e) {
-      if (kDebugMode) print('❌ Error subscribing to topic $topic: $e');
+      if (kDebugMode) log('❌ Error subscribing to topic $topic: $e');
       rethrow;
     }
   }
@@ -307,9 +308,9 @@ class NotificationService implements NotificationServiceInterface {
 
     try {
       await _firebaseMessaging.unsubscribeFromTopic(topic);
-      if (kDebugMode) print('✅ Unsubscribed from topic: $topic');
+      if (kDebugMode) log('✅ Unsubscribed from topic: $topic');
     } catch (e) {
-      if (kDebugMode) print('❌ Error unsubscribing from topic $topic: $e');
+      if (kDebugMode) log('❌ Error unsubscribing from topic $topic: $e');
       rethrow;
     }
   }
@@ -363,9 +364,9 @@ class NotificationService implements NotificationServiceInterface {
         payload: payloadJson,
       );
 
-      if (kDebugMode) print('✅ Local notification shown: $title');
+      if (kDebugMode) log('✅ Local notification shown: $title');
     } catch (e) {
-      if (kDebugMode) print('❌ Error showing local notification: $e');
+      if (kDebugMode) log('❌ Error showing local notification: $e');
     }
   }
 
@@ -396,10 +397,10 @@ class NotificationService implements NotificationServiceInterface {
             .collection('users')
             .doc(userId)
             .update({'fcmToken': token});
-        if (kDebugMode) print('✅ FCM token updated in Firestore');
+        if (kDebugMode) log('✅ FCM token updated in Firestore');
       }
     } catch (e) {
-      if (kDebugMode) print('❌ Failed to update FCM token in Firestore: $e');
+      if (kDebugMode) log('❌ Failed to update FCM token in Firestore: $e');
     }
   }
 }
@@ -408,10 +409,10 @@ class NotificationService implements NotificationServiceInterface {
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   if (kDebugMode) {
-    print('🔔 Background message received: ${message.messageId}');
-    print('📱 Title: ${message.notification?.title}');
-    print('📱 Body: ${message.notification?.body}');
-    print('📱 Data: ${message.data}');
+    log('🔔 Background message received: ${message.messageId}');
+    log('📱 Title: ${message.notification?.title}');
+    log('📱 Body: ${message.notification?.body}');
+    log('📱 Data: ${message.data}');
   }
   
   // Handle background message processing here if needed

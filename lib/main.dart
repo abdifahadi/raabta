@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'dart:async';
+import 'dart:developer';
 import 'core/services/service_locator.dart';
 import 'core/services/logging_service.dart';
 import 'core/services/notification_service.dart';
@@ -19,18 +20,18 @@ void main() async {
     }
     
     if (kDebugMode) {
-      print('🚀 Starting Raabta app...');
-      print('🌍 Platform: ${kIsWeb ? 'Web' : 'Native'}');
-      print('🔧 Debug mode: $kDebugMode');
+      log('🚀 Starting Raabta app...');
+      log('🌍 Platform: ${kIsWeb ? 'Web' : 'Native'}');
+      log('🔧 Debug mode: $kDebugMode');
     }
 
     // Set up Flutter error handling first
     FlutterError.onError = (FlutterErrorDetails details) {
       if (kDebugMode) {
-        print('🚨 Flutter Error: ${details.exception}');
-        print('🔍 Library: ${details.library}');
-        print('🔍 Context: ${details.context}');
-        print('🔍 Stack Trace: ${details.stack}');
+        log('🚨 Flutter Error: ${details.exception}');
+        log('🔍 Library: ${details.library}');
+        log('🔍 Context: ${details.context}');
+        log('🔍 Stack Trace: ${details.stack}');
       }
     };
 
@@ -38,7 +39,7 @@ void main() async {
     bool servicesInitialized = false;
     try {
       if (kDebugMode) {
-        print('⚙️ Initializing services...');
+        log('⚙️ Initializing services...');
       }
       
       // Reduced timeout for web platforms (5 seconds instead of 15)
@@ -48,7 +49,7 @@ void main() async {
         timeout,
         onTimeout: () {
           if (kDebugMode) {
-            print('⚠️ Service initialization timeout (${timeout.inSeconds}s) - continuing with degraded mode');
+            log('⚠️ Service initialization timeout (${timeout.inSeconds}s) - continuing with degraded mode');
           }
           throw TimeoutException('Service initialization timeout', timeout);
         },
@@ -56,16 +57,16 @@ void main() async {
       servicesInitialized = true;
       
       if (kDebugMode) {
-        print('✅ Services initialized successfully');
+        log('✅ Services initialized successfully');
         final firebaseService = ServiceLocator().backendServiceOrNull;
         if (firebaseService?.isInitialized == true) {
-          print('🔥 Firebase service is ready');
+          log('🔥 Firebase service is ready');
         }
       }
     } catch (serviceError, serviceStackTrace) {
       if (kDebugMode) {
-        print('🚨 Service initialization error: $serviceError');
-        print('🔍 Service Stack Trace: $serviceStackTrace');
+        log('🚨 Service initialization error: $serviceError');
+        log('🔍 Service Stack Trace: $serviceStackTrace');
       }
       
       // Continue without fully initialized services - the app can handle this
@@ -74,7 +75,7 @@ void main() async {
       // For web, add additional fallback delay to ensure DOM is ready
       if (kIsWeb) {
         if (kDebugMode) {
-          print('🌐 Web platform: Adding fallback delay for DOM readiness');
+          log('🌐 Web platform: Adding fallback delay for DOM readiness');
         }
         await Future.delayed(const Duration(milliseconds: 500));
       }
@@ -88,12 +89,12 @@ void main() async {
     runApp(MyApp(servicesInitialized: servicesInitialized));
     
     if (kDebugMode) {
-      print('✅ App started successfully');
+      log('✅ App started successfully');
     }
   } catch (e, stackTrace) {
     if (kDebugMode) {
-      print('❌ Critical error starting app: $e');
-      print('🔍 Stack Trace: $stackTrace');
+      log('❌ Critical error starting app: $e');
+      log('🔍 Stack Trace: $stackTrace');
     }
     
     // Still try to run the app with a fallback UI
@@ -227,7 +228,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (kDebugMode) {
-      print('🏗️ Building MyApp widget');
+      log('🏗️ Building MyApp widget');
     }
     
     // Initialize notification handler with navigator key
@@ -272,8 +273,8 @@ class MyApp extends StatelessWidget {
         // Handle widget errors gracefully
         ErrorWidget.builder = (FlutterErrorDetails errorDetails) {
           if (kDebugMode) {
-            print('🚨 Widget Error: ${errorDetails.exception}');
-            print('🔍 Widget Error Library: ${errorDetails.library}');
+            log('🚨 Widget Error: ${errorDetails.exception}');
+            log('🔍 Widget Error Library: ${errorDetails.library}');
           }
           return Container(
             color: const Color(0xFFF5F5F5),

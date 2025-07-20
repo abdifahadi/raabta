@@ -1,3 +1,4 @@
+import 'dart:developer';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
@@ -102,7 +103,7 @@ class MediaPickerService {
   }) async {
     try {
       if (kDebugMode) {
-        print('📷 Picking image from $source');
+        log('📷 Picking image from $source');
       }
 
       final XFile? pickedFile = await _imagePicker.pickImage(
@@ -139,7 +140,7 @@ class MediaPickerService {
       }
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error picking image: $e');
+        log('❌ Error picking image: $e');
       }
       throw Exception('Failed to pick image: $e');
     }
@@ -152,7 +153,7 @@ class MediaPickerService {
   }) async {
     try {
       if (kDebugMode) {
-        print('🎬 Picking video from $source');
+        log('🎬 Picking video from $source');
       }
 
       final XFile? pickedFile = await _imagePicker.pickVideo(
@@ -187,7 +188,7 @@ class MediaPickerService {
       }
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error picking video: $e');
+        log('❌ Error picking video: $e');
       }
       throw Exception('Failed to pick video: $e');
     }
@@ -200,7 +201,7 @@ class MediaPickerService {
   }) async {
     try {
       if (kDebugMode) {
-        print('📎 Picking file of type $type');
+        log('📎 Picking file of type $type');
       }
 
       final FilePickerResult? result = await FilePicker.platform.pickFiles(
@@ -267,7 +268,7 @@ class MediaPickerService {
       }
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error picking file: $e');
+        log('❌ Error picking file: $e');
       }
       throw Exception('Failed to pick file: $e');
     }
@@ -280,7 +281,7 @@ class MediaPickerService {
   }) async {
     try {
       if (kDebugMode) {
-        print('📎 Picking multiple files of type $type');
+        log('📎 Picking multiple files of type $type');
       }
 
       final FilePickerResult? result = await FilePicker.platform.pickFiles(
@@ -351,7 +352,7 @@ class MediaPickerService {
       return pickedFiles;
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error picking multiple files: $e');
+        log('❌ Error picking multiple files: $e');
       }
       throw Exception('Failed to pick multiple files: $e');
     }
