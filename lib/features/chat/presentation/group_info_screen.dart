@@ -409,6 +409,22 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
     );
   }
 
+  void _showAddMembersDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add Members'),
+        content: const Text('Add members functionality is not yet implemented.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_currentGroup == null) {
@@ -550,10 +566,8 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                         IconButton(
                           icon: const Icon(Icons.person_add),
                           onPressed: () {
-                            // TODO: Navigate to add members screen
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Add members feature coming soon!')),
-                            );
+                            // Navigate to add members screen
+                            _showAddMembersDialog();
                           },
                         ),
                     ],
@@ -595,7 +609,7 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            if (profile?.email != null) Text(profile.email!),
+                            if (profile?.email != null) Text(profile?.email!),
                             if (isAdmin)
                               Text(
                                 'Admin',
