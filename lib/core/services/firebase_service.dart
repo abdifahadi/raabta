@@ -66,7 +66,7 @@ class FirebaseService implements BackendService {
         if (kDebugMode) {
           print('🌐 Web platform detected, adding initialization delay...');
         }
-        await Future.delayed(const Duration(milliseconds: 500));
+        await Future.delayed(const Duration(milliseconds: 200));
       }
 
       // Add retry mechanism for initialization with reduced retries for faster loading
