@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:developer';
 import 'auth_service.dart';
 import 'firebase_service.dart';
 import 'storage_repository.dart';
@@ -76,14 +78,14 @@ class ServiceLocator {
   Future<void> initialize() async {
     if (_isInitialized) {
       if (kDebugMode) {
-        print('🔧 ServiceLocator already initialized');
+        log('🔧 ServiceLocator already initialized');
       }
       return;
     }
 
     if (_isInitializing) {
       if (kDebugMode) {
-        print('🔧 ServiceLocator initialization in progress, waiting...');
+        log('🔧 ServiceLocator initialization in progress, waiting...');
       }
       // Wait for initialization to complete with timeout
       int waitCount = 0;
@@ -99,8 +101,8 @@ class ServiceLocator {
 
     try {
       if (kDebugMode) {
-        print('🔧 Initializing ServiceLocator...');
-        print('🌐 Platform: ${kIsWeb ? 'Web' : 'Native'}');
+        log('🔧 Initializing ServiceLocator...');
+        log('🌐 Platform: ${kIsWeb ? 'Web' : 'Native'}');
       }
 
       // Initialize backend service with timeout
@@ -111,7 +113,7 @@ class ServiceLocator {
         kIsWeb ? const Duration(seconds: 8) : const Duration(seconds: 12),
         onTimeout: () {
           if (kDebugMode) {
-            print('⏰ Firebase initialization timeout in ServiceLocator');
+            log('⏰ Firebase initialization timeout in ServiceLocator');
           }
           throw TimeoutException('Firebase initialization timeout', kIsWeb ? const Duration(seconds: 8) : const Duration(seconds: 12));
         },
@@ -161,11 +163,11 @@ class ServiceLocator {
       _isInitialized = true;
       
       if (kDebugMode) {
-        print('✅ ServiceLocator initialized successfully');
+        log('✅ ServiceLocator initialized successfully');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('❌ ServiceLocator initialization failed: $e');
+        log('❌ ServiceLocator initialization failed: $e');
       }
       rethrow;
     } finally {

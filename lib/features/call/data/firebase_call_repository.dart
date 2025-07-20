@@ -1,3 +1,4 @@
+import 'dart:developer';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import '../domain/models/call_model.dart';
@@ -43,13 +44,13 @@ class FirebaseCallRepository implements CallRepository {
           .set(call.toFirestore());
 
       if (kDebugMode) {
-        print('📞 Call initiated: ${call.callId}');
+        log('📞 Call initiated: ${call.callId}');
       }
 
       return call;
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error initiating call: $e');
+        log('❌ Error initiating call: $e');
       }
       rethrow;
     }
@@ -91,11 +92,11 @@ class FirebaseCallRepository implements CallRepository {
           .update(updateData);
 
       if (kDebugMode) {
-        print('📞 Call status updated: $callId -> ${status.name}');
+        log('📞 Call status updated: $callId -> ${status.name}');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error updating call status: $e');
+        log('❌ Error updating call status: $e');
       }
       rethrow;
     }
@@ -116,7 +117,7 @@ class FirebaseCallRepository implements CallRepository {
       return CallModel.fromFirestore(doc.data()!);
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error getting call: $e');
+        log('❌ Error getting call: $e');
       }
       return null;
     }
@@ -189,7 +190,7 @@ class FirebaseCallRepository implements CallRepository {
       return sortedCalls.take(limit).toList();
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error getting call history: $e');
+        log('❌ Error getting call history: $e');
       }
       return [];
     }
@@ -204,11 +205,11 @@ class FirebaseCallRepository implements CallRepository {
           .delete();
 
       if (kDebugMode) {
-        print('📞 Call deleted: $callId');
+        log('📞 Call deleted: $callId');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error deleting call: $e');
+        log('❌ Error deleting call: $e');
       }
       rethrow;
     }
@@ -252,7 +253,7 @@ class FirebaseCallRepository implements CallRepository {
       return null;
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error getting active call: $e');
+        log('❌ Error getting active call: $e');
       }
       return null;
     }
@@ -269,11 +270,11 @@ class FirebaseCallRepository implements CallRepository {
       );
 
       if (kDebugMode) {
-        print('📞 Call ended: $callId, reason: ${reason.name}');
+        log('📞 Call ended: $callId, reason: ${reason.name}');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error ending call: $e');
+        log('❌ Error ending call: $e');
       }
       rethrow;
     }

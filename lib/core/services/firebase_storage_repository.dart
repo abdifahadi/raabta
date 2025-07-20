@@ -1,3 +1,4 @@
+import 'dart:developer';
 import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
@@ -23,7 +24,7 @@ class FirebaseStorageRepository implements StorageRepository {
   }) async {
     try {
       if (kDebugMode) {
-        print('📤 Uploading file to path: $path');
+        log('📤 Uploading file to path: $path');
       }
 
       final ref = _storage.ref().child(path);
@@ -55,13 +56,13 @@ class FirebaseStorageRepository implements StorageRepository {
       final downloadUrl = await snapshot.ref.getDownloadURL();
 
       if (kDebugMode) {
-        print('✅ File uploaded successfully: $downloadUrl');
+        log('✅ File uploaded successfully: $downloadUrl');
       }
 
       return downloadUrl;
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error uploading file: $e');
+        log('❌ Error uploading file: $e');
       }
       throw Exception('Failed to upload file: $e');
     }
@@ -76,7 +77,7 @@ class FirebaseStorageRepository implements StorageRepository {
   }) async {
     try {
       if (kDebugMode) {
-        print('📤 Uploading bytes to path: $path');
+        log('📤 Uploading bytes to path: $path');
       }
 
       final ref = _storage.ref().child(path);
@@ -105,13 +106,13 @@ class FirebaseStorageRepository implements StorageRepository {
       final downloadUrl = await snapshot.ref.getDownloadURL();
 
       if (kDebugMode) {
-        print('✅ Bytes uploaded successfully: $downloadUrl');
+        log('✅ Bytes uploaded successfully: $downloadUrl');
       }
 
       return downloadUrl;
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error uploading bytes: $e');
+        log('❌ Error uploading bytes: $e');
       }
       throw Exception('Failed to upload bytes: $e');
     }
@@ -121,18 +122,18 @@ class FirebaseStorageRepository implements StorageRepository {
   Future<void> deleteFile(String url) async {
     try {
       if (kDebugMode) {
-        print('🗑️ Deleting file: $url');
+        log('🗑️ Deleting file: $url');
       }
 
       final ref = _storage.refFromURL(url);
       await ref.delete();
 
       if (kDebugMode) {
-        print('✅ File deleted successfully');
+        log('✅ File deleted successfully');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error deleting file: $e');
+        log('❌ Error deleting file: $e');
       }
       throw Exception('Failed to delete file: $e');
     }
@@ -145,7 +146,7 @@ class FirebaseStorageRepository implements StorageRepository {
       return await ref.getDownloadURL();
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error getting download URL: $e');
+        log('❌ Error getting download URL: $e');
       }
       throw Exception('Failed to get download URL: $e');
     }
@@ -198,7 +199,7 @@ class FirebaseStorageRepository implements StorageRepository {
       };
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error getting file info: $e');
+        log('❌ Error getting file info: $e');
       }
       return null;
     }

@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:developer';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -13,7 +15,6 @@ import 'package:raabta/features/onboarding/presentation/welcome_screen.dart';
 import 'package:raabta/core/services/service_locator.dart';
 import 'package:raabta/core/services/notification_handler.dart';
 import 'package:raabta/features/call/presentation/widgets/call_manager.dart';
-import 'dart:async';
 
 /// A wrapper widget that handles authentication state changes
 class AuthWrapper extends StatefulWidget {
@@ -31,7 +32,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
   bool _isFirstLaunch = true;
   bool _isCheckingFirstLaunch = true;
   bool _hasInitializationError = false;
-  bool _hasAuthStreamError = false;
+  // TODO: Removed unused field '_hasAuthStreamError' - was only set but never read
   String _errorMessage = '';
   late final AuthRepository _authRepository;
   late final UserProfileRepository _userProfileRepository;
@@ -56,7 +57,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
   void _initializeRepositories() {
     try {
       if (kDebugMode) {
-        print('🔐 AuthWrapper: Initializing repositories...');
+        log('🔐 AuthWrapper: Initializing repositories...');
       }
       
       // Initialize repositories safely
@@ -66,13 +67,13 @@ class _AuthWrapperState extends State<AuthWrapper> {
       if (widget.servicesInitialized && ServiceLocator().isInitialized) {
         _userProfileRepository = ServiceLocator().userProfileRepository;
         if (kDebugMode) {
-          print('🔐 Using UserProfileRepository from ServiceLocator');
+          log('🔐 Using UserProfileRepository from ServiceLocator');
         }
       } else {
         // Create instance directly if ServiceLocator is not ready
         _userProfileRepository = FirebaseUserProfileRepository();
         if (kDebugMode) {
-          print('ℹ️ Creating UserProfileRepository directly due to uninitialized services');
+          log('ℹ️ Creating UserProfileRepository directly due to uninitialized services');
         }
       }
       
@@ -84,8 +85,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
       
     } catch (e, stackTrace) {
       if (kDebugMode) {
-        print('🚨 AuthWrapper initialization error: $e');
-        print('🔍 Stack trace: $stackTrace');
+        log('🚨 AuthWrapper initialization error: $e');
+        log('🔍 Stack trace: $stackTrace');
       }
       
       setState(() {
@@ -105,7 +106,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
     _timeoutTimer = Timer(timeoutDuration, () {
       if (mounted && !_isRetrying && !_hasTimeout) {
         if (kDebugMode) {
-          print('⏰ AuthWrapper timeout after ${timeoutDuration.inSeconds} seconds');
+          log('⏰ AuthWrapper timeout after ${timeoutDuration.inSeconds} seconds');
         }
         setState(() {
           _hasTimeout = true;
@@ -117,14 +118,14 @@ class _AuthWrapperState extends State<AuthWrapper> {
   Future<void> _checkFirstLaunch() async {
     try {
       if (kDebugMode) {
-        print('🔍 Checking first launch status...');
+        log('🔍 Checking first launch status...');
       }
       
       final prefs = await SharedPreferences.getInstance();
       final isFirstLaunch = prefs.getBool('is_first_launch') ?? true;
       
       if (kDebugMode) {
-        print('🔍 First launch status: $isFirstLaunch');
+        log('🔍 First launch status: $isFirstLaunch');
       }
       
       if (mounted) {
@@ -138,12 +139,12 @@ class _AuthWrapperState extends State<AuthWrapper> {
       if (isFirstLaunch) {
         await prefs.setBool('is_first_launch', false);
         if (kDebugMode) {
-          print('✅ Marked first launch as complete');
+          log('✅ Marked first launch as complete');
         }
       }
     } catch (e) {
       if (kDebugMode) {
-        print('🚨 Error checking first launch: $e');
+        log('🚨 Error checking first launch: $e');
       }
       // Default to showing welcome screen if error
       if (mounted) {
@@ -157,13 +158,12 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
   void _retry() {
     if (kDebugMode) {
-      print('🔄 AuthWrapper: Retrying...');
+      log('🔄 AuthWrapper: Retrying...');
     }
     
     setState(() {
       _hasTimeout = false;
       _isRetrying = true;
-      _hasAuthStreamError = false;
     });
     
     // Reset timeout
@@ -182,7 +182,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
   /// Show sign in screen as fallback
   void _showSignInFallback() {
     if (kDebugMode) {
-      print('🔄 AuthWrapper: Showing sign-in fallback');
+      log('🔄 AuthWrapper: Showing sign-in fallback');
     }
     
     Navigator.of(context).pushReplacement(
@@ -417,7 +417,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
   @override
   Widget build(BuildContext context) {
     if (kDebugMode) {
-      print('🔐 Building AuthWrapper');
+      log('🔐 Building AuthWrapper');
     }
 
     // Show initialization error screen if repositories failed to initialize
@@ -449,7 +449,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
     // Show welcome screen for first-time users
     if (_isFirstLaunch) {
       if (kDebugMode) {
-        print('🎉 First launch detected, showing welcome screen');
+        log('🎉 First launch detected, showing welcome screen');
       }
       return const WelcomeScreen();
     }
@@ -476,31 +476,25 @@ class _AuthWrapperState extends State<AuthWrapper> {
         kIsWeb ? const Duration(seconds: 10) : const Duration(seconds: 15),
         onTimeout: (sink) {
           if (kDebugMode) {
-            print('⏰ Auth stream timeout - providing fallback');
+            log('⏰ Auth stream timeout - providing fallback');
           }
           sink.add(null); // Fallback to no user
         },
       ).handleError((error) {
         if (kDebugMode) {
-          print('🚨 Auth stream error handled: $error');
+          log('🚨 Auth stream error handled: $error');
         }
-        setState(() {
-          _hasAuthStreamError = true;
-        });
       }),
       builder: (context, snapshot) {
         if (kDebugMode) {
-          print('🔐 Auth state change: ${snapshot.connectionState}, hasData: ${snapshot.hasData}, data: ${snapshot.data?.uid ?? 'null'}');
+          log('🔐 Auth state change: ${snapshot.connectionState}, hasData: ${snapshot.hasData}, data: ${snapshot.data?.uid ?? 'null'}');
         }
 
         // Handle errors with more specific messaging
         if (snapshot.hasError) {
           if (kDebugMode) {
-            print('🚨 Auth stream error: ${snapshot.error}');
+            log('🚨 Auth stream error: ${snapshot.error}');
           }
-          setState(() {
-            _hasAuthStreamError = true;
-          });
           return _buildErrorScreen(
             title: 'Authentication Error',
             message: kIsWeb 
@@ -517,7 +511,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
         // Show loading while waiting for auth state with timeout consideration
         if (snapshot.connectionState == ConnectionState.waiting) {
           if (kDebugMode) {
-            print('🔐 Waiting for auth state... (Web: ${kIsWeb})');
+            log('🔐 Waiting for auth state... (Web: $kIsWeb)');
           }
           
           // For web, show additional loading states after some time
@@ -545,7 +539,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
           final user = snapshot.data!;
           
           if (kDebugMode) {
-            print('🔐 User is signed in: ${user.uid}');
+            log('🔐 User is signed in: ${user.uid}');
           }
           
           // Check if user profile exists and is complete
@@ -553,12 +547,12 @@ class _AuthWrapperState extends State<AuthWrapper> {
             future: _userProfileRepository.getUserProfile(user.uid),
             builder: (context, profileSnapshot) {
               if (kDebugMode) {
-                print('🔐 Profile check: ${profileSnapshot.connectionState}, hasData: ${profileSnapshot.hasData}');
+                log('🔐 Profile check: ${profileSnapshot.connectionState}, hasData: ${profileSnapshot.hasData}');
               }
 
               if (profileSnapshot.hasError) {
                 if (kDebugMode) {
-                  print('🚨 Profile fetch error: ${profileSnapshot.error}');
+                  log('🚨 Profile fetch error: ${profileSnapshot.error}');
                 }
                 return _buildErrorScreen(
                   title: 'Profile Loading Error',
@@ -576,7 +570,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
               
               if (profileSnapshot.connectionState == ConnectionState.waiting) {
                 if (kDebugMode) {
-                  print('🔐 Loading user profile...');
+                  log('🔐 Loading user profile...');
                 }
                 return _buildLoadingScreen(
                   title: 'Loading profile...',
@@ -587,7 +581,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
               final profile = profileSnapshot.data;
               if (profile != null && profile.isProfileComplete) {
                 if (kDebugMode) {
-                  print('🔐 Profile is complete, showing home screen');
+                  log('🔐 Profile is complete, showing home screen');
                 }
                 
                 // Update FCM token for signed-in user
@@ -604,7 +598,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
                 );
               } else {
                 if (kDebugMode) {
-                  print('🔐 Profile incomplete or missing, showing profile setup');
+                  log('🔐 Profile incomplete or missing, showing profile setup');
                 }
                 // Profile doesn't exist or is incomplete, show profile setup
                 if (profile != null) {
@@ -629,7 +623,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
                     builder: (context, createSnapshot) {
                       if (createSnapshot.hasError) {
                         if (kDebugMode) {
-                          print('🚨 Profile creation error: ${createSnapshot.error}');
+                          log('🚨 Profile creation error: ${createSnapshot.error}');
                         }
                         return _buildErrorScreen(
                           title: 'Profile Creation Error',
@@ -642,7 +636,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
                       
                       if (createSnapshot.connectionState == ConnectionState.waiting) {
                         if (kDebugMode) {
-                          print('🔐 Creating initial profile...');
+                          log('🔐 Creating initial profile...');
                         }
                         return _buildLoadingScreen(
                           title: 'Setting up profile...',
@@ -652,7 +646,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
                       
                       if (createSnapshot.hasData) {
                         if (kDebugMode) {
-                          print('🔐 Initial profile created, showing setup screen');
+                          log('🔐 Initial profile created, showing setup screen');
                         }
                         return TweenAnimationBuilder<double>(
                           tween: Tween(begin: 0.0, end: 1.0),
@@ -664,7 +658,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
                         );
                       } else {
                         if (kDebugMode) {
-                          print('🚨 Failed to create initial profile, signing out');
+                          log('🚨 Failed to create initial profile, signing out');
                         }
                         // Error creating profile, sign out
                         _authRepository.signOut();
@@ -680,7 +674,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
         // Otherwise, the user is not signed in
         if (kDebugMode) {
-          print('🔐 User is not signed in, showing sign in screen');
+          log('🔐 User is not signed in, showing sign in screen');
         }
         
         // Remove FCM token when user signs out
@@ -702,7 +696,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
   void _updateFCMTokenForUser(String userId) {
     NotificationHandler().updateFCMTokenForUser(userId).catchError((error) {
       if (kDebugMode) {
-        print('❌ Failed to update FCM token for user $userId: $error');
+        log('❌ Failed to update FCM token for user $userId: $error');
       }
     });
   }
@@ -713,7 +707,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
     // FCM token cleanup will happen during next sign-in
     // This is a limitation but acceptable since tokens have expiry
     if (kDebugMode) {
-      print('🔐 User signed out, FCM token will be cleaned up on next sign-in');
+      log('🔐 User signed out, FCM token will be cleaned up on next sign-in');
     }
   }
 }

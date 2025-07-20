@@ -1,3 +1,4 @@
+import 'dart:developer';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
@@ -45,7 +46,7 @@ class FirebaseAuthService implements AuthProvider {
     final firebaseService = FirebaseService();
     if (!firebaseService.isInitialized) {
       if (kDebugMode) {
-        print('⚠️ Firebase not initialized, but AuthService is being accessed');
+        log('⚠️ Firebase not initialized, but AuthService is being accessed');
       }
       // Instead of throwing, we'll let Firebase.instance handle the error
       // This allows for better error handling in the UI
@@ -61,7 +62,7 @@ class FirebaseAuthService implements AuthProvider {
       return _auth.currentUser;
     } catch (e) {
       if (kDebugMode) {
-        print('🚨 Error getting current user: $e');
+        log('🚨 Error getting current user: $e');
       }
       return null;
     }
@@ -75,7 +76,7 @@ class FirebaseAuthService implements AuthProvider {
       // Add debug logging for web
       if (kIsWeb && kDebugMode) {
         return stream.map((user) {
-          print('🔐 Auth state change (Web): ${user?.uid ?? 'null'}');
+          log('🔐 Auth state change (Web): ${user?.uid ?? 'null'}');
           return user;
         });
       }
@@ -83,7 +84,7 @@ class FirebaseAuthService implements AuthProvider {
       return stream;
     } catch (e) {
       if (kDebugMode) {
-        print('🚨 Error getting auth state changes: $e');
+        log('🚨 Error getting auth state changes: $e');
       }
       // Return a stream that emits null to indicate no user
       return Stream.value(null);

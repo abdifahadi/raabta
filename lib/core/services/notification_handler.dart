@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../models/notification_payload.dart';
@@ -30,7 +31,7 @@ class NotificationHandler {
       _handleNotificationTap,
       onError: (error) {
         if (kDebugMode) {
-          print('❌ Error handling notification tap: $error');
+          log('❌ Error handling notification tap: $error');
         }
       },
     );
@@ -40,7 +41,7 @@ class NotificationHandler {
       _handleForegroundMessage,
       onError: (error) {
         if (kDebugMode) {
-          print('❌ Error handling foreground message: $error');
+          log('❌ Error handling foreground message: $error');
         }
       },
     );
@@ -49,12 +50,12 @@ class NotificationHandler {
   /// Handle notification tap - navigate to appropriate screen
   void _handleNotificationTap(NotificationPayload payload) {
     if (kDebugMode) {
-      print('🔔 Handling notification tap: ${payload.toString()}');
+      log('🔔 Handling notification tap: ${payload.toString()}');
     }
 
     final context = _navigatorKey?.currentContext;
     if (context == null) {
-      if (kDebugMode) print('❌ Navigator context not available');
+      if (kDebugMode) log('❌ Navigator context not available');
       return;
     }
 
@@ -64,7 +65,7 @@ class NotificationHandler {
     } else {
       // Handle other notification types
       if (kDebugMode) {
-        print('🔔 Unhandled notification type: ${payload.type}');
+        log('🔔 Unhandled notification type: ${payload.type}');
       }
     }
   }
@@ -72,7 +73,7 @@ class NotificationHandler {
   /// Handle foreground messages - show in-app notification or update UI
   void _handleForegroundMessage(NotificationPayload payload) {
     if (kDebugMode) {
-      print('🔔 Handling foreground message: ${payload.toString()}');
+      log('🔔 Handling foreground message: ${payload.toString()}');
     }
 
     final context = _navigatorKey?.currentContext;
@@ -116,11 +117,11 @@ class NotificationHandler {
       );
 
       if (kDebugMode) {
-        print('✅ Navigated to chat screen: $conversationId');
+        log('✅ Navigated to chat screen: $conversationId');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error navigating to chat screen: $e');
+        log('❌ Error navigating to chat screen: $e');
       }
     }
   }
@@ -160,7 +161,7 @@ class NotificationHandler {
       );
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error showing in-app notification: $e');
+        log('❌ Error showing in-app notification: $e');
       }
     }
   }
@@ -172,20 +173,20 @@ class NotificationHandler {
       final chatRepository = ServiceLocator().chatRepository;
 
       if (notificationService == null) {
-        if (kDebugMode) print('❌ NotificationService not available');
+        if (kDebugMode) log('❌ NotificationService not available');
         return;
       }
 
       final token = await notificationService.getFCMToken();
       if (token != null) {
         await chatRepository.saveFCMToken(userId, token);
-        if (kDebugMode) print('✅ FCM token saved for user: $userId');
+        if (kDebugMode) log('✅ FCM token saved for user: $userId');
         
         // Clean up old tokens
         await chatRepository.cleanupOldFCMTokens(userId);
       }
     } catch (e) {
-      if (kDebugMode) print('❌ Error updating FCM token: $e');
+      if (kDebugMode) log('❌ Error updating FCM token: $e');
     }
   }
 
@@ -200,10 +201,10 @@ class NotificationHandler {
       final token = await notificationService.getFCMToken();
       if (token != null) {
         await chatRepository.removeFCMToken(userId, token);
-        if (kDebugMode) print('✅ FCM token removed for user: $userId');
+        if (kDebugMode) log('✅ FCM token removed for user: $userId');
       }
     } catch (e) {
-      if (kDebugMode) print('❌ Error removing FCM token: $e');
+      if (kDebugMode) log('❌ Error removing FCM token: $e');
     }
   }
 
@@ -214,9 +215,9 @@ class NotificationHandler {
       if (notificationService == null) return;
 
       await notificationService.subscribeToTopic('user_$userId');
-      if (kDebugMode) print('✅ Subscribed to user topic: user_$userId');
+      if (kDebugMode) log('✅ Subscribed to user topic: user_$userId');
     } catch (e) {
-      if (kDebugMode) print('❌ Error subscribing to user topic: $e');
+      if (kDebugMode) log('❌ Error subscribing to user topic: $e');
     }
   }
 
@@ -227,9 +228,9 @@ class NotificationHandler {
       if (notificationService == null) return;
 
       await notificationService.unsubscribeFromTopic('user_$userId');
-      if (kDebugMode) print('✅ Unsubscribed from user topic: user_$userId');
+      if (kDebugMode) log('✅ Unsubscribed from user topic: user_$userId');
     } catch (e) {
-      if (kDebugMode) print('❌ Error unsubscribing from user topic: $e');
+      if (kDebugMode) log('❌ Error unsubscribing from user topic: $e');
     }
   }
 
@@ -245,7 +246,7 @@ class NotificationHandler {
       }
       return true;
     } catch (e) {
-      if (kDebugMode) print('❌ Error checking notification permissions: $e');
+      if (kDebugMode) log('❌ Error checking notification permissions: $e');
       return false;
     }
   }
