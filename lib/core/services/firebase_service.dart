@@ -69,8 +69,8 @@ class FirebaseService implements BackendService {
         await Future.delayed(const Duration(milliseconds: 500));
       }
 
-      // Add retry mechanism for initialization with exponential backoff
-      int retries = 5;
+      // Add retry mechanism for initialization with reduced retries for faster loading
+      int retries = 3;
       Exception? lastException;
       
       for (int i = 0; i < retries; i++) {
@@ -126,8 +126,8 @@ class FirebaseService implements BackendService {
           }
           
           if (i < retries - 1) {
-            // Exponential backoff: 500ms, 1s, 2s, 4s
-            final delay = Duration(milliseconds: 500 * (1 << i));
+            // Reduced backoff: 300ms, 600ms for faster loading
+            final delay = Duration(milliseconds: 300 * (i + 1));
             if (kDebugMode) {
               print('⏳ Waiting ${delay.inMilliseconds}ms before retry...');
             }
