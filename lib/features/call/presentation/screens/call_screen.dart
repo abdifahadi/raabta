@@ -26,7 +26,6 @@ class _CallScreenState extends State<CallScreen> {
   Timer? _controlsTimer;
   int _remoteUid = 0;
   bool _remoteVideoMuted = false;
-  bool _remoteAudioMuted = false; // Add missing variable
   
   // Call duration
   Timer? _durationTimer;
@@ -88,7 +87,7 @@ class _CallScreenState extends State<CallScreen> {
           
         case 'remoteAudioStateChanged':
           setState(() {
-            _remoteAudioMuted = event['state'] != 'remoteAudioStateDecoding';
+            // _remoteAudioMuted = event['state'] != 'remoteAudioStateDecoding'; // This line is removed
           });
           break;
           

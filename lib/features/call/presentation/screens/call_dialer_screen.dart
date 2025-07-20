@@ -330,9 +330,9 @@ class _CallDialerScreenState extends State<CallDialerScreen>
         receiverId: widget.targetUser.uid,
         callType: callType,
         callerName: currentUserProfile.displayName ?? 'Unknown',
-        callerPhotoUrl: currentUserProfile.photoUrl,
+        callerPhotoUrl: currentUserProfile.photoUrl ?? '',
         receiverName: widget.targetUser.displayName ?? 'Unknown',
-        receiverPhotoUrl: widget.targetUser.photoUrl,
+        receiverPhotoUrl: widget.targetUser.photoUrl ?? '',
       );
 
       // Navigate to call screen
