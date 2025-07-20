@@ -13,8 +13,10 @@ void main() async {
   try {
     WidgetsFlutterBinding.ensureInitialized();
     
-    // Set up FCM background message handler
-    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    // Set up FCM background message handler (skip on web)
+    if (!kIsWeb) {
+      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    }
     
     if (kDebugMode) {
       print('🚀 Starting Raabta app...');
@@ -39,14 +41,16 @@ void main() async {
         print('⚙️ Initializing services...');
       }
       
-      // Add timeout for service initialization to prevent hanging
+      // Reduced timeout for web platforms (5 seconds instead of 15)
+      final timeout = kIsWeb ? const Duration(seconds: 5) : const Duration(seconds: 10);
+      
       await ServiceLocator().initialize().timeout(
-        const Duration(seconds: 15),
+        timeout,
         onTimeout: () {
           if (kDebugMode) {
-            print('⚠️ Service initialization timeout - continuing with partial services');
+            print('⚠️ Service initialization timeout (${timeout.inSeconds}s) - continuing with degraded mode');
           }
-          throw TimeoutException('Service initialization timeout', const Duration(seconds: 15));
+          throw TimeoutException('Service initialization timeout', timeout);
         },
       );
       servicesInitialized = true;
@@ -66,6 +70,19 @@ void main() async {
       
       // Continue without fully initialized services - the app can handle this
       LoggingService.warning('⚠️ Running in degraded mode due to service initialization failure');
+      
+      // For web, add additional fallback delay to ensure DOM is ready
+      if (kIsWeb) {
+        if (kDebugMode) {
+          print('🌐 Web platform: Adding fallback delay for DOM readiness');
+        }
+        await Future.delayed(const Duration(milliseconds: 500));
+      }
+    }
+
+    // Add a small delay for web to ensure all scripts are loaded
+    if (kIsWeb) {
+      await Future.delayed(const Duration(milliseconds: 100));
     }
 
     runApp(MyApp(servicesInitialized: servicesInitialized));
@@ -128,7 +145,9 @@ void main() async {
                     constraints: const BoxConstraints(maxWidth: 300),
                     padding: const EdgeInsets.all(16.0),
                     child: Text(
-                      'We encountered an error while starting the app. This might be due to a network issue or browser compatibility.',
+                      kIsWeb 
+                        ? 'We encountered an error while starting the web app. This might be due to a network issue or browser compatibility. Please refresh the page to try again.'
+                        : 'We encountered an error while starting the app. This might be due to a network issue or device compatibility.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 14,
@@ -164,16 +183,15 @@ void main() async {
                         onPressed: () {
                           // Try to restart the app
                           if (kIsWeb) {
-                            // For web, reload the page
-                            LoggingService.info('🔄 Reloading page...');
-                            // Would need dart:html import for window.location.reload()
+                            // For web, show a message that they need to refresh
+                            LoggingService.info('🔄 Please refresh the page to retry...');
                           } else {
                             // For mobile, try to restart main
                             main();
                           }
                         },
                         icon: const Icon(Icons.refresh),
-                        label: const Text('Retry'),
+                        label: Text(kIsWeb ? 'Refresh Page' : 'Retry'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
                           foregroundColor: Colors.red[600],

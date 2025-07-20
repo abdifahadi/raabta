@@ -13,6 +13,7 @@ import 'package:raabta/features/onboarding/presentation/welcome_screen.dart';
 import 'package:raabta/core/services/service_locator.dart';
 import 'package:raabta/core/services/notification_handler.dart';
 import 'package:raabta/features/call/presentation/widgets/call_manager.dart';
+import 'dart:async';
 
 /// A wrapper widget that handles authentication state changes
 class AuthWrapper extends StatefulWidget {
@@ -30,9 +31,12 @@ class _AuthWrapperState extends State<AuthWrapper> {
   bool _isFirstLaunch = true;
   bool _isCheckingFirstLaunch = true;
   bool _hasInitializationError = false;
+  bool _hasAuthStreamError = false;
   String _errorMessage = '';
   late final AuthRepository _authRepository;
   late final UserProfileRepository _userProfileRepository;
+  Timer? _timeoutTimer;
+  StreamSubscription<User?>? _authStreamSubscription;
   
   @override
   void initState() {
@@ -41,15 +45,29 @@ class _AuthWrapperState extends State<AuthWrapper> {
     _initializeRepositories();
   }
 
+  @override
+  void dispose() {
+    _timeoutTimer?.cancel();
+    _authStreamSubscription?.cancel();
+    super.dispose();
+  }
+
   /// Initialize repositories with error handling
   void _initializeRepositories() {
     try {
+      if (kDebugMode) {
+        print('🔐 AuthWrapper: Initializing repositories...');
+      }
+      
       // Initialize repositories safely
       _authRepository = FirebaseAuthRepository();
       
       // For user profile repository, check if services are initialized
       if (widget.servicesInitialized && ServiceLocator().isInitialized) {
         _userProfileRepository = ServiceLocator().userProfileRepository;
+        if (kDebugMode) {
+          print('🔐 Using UserProfileRepository from ServiceLocator');
+        }
       } else {
         // Create instance directly if ServiceLocator is not ready
         _userProfileRepository = FirebaseUserProfileRepository();
@@ -61,14 +79,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
       // Check if this is first launch
       _checkFirstLaunch();
       
-      // Reduced timeout for better UX (from 8 seconds to 8 seconds)
-      Future.delayed(const Duration(seconds: 8), () {
-        if (mounted && !_isRetrying) {
-          setState(() {
-            _hasTimeout = true;
-          });
-        }
-      });
+      // Set up timeout with shorter duration for web
+      _setupTimeout();
       
     } catch (e, stackTrace) {
       if (kDebugMode) {
@@ -83,13 +95,36 @@ class _AuthWrapperState extends State<AuthWrapper> {
     }
   }
 
+  /// Set up timeout mechanism
+  void _setupTimeout() {
+    _timeoutTimer?.cancel();
+    
+    // Reduced timeout for better UX - shorter for web
+    final timeoutDuration = kIsWeb ? const Duration(seconds: 6) : const Duration(seconds: 8);
+    
+    _timeoutTimer = Timer(timeoutDuration, () {
+      if (mounted && !_isRetrying && !_hasTimeout) {
+        if (kDebugMode) {
+          print('⏰ AuthWrapper timeout after ${timeoutDuration.inSeconds} seconds');
+        }
+        setState(() {
+          _hasTimeout = true;
+        });
+      }
+    });
+  }
+
   Future<void> _checkFirstLaunch() async {
     try {
+      if (kDebugMode) {
+        print('🔍 Checking first launch status...');
+      }
+      
       final prefs = await SharedPreferences.getInstance();
       final isFirstLaunch = prefs.getBool('is_first_launch') ?? true;
       
       if (kDebugMode) {
-        print('🔍 Checking first launch: $isFirstLaunch');
+        print('🔍 First launch status: $isFirstLaunch');
       }
       
       if (mounted) {
@@ -102,6 +137,9 @@ class _AuthWrapperState extends State<AuthWrapper> {
       // If this is first launch, mark it as false for next time
       if (isFirstLaunch) {
         await prefs.setBool('is_first_launch', false);
+        if (kDebugMode) {
+          print('✅ Marked first launch as complete');
+        }
       }
     } catch (e) {
       if (kDebugMode) {
@@ -118,10 +156,18 @@ class _AuthWrapperState extends State<AuthWrapper> {
   }
 
   void _retry() {
+    if (kDebugMode) {
+      print('🔄 AuthWrapper: Retrying...');
+    }
+    
     setState(() {
       _hasTimeout = false;
       _isRetrying = true;
+      _hasAuthStreamError = false;
     });
+    
+    // Reset timeout
+    _setupTimeout();
     
     // Reset retry flag after a short delay
     Future.delayed(const Duration(milliseconds: 500), () {
@@ -131,15 +177,19 @@ class _AuthWrapperState extends State<AuthWrapper> {
         });
       }
     });
+  }
+
+  /// Show sign in screen as fallback
+  void _showSignInFallback() {
+    if (kDebugMode) {
+      print('🔄 AuthWrapper: Showing sign-in fallback');
+    }
     
-    // Add timeout again
-    Future.delayed(const Duration(seconds: 8), () {
-      if (mounted && !_isRetrying) {
-        setState(() {
-          _hasTimeout = true;
-        });
-      }
-    });
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (context) => const SignInScreen(),
+      ),
+    );
   }
 
   Widget _buildLoadingScreen({
@@ -420,43 +470,73 @@ class _AuthWrapperState extends State<AuthWrapper> {
       );
     }
 
+    // Create auth stream with timeout and error handling
     return StreamBuilder<User?>(
-      stream: _authRepository.authStateChanges,
+      stream: _authRepository.authStateChanges.timeout(
+        kIsWeb ? const Duration(seconds: 10) : const Duration(seconds: 15),
+        onTimeout: (sink) {
+          if (kDebugMode) {
+            print('⏰ Auth stream timeout - providing fallback');
+          }
+          sink.add(null); // Fallback to no user
+        },
+      ).handleError((error) {
+        if (kDebugMode) {
+          print('🚨 Auth stream error handled: $error');
+        }
+        setState(() {
+          _hasAuthStreamError = true;
+        });
+      }),
       builder: (context, snapshot) {
         if (kDebugMode) {
-          print('🔐 Auth state change: ${snapshot.connectionState}, hasData: ${snapshot.hasData}, data: ${snapshot.data}');
+          print('🔐 Auth state change: ${snapshot.connectionState}, hasData: ${snapshot.hasData}, data: ${snapshot.data?.uid ?? 'null'}');
         }
 
-        // Handle errors
+        // Handle errors with more specific messaging
         if (snapshot.hasError) {
           if (kDebugMode) {
             print('🚨 Auth stream error: ${snapshot.error}');
           }
+          setState(() {
+            _hasAuthStreamError = true;
+          });
           return _buildErrorScreen(
             title: 'Authentication Error',
-            message: 'We encountered an issue with authentication services. Please try again or contact support if the problem persists.',
+            message: kIsWeb 
+              ? 'We encountered an issue with authentication services on the web. This might be due to browser settings or network issues. Please try refreshing the page or signing in manually.'
+              : 'We encountered an issue with authentication services. Please try again or contact support if the problem persists.',
             onRetry: () {
               _authRepository.signOut();
               _retry();
             },
-            onSignIn: () {
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(
-                  builder: (context) => const SignInScreen(),
-                ),
-              );
-            },
+            onSignIn: _showSignInFallback,
           );
         }
 
-        // Show loading while waiting for auth state
+        // Show loading while waiting for auth state with timeout consideration
         if (snapshot.connectionState == ConnectionState.waiting) {
           if (kDebugMode) {
-            print('🔐 Waiting for auth state...');
+            print('🔐 Waiting for auth state... (Web: ${kIsWeb})');
           }
+          
+          // For web, show additional loading states after some time
+          if (_hasTimeout) {
+            return _buildErrorScreen(
+              title: 'Loading Taking Too Long',
+              message: kIsWeb 
+                ? 'Authentication is taking longer than expected on the web. This might be due to slow network or browser settings.'
+                : 'Authentication is taking longer than expected.',
+              onRetry: _retry,
+              onSignIn: _showSignInFallback,
+            );
+          }
+          
           return _buildLoadingScreen(
             title: 'Checking authentication...',
-            subtitle: 'Please wait a moment',
+            subtitle: kIsWeb 
+              ? 'Initializing web authentication...'
+              : 'Please wait a moment',
           );
         }
 
