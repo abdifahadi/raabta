@@ -4,7 +4,7 @@ import 'package:raabta/features/auth/domain/firebase_auth_repository.dart';
 import 'package:raabta/features/auth/domain/user_profile_repository.dart';
 import 'package:raabta/features/auth/domain/models/user_profile_model.dart';
 import 'package:raabta/features/auth/presentation/sign_in_screen.dart';
-import 'package:raabta/features/chat/presentation/conversations_screen.dart';
+import 'package:raabta/features/chat/presentation/chat_conversations_screen.dart';
 import 'package:raabta/core/services/service_locator.dart';
 import 'package:intl/intl.dart';
 
