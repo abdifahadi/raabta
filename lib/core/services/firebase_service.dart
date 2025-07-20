@@ -50,14 +50,14 @@ class FirebaseService implements BackendService {
     _isInitializing = true;
 
     try {
-      log('🔥 Initializing Firebase...');
+      log('🔥 Checking Firebase initialization status...');
       if (kIsWeb) {
         log('🌐 Platform: Web');
       } else {
         log('📱 Platform: ${defaultTargetPlatform.toString()}');
       }
 
-      // Check if Firebase is already initialized
+      // Check if Firebase is already initialized (should be from main.dart)
       try {
         final app = Firebase.app();
         log('🔥 Firebase app already exists: ${app.name}');
@@ -65,79 +65,47 @@ class FirebaseService implements BackendService {
         _isInitializing = false;
         return;
       } catch (e) {
-        // No existing app, continue with initialization
-        log('🔥 No existing Firebase app found, proceeding with initialization...');
+        // No existing app, this should not happen now since main.dart initializes Firebase
+        log('⚠️ Firebase not initialized yet, this is unexpected. Attempting initialization...');
       }
 
-      // Web-specific pre-initialization checks
-      if (kIsWeb) {
-        await _prepareWebEnvironment();
-      }
+      // Fallback initialization if Firebase was not initialized in main.dart
+      // This should rarely happen now
+      log('🔥 Fallback Firebase initialization attempt');
 
-      // Reduced retry count for faster failure/fallback
-      int retries = kIsWeb ? 2 : 3;
-      Exception? lastException;
+      // Add timeout for initialization attempt
+      final initTimeout = kIsWeb ? const Duration(seconds: 8) : const Duration(seconds: 10);
       
-      for (int i = 0; i < retries; i++) {
-        try {
-          log('🔥 Firebase initialization attempt ${i + 1}/$retries');
-
-          // Add timeout for each initialization attempt
-          final initTimeout = kIsWeb ? const Duration(seconds: 8) : const Duration(seconds: 10);
-          
-          await Firebase.initializeApp(
-            options: DefaultFirebaseOptions.currentPlatform,
-          ).timeout(initTimeout);
-          
-          _initialized = true;
-          _isInitializing = false;
-          
-          log('🔥 Firebase initialized successfully ${i > 0 ? 'after ${i + 1} attempts' : ''}');
-
-            // Print platform-specific information
-            if (kIsWeb) {
-              log('🌐 Running on Web platform');
-              log('🔑 Project ID: ${DefaultFirebaseOptions.web.projectId}');
-              log('🔗 Auth Domain: ${DefaultFirebaseOptions.web.authDomain}');
-              log('🗄️ Storage Bucket: ${DefaultFirebaseOptions.web.storageBucket}');
-            } else {
-              log('📱 Running on ${defaultTargetPlatform.toString()} platform');
-              final options = DefaultFirebaseOptions.currentPlatform;
-              log('🔑 Project ID: ${options.projectId}');
-              log('🆔 App ID: ${options.appId}');
-            }
-            
-            // Verify Firebase app is properly initialized
-            final app = Firebase.app();
-            log('✅ Firebase app verification: ${app.name} - ${app.options.projectId}');
-          }
-          
-          // Additional web-specific validation
-          if (kIsWeb) {
-            await _validateWebFirebaseSetup();
-          }
-          
-          return; // Success, exit retry loop
-        } catch (e) {
-          lastException = e is Exception ? e : Exception(e.toString());
-          log('🚨 Firebase initialization attempt ${i + 1} failed: $e');
-          if (e.toString().contains('FirebaseException') || e.toString().contains('auth/')) {
-            log('🔍 Firebase error details: $e');
-          }
-          
-          if (i < retries - 1) {
-            // Reduced backoff for web: 200ms, 400ms for faster loading
-            final delay = Duration(milliseconds: kIsWeb ? 200 * (i + 1) : 300 * (i + 1));
-            log('⏳ Waiting ${delay.inMilliseconds}ms before retry...');
-            await Future.delayed(delay);
-          }
-        }
-      }
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      ).timeout(initTimeout);
       
-      // If we get here, all retries failed
-      _initialized = false;
+      _initialized = true;
       _isInitializing = false;
-      throw lastException ?? Exception('Failed to initialize Firebase after $retries attempts');
+      
+      log('🔥 Firebase initialized successfully (fallback)');
+
+        // Print platform-specific information
+        if (kIsWeb) {
+          log('🌐 Running on Web platform');
+          log('🔑 Project ID: ${DefaultFirebaseOptions.web.projectId}');
+          log('🔗 Auth Domain: ${DefaultFirebaseOptions.web.authDomain}');
+          log('🗄️ Storage Bucket: ${DefaultFirebaseOptions.web.storageBucket}');
+        } else {
+          log('📱 Running on ${defaultTargetPlatform.toString()} platform');
+          final options = DefaultFirebaseOptions.currentPlatform;
+          log('🔑 Project ID: ${options.projectId}');
+          log('🆔 App ID: ${options.appId}');
+        }
+        
+        // Verify Firebase app is properly initialized
+        final app = Firebase.app();
+        log('✅ Firebase app verification: ${app.name} - ${app.options.projectId}');
+        
+        // Additional web-specific validation
+        if (kIsWeb) {
+          await _validateWebFirebaseSetup();
+        }
 
     } catch (e, stackTrace) {
       _initialized = false;

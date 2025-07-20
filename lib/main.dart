@@ -1,31 +1,70 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'dart:async';
 import 'dart:developer';
+import 'core/config/firebase_options.dart';
 import 'core/services/service_locator.dart';
 import 'core/services/logging_service.dart';
 import 'core/services/notification_service.dart';
 import 'core/services/notification_handler.dart';
 import 'features/auth/presentation/auth_wrapper.dart';
 
+/// Background message handler for Firebase Cloud Messaging
+@pragma('vm:entry-point')
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // Initialize Firebase if not already initialized
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  
+  if (kDebugMode) {
+    log('📲 Background message received: ${message.messageId}');
+  }
+}
+
 void main() async {
+  // Ensure Flutter binding is initialized first
+  WidgetsFlutterBinding.ensureInitialized();
+  
   // Add error handling and logging
   try {
-    WidgetsFlutterBinding.ensureInitialized();
-    
-    // Set up FCM background message handler (skip on web)
-    if (!kIsWeb) {
-      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-    }
-    
     if (kDebugMode) {
       log('🚀 Starting Raabta app...');
       log('🌍 Platform: ${kIsWeb ? 'Web' : 'Native'}');
       log('🔧 Debug mode: $kDebugMode');
     }
 
-    // Set up Flutter error handling first
+    // Initialize Firebase first with proper error handling
+    try {
+      if (kDebugMode) {
+        log('🔥 Initializing Firebase...');
+      }
+      
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+      
+      if (kDebugMode) {
+        log('✅ Firebase initialized successfully');
+      }
+    } catch (firebaseError, firebaseStackTrace) {
+      if (kDebugMode) {
+        log('❌ Firebase initialization failed: $firebaseError');
+        log('🔍 Firebase Stack Trace: $firebaseStackTrace');
+      }
+      
+      // Log the error but don't stop the app - some features might still work
+      LoggingService.error('Firebase initialization failed: $firebaseError');
+      
+      // Continue with app initialization in degraded mode
+    }
+    
+    // Set up FCM background message handler (skip on web)
+    if (!kIsWeb) {
+      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    }
+
+    // Set up Flutter error handling
     FlutterError.onError = (FlutterErrorDetails details) {
       if (kDebugMode) {
         log('🚨 Flutter Error: ${details.exception}');
@@ -35,7 +74,7 @@ void main() async {
       }
     };
 
-    // Initialize services with faster initialization for web
+    // Initialize services after Firebase
     bool servicesInitialized = false;
     try {
       if (kDebugMode) {
@@ -58,10 +97,6 @@ void main() async {
       
       if (kDebugMode) {
         log('✅ Services initialized successfully');
-        final firebaseService = ServiceLocator().backendServiceOrNull;
-        if (firebaseService?.isInitialized == true) {
-          log('🔥 Firebase service is ready');
-        }
       }
     } catch (serviceError, serviceStackTrace) {
       if (kDebugMode) {
@@ -86,6 +121,7 @@ void main() async {
       await Future.delayed(const Duration(milliseconds: 100));
     }
 
+    // Start the app
     runApp(MyApp(servicesInitialized: servicesInitialized));
     
     if (kDebugMode) {
@@ -265,8 +301,8 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      home: SafeArea(
-        child: AuthWrapper(servicesInitialized: servicesInitialized),
+      home: const SafeArea(
+        child: AuthWrapper(),
       ),
       // Enhanced error builder for better error handling
       builder: (context, widget) {
@@ -339,7 +375,7 @@ class MyApp extends StatelessWidget {
                         Navigator.of(context).pushReplacement(
                           MaterialPageRoute(
                             builder: (context) => const SafeArea(
-                              child: AuthWrapper(servicesInitialized: true),
+                              child: AuthWrapper(),
                             ),
                           ),
                         );
@@ -348,7 +384,7 @@ class MyApp extends StatelessWidget {
                         Navigator.of(context).pushReplacement(
                           MaterialPageRoute(
                             builder: (context) => const SafeArea(
-                              child: AuthWrapper(servicesInitialized: true),
+                              child: AuthWrapper(),
                             ),
                           ),
                         );
