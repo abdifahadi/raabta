@@ -11,6 +11,8 @@ import 'package:raabta/features/auth/domain/user_profile_repository.dart';
 import 'package:raabta/features/auth/domain/firebase_user_profile_repository.dart';
 import 'package:raabta/features/chat/domain/chat_repository.dart';
 import 'package:raabta/features/chat/domain/firebase_chat_repository.dart';
+import 'package:raabta/features/chat/domain/group_chat_repository.dart';
+import 'package:raabta/features/chat/domain/firebase_group_chat_repository.dart';
 import 'package:flutter/foundation.dart';
 
 /// Service locator for dependency injection
@@ -37,6 +39,9 @@ class ServiceLocator {
 
   /// Chat repository instance
   ChatRepository? _chatRepository;
+
+  /// Group chat repository instance
+  GroupChatRepository? _groupChatRepository;
 
   /// Storage repository instance
   FirebaseStorageRepository? _storageRepository;
@@ -110,6 +115,12 @@ class ServiceLocator {
         encryptionKeyManager: _encryptionKeyManager!,
       );
 
+      // Initialize group chat repository
+      _groupChatRepository = FirebaseGroupChatRepository(
+        storageRepository: _storageRepository!,
+        encryptionKeyManager: _encryptionKeyManager!,
+      );
+
       // Initialize media picker service
       _mediaPickerService = MediaPickerService();
 
@@ -170,6 +181,14 @@ class ServiceLocator {
       throw StateError('ServiceLocator not initialized. Call initialize() first.');
     }
     return _chatRepository!;
+  }
+
+  /// Get group chat repository
+  GroupChatRepository get groupChatRepository {
+    if (_groupChatRepository == null) {
+      throw StateError('ServiceLocator not initialized. Call initialize() first.');
+    }
+    return _groupChatRepository!;
   }
 
   /// Get storage repository

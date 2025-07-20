@@ -272,4 +272,19 @@ class MessageModel {
     return !isEncrypted || 
            (decryptionKey != null && encryptedContent != null);
   }
+
+  /// Check if this is a group message
+  bool get isGroupMessage {
+    return metadata?['conversationType'] == 'group';
+  }
+
+  /// Get group ID for group messages
+  String? get groupId {
+    return isGroupMessage ? metadata?['groupId'] as String? : null;
+  }
+
+  /// Check if this message was sent in a specific group
+  bool isSentInGroup(String groupId) {
+    return isGroupMessage && this.groupId == groupId;
+  }
 }
