@@ -1,245 +1,213 @@
-# Raabta - Cross-platform Chat App
+# Raabta - Cross-Platform Chat Application
 
-## Overview
-Raabta is a professional cross-platform messaging application built with Flutter. It supports Android, iOS, Web, and Desktop platforms with a comprehensive media messaging system.
+A modern, cross-platform chat application built with Flutter that supports real-time messaging, voice/video calls, and multimedia sharing across Android, Web, and Desktop platforms.
 
-## Features Implemented
+## Features
 
-### ✅ Media Messaging System
-- **Multi-format Support**: Images, Videos, Audio files, Documents (PDF, Word, Excel, etc.)
-- **Cross-platform File Picking**: Works seamlessly across all platforms
-- **Cloud Storage**: Files are stored securely on Firebase Storage
-- **Media Previews**: In-app viewers for different media types
+- 🔥 Real-time messaging with Firebase
+- 📱 Cross-platform support (Android, Web, Desktop)
+- 🎥 Voice and video calling
+- 📸 Media sharing (images, videos, documents)
+- 🔔 Push notifications
+- 🔐 Secure authentication
+- 🌙 Modern Material Design 3 UI
 
-### ✅ Message Types
-- **Text Messages**: Rich text messaging with emoji support
-- **Image Messages**: High-quality image sharing with compression
-- **Video Messages**: Video sharing with thumbnail previews
-- **Audio Messages**: Audio file sharing with playback controls
-- **Document Messages**: File sharing with type recognition and previews
-
-### ✅ Media Viewers
-- **Image Viewer**: Full-screen zoomable image viewing with hero animations
-- **Video Player**: In-app video playback with custom controls
-- **Audio Player**: Minimal audio player with play/pause and progress controls
-- **Document Viewer**: File preview with download and share options
-
-### ✅ Chat Features
-- **Real-time Messaging**: Instant message delivery using Firestore
-- **Message Status**: Sent, Delivered, Read status indicators
-- **Message Management**: Long-press options for delete, reply, forward, copy
-- **Date Separators**: Messages grouped by date for better readability
-
-### ✅ Conversation Management
-- **Mute/Unmute**: Control notifications per conversation
-- **Block/Unblock**: Block users and manage blocked conversations
-- **Clear Chat**: Remove chat history for individual users
-- **Delete Conversation**: Permanently delete conversations
-
-### ✅ UI/UX Features
-- **Modern Design**: Clean, intuitive interface following Material Design
-- **Responsive Layout**: Optimized for different screen sizes
-- **Dark/Light Mode Ready**: Prepared for theme switching
-- **Smooth Animations**: Hero animations and smooth transitions
-- **Error Handling**: Comprehensive error handling with user feedback
-
-## Technical Architecture
-
-### Clean Architecture
-```
-lib/
-├── core/
-│   └── services/
-│       ├── auth_service.dart
-│       ├── storage_repository.dart
-│       ├── firebase_storage_repository.dart
-│       ├── media_picker_service.dart
-│       └── service_locator.dart
-├── features/
-│   ├── auth/
-│   │   ├── domain/
-│   │   └── presentation/
-│   └── chat/
-│       ├── domain/
-│       │   ├── models/
-│       │   │   ├── message_model.dart
-│       │   │   └── conversation_model.dart
-│       │   ├── chat_repository.dart
-│       │   └── firebase_chat_repository.dart
-│       └── presentation/
-│           ├── widgets/
-│           │   ├── media_viewer/
-│           │   │   ├── image_viewer.dart
-│           │   │   ├── video_player_widget.dart
-│           │   │   ├── audio_player_widget.dart
-│           │   │   └── document_viewer.dart
-│           │   ├── message_bubble.dart
-│           │   └── media_picker_bottom_sheet.dart
-│           ├── chat_screen.dart
-│           ├── chat_settings_screen.dart
-│           └── conversations_screen.dart
-```
-
-### Key Components
-
-#### 1. Message Model
-- Supports multiple message types (text, image, video, audio, file)
-- Includes metadata for media files (URL, file size, duration, etc.)
-- Message status tracking (sending, sent, delivered, read, failed)
-- Reply and reaction support structure
-
-#### 2. Firebase Chat Repository
-- **sendMessage()**: Text message sending
-- **sendMediaMessage()**: Media file upload and messaging
-- **updateMessageStatus()**: Message status updates
-- **muteConversation()/unmuteConversation()**: Notification control
-- **blockConversation()/unblockConversation()**: User blocking
-- **clearChatForUser()**: Individual chat history clearing
-
-#### 3. Media Picker Service
-- Cross-platform file selection
-- Support for images, videos, audio, and documents
-- File size validation and type detection
-- Web and mobile platform compatibility
-
-#### 4. Storage Repository
-- Firebase Storage integration
-- Secure file upload with progress tracking
-- Automatic file path generation
-- File metadata management
-
-## Media Support
-
-### Supported File Types
-
-#### Images
-- JPEG, PNG, GIF, WebP, BMP
-- Automatic compression for optimal storage
-- Full-screen viewing with zoom
-
-#### Videos
-- MP4, AVI, MOV, MKV, WebM
-- Thumbnail generation
-- In-app playback controls
-
-#### Audio
-- MP3, WAV, AAC, M4A, OGG
-- Playback controls with progress tracking
-- Duration display
-
-#### Documents
-- PDF, Word documents, Excel spreadsheets
-- PowerPoint presentations, Text files
-- File type recognition and appropriate icons
-
-## Cross-Platform Features
-
-### Web Support
-- File picker using browser APIs
-- Responsive design for web interfaces
-- Keyboard shortcuts support
-
-### Desktop Support
-- Native file dialogs
-- Window management
-- Platform-specific UI adaptations
-
-### Mobile Support
-- Camera integration for image/video capture
-- Native file system access
-- Touch-optimized interface
-
-## Security Features
-
-### File Upload Security
-- File type validation
-- File size limits per media type
-- Secure Firebase Storage rules
-- Encrypted file transfer
-
-### User Privacy
-- Individual message deletion
-- Conversation blocking
-- Mute functionality
-- Clear chat history
-
-## Performance Optimizations
-
-### Media Handling
-- Image compression and resizing
-- Lazy loading for media content
-- Cached network images
-- Progressive file upload
-
-### Real-time Updates
-- Efficient Firestore queries
-- Stream-based message updates
-- Optimistic UI updates
-- Connection state management
-
-## Future Enhancements
-
-### Planned Features
-- [ ] Voice message recording
-- [ ] Message encryption
-- [ ] Group chat support
-- [ ] Message search functionality
-- [ ] File sharing with expiry
-- [ ] Message reactions
-- [ ] Typing indicators
-- [ ] Online status
-- [ ] Push notifications
-- [ ] Message drafts
-
-### Technical Improvements
-- [ ] Offline message support
-- [ ] Advanced caching strategies
-- [ ] Performance monitoring
-- [ ] Analytics integration
-- [ ] Automated testing suite
-
-## Getting Started
+## Environment Setup
 
 ### Prerequisites
-- Flutter SDK (latest stable version)
-- Firebase project setup
-- Platform-specific configurations
 
-### Installation
-1. Clone the repository
-2. Install dependencies: `flutter pub get`
-3. Configure Firebase (follow Firebase setup guide)
-4. Run the app: `flutter run`
+Before running this project, you need to set up your development environment for the platforms you want to target.
 
-### Firebase Configuration
-1. Create a Firebase project
-2. Enable Authentication, Firestore, and Storage
-3. Download configuration files
-4. Update Firestore security rules
-5. Configure Storage rules
+#### 1. Flutter SDK Installation
 
-## Dependencies
+1. Download and install Flutter SDK from [flutter.dev](https://flutter.dev/docs/get-started/install)
+2. Add Flutter to your PATH
+3. Run `flutter doctor` to verify installation
 
-### Core Dependencies
-- `firebase_core`: Firebase initialization
-- `firebase_auth`: User authentication
-- `cloud_firestore`: Real-time database
-- `firebase_storage`: File storage
+#### 2. Android Development Setup
 
-### Media Dependencies
-- `file_picker`: Cross-platform file selection
-- `image_picker`: Image and video capture
-- `video_player`: Video playback
-- `cached_network_image`: Image caching
-- `photo_view`: Image viewing
+**Required for Android builds:**
 
-### UI Dependencies
-- `flutter_chat_bubble`: Chat bubble styling
-- `animations`: Smooth animations
-- `intl`: Internationalization
+1. **Install Android Studio:**
+   - Download from [developer.android.com](https://developer.android.com/studio)
+   - Install Android SDK through Android Studio
+   - Accept Android licenses: `flutter doctor --android-licenses`
+
+2. **Set Android SDK Path:**
+   ```bash
+   # Add to your shell profile (.bashrc, .zshrc, etc.)
+   export ANDROID_HOME=/path/to/your/Android/Sdk
+   export PATH=$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/tools
+   ```
+
+3. **Install Required SDK Components:**
+   - Android SDK Build-Tools
+   - Android SDK Platform-Tools
+   - Android SDK Tools
+   - At least one Android SDK Platform (API level 21 or higher)
+
+#### 3. Web Development Setup
+
+**Required for Web builds:**
+
+1. **Install Chrome or Chromium:**
+   - Download from [google.com/chrome](https://www.google.com/chrome/)
+   - Or install Chromium via package manager
+
+2. **Set CHROME_EXECUTABLE (if needed):**
+   ```bash
+   # If Chrome is not in default location, set this environment variable
+   export CHROME_EXECUTABLE=/path/to/your/chrome
+   
+   # Common paths:
+   # macOS: /Applications/Google Chrome.app/Contents/MacOS/Google Chrome
+   # Linux: /usr/bin/google-chrome or /usr/bin/chromium-browser
+   # Windows: C:\Program Files\Google\Chrome\Application\chrome.exe
+   ```
+
+3. **Enable Flutter Web:**
+   ```bash
+   flutter config --enable-web
+   ```
+
+#### 4. Desktop Development Setup (Linux)
+
+**Required for Linux desktop builds:**
+
+1. **Install Build Dependencies:**
+   ```bash
+   sudo apt-get update
+   sudo apt-get install ninja-build libgtk-3-dev
+   ```
+
+2. **Install Additional Dependencies:**
+   ```bash
+   sudo apt-get install \
+     clang cmake ninja-build pkg-config libgtk-3-dev \
+     liblzma-dev libstdc++-12-dev
+   ```
+
+3. **Enable Flutter Desktop:**
+   ```bash
+   flutter config --enable-linux-desktop
+   ```
+
+#### 5. Firebase Setup
+
+1. **Create Firebase Project:**
+   - Go to [console.firebase.google.com](https://console.firebase.google.com)
+   - Create a new project
+   - Enable Authentication, Firestore, and Storage
+
+2. **Configure Firebase for Each Platform:**
+   - **Android:** Download `google-services.json` and place in `android/app/`
+   - **Web:** The web configuration is already included in the project
+   - **iOS (future):** Download `GoogleService-Info.plist` for iOS support
+
+### Quick Setup Commands
+
+```bash
+# 1. Clone the repository
+git clone <repository-url>
+cd raabta
+
+# 2. Install dependencies
+flutter pub get
+
+# 3. Verify your setup
+flutter doctor
+
+# 4. Run on different platforms
+flutter run -d chrome          # Web
+flutter run -d android         # Android
+flutter run -d linux           # Linux Desktop
+```
+
+## Running the Application
+
+### Development Mode
+
+```bash
+# Web (Chrome required)
+flutter run -d chrome
+
+# Android (Android Studio/SDK required)
+flutter run -d android
+
+# Linux Desktop (ninja-build and libgtk-3-dev required)
+flutter run -d linux
+```
+
+### Production Builds
+
+```bash
+# Web build
+flutter build web --release
+
+# Android APK
+flutter build apk --release
+
+# Android App Bundle (for Play Store)
+flutter build appbundle --release
+
+# Linux Desktop
+flutter build linux --release
+```
+
+## Troubleshooting
+
+### Common Issues and Solutions
+
+1. **"Chrome executable not found"**
+   - Install Google Chrome or Chromium
+   - Set `CHROME_EXECUTABLE` environment variable to Chrome path
+
+2. **"Android SDK not found"**
+   - Install Android Studio
+   - Set `ANDROID_HOME` environment variable
+   - Run `flutter doctor --android-licenses`
+
+3. **"ninja not found" (Linux)**
+   - Install ninja build tools: `sudo apt install ninja-build`
+
+4. **"libgtk-3-dev not found" (Linux)**
+   - Install GTK development libraries: `sudo apt install libgtk-3-dev`
+
+5. **Firebase connection issues**
+   - Verify Firebase configuration files are in correct locations
+   - Check internet connectivity
+   - Ensure Firebase project is properly configured
+
+### Checking Your Environment
+
+Run this command to verify your setup:
+
+```bash
+flutter doctor -v
+```
+
+This will show detailed information about your Flutter installation and any missing requirements.
+
+## Project Structure
+
+```
+lib/
+├── core/               # Core functionality and services
+├── features/           # Feature-based modules
+│   ├── auth/          # Authentication
+│   ├── chat/          # Chat functionality
+│   ├── call/          # Voice/Video calling
+│   └── home/          # Home screen
+└── main.dart          # App entry point
+```
 
 ## Contributing
-Contributions are welcome! Please read the contributing guidelines and submit pull requests for any improvements.
+
+1. Ensure your environment is properly set up using the instructions above
+2. Run `flutter analyze` to check for issues
+3. Run `flutter test` to ensure tests pass
+4. Follow the existing code structure and naming conventions
 
 ## License
+
 This project is licensed under the MIT License - see the LICENSE file for details.

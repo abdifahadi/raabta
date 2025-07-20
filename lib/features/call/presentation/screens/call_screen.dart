@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:raabta/features/call/domain/models/call_model.dart';
 import '../../../../core/services/call_service.dart';
@@ -84,7 +85,9 @@ class _CallScreenState extends State<CallScreen> {
     try {
       await _callService.endCall();
     } catch (e) {
-      debugPrint('Error during cleanup: $e');
+      if (kDebugMode) {
+        debugPrint('Error during cleanup: $e');
+      }
     }
   }
 

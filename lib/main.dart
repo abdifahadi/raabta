@@ -248,6 +248,7 @@ void main() async {
                           }
                         },
                         icon: const Icon(Icons.refresh),
+                        // Note: Cannot use const here due to conditional expression
                         label: Text(kIsWeb ? 'Refresh Page' : 'Retry'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,

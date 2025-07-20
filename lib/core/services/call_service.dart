@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 import 'package:flutter/material.dart';
 import '../../features/call/domain/models/call_model.dart';
 
@@ -42,16 +42,22 @@ class CallService {
 
   Future<void> initialize() async {
     try {
-      // For web compatibility, we'll use mock initialization
+      // For web compatibility, we'll use mock implementation
       if (kIsWeb) {
-        debugPrint('CallService: Web mode - using mock implementation');
+        if (kDebugMode) {
+          debugPrint('CallService: Web mode - using mock implementation');
+        }
         return;
       }
       
       // In a real implementation, we would initialize the actual engine here
-      debugPrint('CallService: Initialized successfully');
+      if (kDebugMode) {
+        debugPrint('CallService: Initialized successfully');
+      }
     } catch (e) {
-      debugPrint('CallService: Failed to initialize: $e');
+      if (kDebugMode) {
+        debugPrint('CallService: Failed to initialize: $e');
+      }
       throw Exception('Failed to initialize call service: $e');
     }
   }
@@ -68,7 +74,9 @@ class CallService {
       
       if (kIsWeb) {
         // Mock join call for web
-        debugPrint('CallService: Mock joining call $channelName');
+        if (kDebugMode) {
+          debugPrint('CallService: Mock joining call $channelName');
+        }
         
         // Simulate successful join
         await Future.delayed(const Duration(milliseconds: 500));
@@ -85,12 +93,16 @@ class CallService {
       }
       
       // Real implementation would go here
-      debugPrint('CallService: Joined call $channelName successfully');
+      if (kDebugMode) {
+        debugPrint('CallService: Joined call $channelName successfully');
+      }
       
     } catch (e) {
       _isInCall = false;
       _currentChannelName = null;
-      debugPrint('CallService: Failed to join call: $e');
+      if (kDebugMode) {
+        debugPrint('CallService: Failed to join call: $e');
+      }
       throw Exception('Failed to join call: $e');
     }
   }
@@ -125,7 +137,9 @@ class CallService {
 
   Future<void> answerCall(CallModel call) async {
     // Mock implementation
-    debugPrint('CallService: Mock answering call ${call.callId}');
+    if (kDebugMode) {
+      debugPrint('CallService: Mock answering call ${call.callId}');
+    }
     await joinCall(
       channelName: call.channelName,
       token: '',
@@ -136,7 +150,9 @@ class CallService {
 
   Future<void> declineCall(CallModel call) async {
     // Mock implementation
-    debugPrint('CallService: Mock declining call ${call.callId}');
+    if (kDebugMode) {
+      debugPrint('CallService: Mock declining call ${call.callId}');
+    }
     _currentCallController.add(null);
   }
 
@@ -144,7 +160,9 @@ class CallService {
     try {
       if (kIsWeb) {
         // Mock end call for web
-        debugPrint('CallService: Mock ending call');
+        if (kDebugMode) {
+          debugPrint('CallService: Mock ending call');
+        }
         _isInCall = false;
         _currentChannelName = null;
         _currentCallController.add(null);
@@ -156,9 +174,13 @@ class CallService {
       _currentChannelName = null;
       _currentCallController.add(null);
       
-      debugPrint('CallService: Call ended successfully');
+      if (kDebugMode) {
+        debugPrint('CallService: Call ended successfully');
+      }
     } catch (e) {
-      debugPrint('CallService: Failed to end call: $e');
+      if (kDebugMode) {
+        debugPrint('CallService: Failed to end call: $e');
+      }
       throw Exception('Failed to end call: $e');
     }
   }
@@ -168,14 +190,20 @@ class CallService {
       _isAudioEnabled = !_isAudioEnabled;
       
       if (kIsWeb) {
-        debugPrint('CallService: Mock toggled audio: ${_isAudioEnabled ? 'unmuted' : 'muted'}');
+        if (kDebugMode) {
+          debugPrint('CallService: Mock toggled audio: ${_isAudioEnabled ? 'unmuted' : 'muted'}');
+        }
         return;
       }
       
       // Real implementation would go here
-      debugPrint('CallService: Audio ${_isAudioEnabled ? 'unmuted' : 'muted'}');
+      if (kDebugMode) {
+        debugPrint('CallService: Audio ${_isAudioEnabled ? 'unmuted' : 'muted'}');
+      }
     } catch (e) {
-      debugPrint('CallService: Failed to toggle mute: $e');
+      if (kDebugMode) {
+        debugPrint('CallService: Failed to toggle mute: $e');
+      }
       throw Exception('Failed to toggle mute: $e');
     }
   }
@@ -185,14 +213,20 @@ class CallService {
       _isVideoEnabled = !_isVideoEnabled;
       
       if (kIsWeb) {
-        debugPrint('CallService: Mock toggled video: ${_isVideoEnabled ? 'enabled' : 'disabled'}');
+        if (kDebugMode) {
+          debugPrint('CallService: Mock toggled video: ${_isVideoEnabled ? 'enabled' : 'disabled'}');
+        }
         return;
       }
       
       // Real implementation would go here
-      debugPrint('CallService: Video ${_isVideoEnabled ? 'enabled' : 'disabled'}');
+      if (kDebugMode) {
+        debugPrint('CallService: Video ${_isVideoEnabled ? 'enabled' : 'disabled'}');
+      }
     } catch (e) {
-      debugPrint('CallService: Failed to toggle video: $e');
+      if (kDebugMode) {
+        debugPrint('CallService: Failed to toggle video: $e');
+      }
       throw Exception('Failed to toggle video: $e');
     }
   }
@@ -202,14 +236,20 @@ class CallService {
       _isSpeakerEnabled = !_isSpeakerEnabled;
       
       if (kIsWeb) {
-        debugPrint('CallService: Mock toggled speaker: ${_isSpeakerEnabled ? 'enabled' : 'disabled'}');
+        if (kDebugMode) {
+          debugPrint('CallService: Mock toggled speaker: ${_isSpeakerEnabled ? 'enabled' : 'disabled'}');
+        }
         return;
       }
       
       // Real implementation would go here
-      debugPrint('CallService: Speaker ${_isSpeakerEnabled ? 'enabled' : 'disabled'}');
+      if (kDebugMode) {
+        debugPrint('CallService: Speaker ${_isSpeakerEnabled ? 'enabled' : 'disabled'}');
+      }
     } catch (e) {
-      debugPrint('CallService: Failed to toggle speaker: $e');
+      if (kDebugMode) {
+        debugPrint('CallService: Failed to toggle speaker: $e');
+      }
       throw Exception('Failed to toggle speaker: $e');
     }
   }
@@ -217,14 +257,20 @@ class CallService {
   Future<void> switchCamera() async {
     try {
       if (kIsWeb) {
-        debugPrint('CallService: Mock camera switch');
+        if (kDebugMode) {
+          debugPrint('CallService: Mock camera switch');
+        }
         return;
       }
       
       // Real implementation would go here
-      debugPrint('CallService: Camera switched');
+      if (kDebugMode) {
+        debugPrint('CallService: Camera switched');
+      }
     } catch (e) {
-      debugPrint('CallService: Failed to switch camera: $e');
+      if (kDebugMode) {
+        debugPrint('CallService: Failed to switch camera: $e');
+      }
       throw Exception('Failed to switch camera: $e');
     }
   }
