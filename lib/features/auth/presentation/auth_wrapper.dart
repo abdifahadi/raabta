@@ -10,6 +10,8 @@ import 'package:raabta/features/auth/domain/user_profile_repository.dart';
 import 'package:raabta/features/auth/domain/firebase_user_profile_repository.dart';
 import 'package:raabta/features/auth/presentation/sign_in_screen.dart';
 import 'package:raabta/features/auth/presentation/profile_setup_screen.dart';
+import 'package:raabta/features/auth/presentation/widgets/splash_screen.dart';
+import 'package:raabta/features/auth/presentation/widgets/error_screen.dart';
 import 'package:raabta/features/home/presentation/home_screen.dart';
 import 'package:raabta/features/onboarding/presentation/welcome_screen.dart';
 import 'package:raabta/core/services/service_locator.dart';
@@ -109,208 +111,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
     }
   }
 
-  /// Splash screen component for loading states
-  Widget _buildSplashScreen() {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-          ),
-        ),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // App logo with animation
-              TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0.8, end: 1.0),
-                duration: const Duration(milliseconds: 1000),
-                curve: Curves.easeInOut,
-                builder: (context, scale, child) => Transform.scale(
-                  scale: scale,
-                  child: Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(50),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.chat_bubble_outline,
-                      size: 50,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 32),
-              // Loading spinner with custom animation
-              TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0.0, end: 1.0),
-                duration: const Duration(milliseconds: 800),
-                builder: (context, opacity, child) => Opacity(
-                  opacity: opacity,
-                  child: const SizedBox(
-                    width: 32,
-                    height: 32,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 3,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              // Title with fade-in animation
-              TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0.0, end: 1.0),
-                duration: const Duration(milliseconds: 1200),
-                builder: (context, opacity, child) => Opacity(
-                  opacity: opacity,
-                  child: const Text(
-                    'Loading Raabta...',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              // Subtitle with delayed fade-in
-              TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0.0, end: 1.0),
-                duration: const Duration(milliseconds: 1400),
-                builder: (context, opacity, child) => Opacity(
-                  opacity: opacity,
-                  child: Text(
-                    'Please wait while we set things up',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white.withValues(alpha: 0.9),
-                      height: 1.4,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Error screen component for error states
-  Widget _buildErrorScreen() {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFFF6B6B), Color(0xFFFFE66D)],
-          ),
-        ),
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Error icon
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(40),
-                    ),
-                    child: const Icon(
-                      Icons.error_outline,
-                      size: 40,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  // Title
-                  const Text(
-                    'Authentication Error',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 12),
-                  // Message
-                  Container(
-                    constraints: const BoxConstraints(maxWidth: 350),
-                    child: Text(
-                      kIsWeb 
-                        ? 'We encountered an issue with authentication services on the web. This might be due to browser settings or network issues.'
-                        : 'We encountered an issue with authentication services. Please try again or contact support if the problem persists.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: Colors.white.withValues(alpha: 0.9),
-                        height: 1.5,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  // Action buttons
-                  Column(
-                    children: [
-                      // Primary button
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            // Navigate to login screen
-                            Navigator.of(context).pushReplacement(
-                              MaterialPageRoute(
-                                builder: (context) => const SignInScreen(),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.login, size: 20),
-                          label: const Text('Go to Sign In'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: const Color(0xFFFF6B6B),
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            elevation: 2,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     if (kDebugMode) {
@@ -319,7 +119,10 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
     // Show loading while checking first launch
     if (_isCheckingFirstLaunch) {
-      return _buildSplashScreen();
+      return const SplashScreen(
+        message: 'Initializing Raabta...',
+        subtitle: 'Setting up your experience',
+      );
     }
 
     // Show welcome screen for first-time users
@@ -338,30 +141,35 @@ class _AuthWrapperState extends State<AuthWrapper> {
           log('🔐 Auth state change: ${snapshot.connectionState}, hasData: ${snapshot.hasData}, data: ${snapshot.data?.uid ?? 'null'}');
         }
 
-        // Show loading while waiting for auth state
+        // Handle all 4 cases as specified:
+
+        // Case a: ConnectionState.waiting → show SplashScreen
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return _buildSplashScreen();
-        } 
-        // Show error screen if there's an error
-        else if (snapshot.hasError) {
+          return const SplashScreen(
+            message: 'Connecting...',
+            subtitle: 'Checking authentication status',
+          );
+        }
+
+        // Case b: snapshot.hasError → show ErrorScreen
+        if (snapshot.hasError) {
           if (kDebugMode) {
             log('🚨 Auth stream error: ${snapshot.error}');
           }
-          return _buildErrorScreen();
-        } 
-        // Show login screen if user is not authenticated
-        else if (!snapshot.hasData) {
-          if (kDebugMode) {
-            log('🔐 User is not signed in, showing login screen');
-          }
-          
-          // Remove FCM token when user signs out
-          _handleUserSignOut();
-          
-          return const SignInScreen();
-        } 
-        // User is authenticated, check profile and show home screen
-        else {
+          return ErrorScreen(
+            title: 'Authentication Error',
+            message: 'Failed to connect to authentication services. Please check your internet connection and try again.',
+            onRetry: () {
+              // Retry by refreshing the auth state
+              setState(() {
+                // This will trigger a rebuild and restart the StreamBuilder
+              });
+            },
+          );
+        }
+
+        // Case c: snapshot.hasData → user is authenticated, show HomeScreen (after profile check)
+        if (snapshot.hasData) {
           final user = snapshot.data!;
           
           if (kDebugMode) {
@@ -380,14 +188,25 @@ class _AuthWrapperState extends State<AuthWrapper> {
                 if (kDebugMode) {
                   log('🚨 Profile fetch error: ${profileSnapshot.error}');
                 }
-                return _buildErrorScreen();
+                return ErrorScreen(
+                  title: 'Profile Error',
+                  message: 'Failed to load user profile. Please try again.',
+                  onRetry: () {
+                    setState(() {
+                      // This will trigger a rebuild and restart the profile check
+                    });
+                  },
+                );
               }
               
               if (profileSnapshot.connectionState == ConnectionState.waiting) {
                 if (kDebugMode) {
                   log('🔐 Loading user profile...');
                 }
-                return _buildSplashScreen();
+                return const SplashScreen(
+                  message: 'Loading Profile...',
+                  subtitle: 'Getting your information ready',
+                );
               }
               
               final profile = profileSnapshot.data;
@@ -423,14 +242,24 @@ class _AuthWrapperState extends State<AuthWrapper> {
                         if (kDebugMode) {
                           log('🚨 Profile creation error: ${createSnapshot.error}');
                         }
-                        return _buildErrorScreen();
+                        return ErrorScreen(
+                          title: 'Profile Creation Error',
+                          message: 'Failed to create user profile. Please try signing in again.',
+                          onRetry: () {
+                            // Sign out and go back to login
+                            FirebaseAuth.instance.signOut();
+                          },
+                        );
                       }
                       
                       if (createSnapshot.connectionState == ConnectionState.waiting) {
                         if (kDebugMode) {
                           log('🔐 Creating initial profile...');
                         }
-                        return _buildSplashScreen();
+                        return const SplashScreen(
+                          message: 'Setting up Profile...',
+                          subtitle: 'Creating your account details',
+                        );
                       }
                       
                       if (createSnapshot.hasData) {
@@ -452,6 +281,16 @@ class _AuthWrapperState extends State<AuthWrapper> {
             },
           );
         }
+
+        // Case d: else → user is not authenticated, show LoginScreen
+        if (kDebugMode) {
+          log('🔐 User is not signed in, showing login screen');
+        }
+        
+        // Remove FCM token when user signs out
+        _handleUserSignOut();
+        
+        return const SignInScreen();
       },
     );
   }

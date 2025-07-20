@@ -74,38 +74,28 @@ void main() async {
       }
     };
 
-    // Initialize services after Firebase
+    // Initialize services with setupLocator function
     bool servicesInitialized = false;
     try {
       if (kDebugMode) {
-        log('⚙️ Initializing services...');
+        log('⚙️ Setting up services...');
       }
       
-      // Reduced timeout for web platforms (5 seconds instead of 15)
-      final timeout = kIsWeb ? const Duration(seconds: 5) : const Duration(seconds: 10);
-      
-      await ServiceLocator().initialize().timeout(
-        timeout,
-        onTimeout: () {
-          if (kDebugMode) {
-            log('⚠️ Service initialization timeout (${timeout.inSeconds}s) - continuing with degraded mode');
-          }
-          throw TimeoutException('Service initialization timeout', timeout);
-        },
-      );
+      // Use setupLocator function
+      await setupLocator();
       servicesInitialized = true;
       
       if (kDebugMode) {
-        log('✅ Services initialized successfully');
+        log('✅ Services setup completed successfully');
       }
     } catch (serviceError, serviceStackTrace) {
       if (kDebugMode) {
-        log('🚨 Service initialization error: $serviceError');
+        log('🚨 Service setup error: $serviceError');
         log('🔍 Service Stack Trace: $serviceStackTrace');
       }
       
       // Continue without fully initialized services - the app can handle this
-      LoggingService.warning('⚠️ Running in degraded mode due to service initialization failure');
+      LoggingService.warning('⚠️ Running in degraded mode due to service setup failure');
       
       // For web, add additional fallback delay to ensure DOM is ready
       if (kIsWeb) {
@@ -250,6 +240,33 @@ void main() async {
         ),
       ),
     );
+  }
+}
+
+/// Setup function for service locator
+Future<void> setupLocator() async {
+  try {
+    // Reduced timeout for web platforms
+    final timeout = kIsWeb ? const Duration(seconds: 5) : const Duration(seconds: 10);
+    
+    await ServiceLocator().initialize().timeout(
+      timeout,
+      onTimeout: () {
+        if (kDebugMode) {
+          log('⚠️ Service initialization timeout (${timeout.inSeconds}s) - continuing with degraded mode');
+        }
+        throw TimeoutException('Service initialization timeout', timeout);
+      },
+    );
+    
+    if (kDebugMode) {
+      log('✅ ServiceLocator setup completed');
+    }
+  } catch (e) {
+    if (kDebugMode) {
+      log('❌ ServiceLocator setup failed: $e');
+    }
+    rethrow;
   }
 }
 

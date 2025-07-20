@@ -54,14 +54,26 @@
       }
     });
     
-    // Add Firebase readiness check
+    // Add Firebase readiness check with timeout
     window.addEventListener('load', function() {
       console.log('Page loaded, checking Firebase availability...');
-      if (typeof firebase === 'undefined') {
-        console.error('Firebase not loaded! Check network connection and script URLs.');
-      } else {
-        console.log('Firebase scripts loaded successfully');
+      
+      // Check Firebase availability with timeout
+      function checkFirebase(attempts) {
+        if (attempts > 10) {
+          console.warn('Firebase availability check timed out. App will attempt to continue.');
+          return;
+        }
+        
+        if (typeof firebase === 'undefined') {
+          console.log('Waiting for Firebase... attempt', attempts);
+          setTimeout(() => checkFirebase(attempts + 1), 100);
+        } else {
+          console.log('Firebase scripts loaded successfully');
+        }
       }
+      
+      checkFirebase(1);
     });
   </script>
   
@@ -128,23 +140,64 @@
 
   <script>
     window.addEventListener('load', function(ev) {
+      // Add timeout to prevent infinite loading
+      const loadingTimeout = setTimeout(function() {
+        console.warn('Flutter app loading timeout. Hiding loading screen.');
+        const loading = document.getElementById('loading');
+        if (loading) {
+          loading.innerHTML = `
+            <div class="loading-content">
+              <div style="color: white; text-align: center;">
+                <h3>Loading Taking Longer Than Expected</h3>
+                <p>Please refresh the page to try again.</p>
+                <button onclick="window.location.reload()" style="padding: 10px 20px; margin-top: 10px; background: white; border: none; border-radius: 5px; cursor: pointer;">
+                  Refresh Page
+                </button>
+              </div>
+            </div>
+          `;
+        }
+      }, 15000); // 15 second timeout
+      
       // Download main.dart.js
       _flutter.loader.load({
         serviceWorker: {
           serviceWorkerVersion: serviceWorkerVersion,
         }
       }).then(function(engineInitializer) {
-          engineInitializer.initializeEngine().then(function(appRunner) {
-            appRunner.runApp().then(function() {
+          return engineInitializer.initializeEngine().then(function(appRunner) {
+            return appRunner.runApp().then(function() {
+              // Clear the timeout since app loaded successfully
+              clearTimeout(loadingTimeout);
+              
               // Hide loading screen when Flutter app is ready
               const loading = document.getElementById('loading');
               if (loading) {
                 loading.style.display = 'none';
               }
+              
+              console.log('Flutter app initialized successfully');
             });
           });
-        }
-      });
+        }).catch(function(error) {
+          console.error('Flutter app failed to load:', error);
+          clearTimeout(loadingTimeout);
+          
+          const loading = document.getElementById('loading');
+          if (loading) {
+            loading.innerHTML = `
+              <div class="loading-content">
+                <div style="color: white; text-align: center;">
+                  <h3>Failed to Load App</h3>
+                  <p>There was an error loading the application. Please check your internet connection and try again.</p>
+                  <button onclick="window.location.reload()" style="padding: 10px 20px; margin-top: 10px; background: white; border: none; border-radius: 5px; cursor: pointer;">
+                    Refresh Page
+                  </button>
+                </div>
+              </div>
+            `;
+          }
+        });
     });
   </script>
 </body>
