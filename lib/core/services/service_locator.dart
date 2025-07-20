@@ -85,11 +85,14 @@ class ServiceLocator {
       if (kDebugMode) {
         print('🔧 ServiceLocator initialization in progress, waiting...');
       }
-      // Wait for initialization to complete
-      while (_isInitializing && !_isInitialized) {
+      // Wait for initialization to complete with timeout
+      int waitCount = 0;
+      while (_isInitializing && !_isInitialized && waitCount < 100) {
         await Future.delayed(const Duration(milliseconds: 100));
+        waitCount++;
       }
-      return;
+      if (_isInitialized) return;
+      throw Exception('ServiceLocator initialization timeout');
     }
 
     _isInitializing = true;
@@ -97,11 +100,22 @@ class ServiceLocator {
     try {
       if (kDebugMode) {
         print('🔧 Initializing ServiceLocator...');
+        print('🌐 Platform: ${kIsWeb ? 'Web' : 'Native'}');
       }
 
-      // Initialize backend service
+      // Initialize backend service with timeout
       _backendService = FirebaseService();
-      await _backendService!.initialize();
+      
+      // Add timeout for Firebase initialization
+      await _backendService!.initialize().timeout(
+        kIsWeb ? const Duration(seconds: 8) : const Duration(seconds: 12),
+        onTimeout: () {
+          if (kDebugMode) {
+            print('⏰ Firebase initialization timeout in ServiceLocator');
+          }
+          throw TimeoutException('Firebase initialization timeout', kIsWeb ? const Duration(seconds: 8) : const Duration(seconds: 12));
+        },
+      );
 
       // Initialize auth provider
       _authProvider = FirebaseAuthService();

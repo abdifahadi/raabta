@@ -70,7 +70,17 @@ class FirebaseAuthService implements AuthProvider {
   @override
   Stream<User?> get authStateChanges {
     try {
-      return _auth.authStateChanges();
+      final stream = _auth.authStateChanges();
+      
+      // Add debug logging for web
+      if (kIsWeb && kDebugMode) {
+        return stream.map((user) {
+          print('🔐 Auth state change (Web): ${user?.uid ?? 'null'}');
+          return user;
+        });
+      }
+      
+      return stream;
     } catch (e) {
       if (kDebugMode) {
         print('🚨 Error getting auth state changes: $e');

@@ -45,6 +45,24 @@
   <script>
     // The value below is injected by flutter build, do not touch.
     var serviceWorkerVersion = "{{flutter_service_worker_version}}";
+    
+    // Add error handling for Firebase script loading
+    window.addEventListener('error', function(e) {
+      console.error('Script loading error:', e.filename, e.message);
+      if (e.filename && e.filename.includes('firebase')) {
+        console.error('Firebase script failed to load. Check network connection.');
+      }
+    });
+    
+    // Add Firebase readiness check
+    window.addEventListener('load', function() {
+      console.log('Page loaded, checking Firebase availability...');
+      if (typeof firebase === 'undefined') {
+        console.error('Firebase not loaded! Check network connection and script URLs.');
+      } else {
+        console.log('Firebase scripts loaded successfully');
+      }
+    });
   </script>
   
   <!-- Agora Web SDK for agora_rtc_engine -->

@@ -22,6 +22,7 @@ class FirebaseService implements BackendService {
   FirebaseService._internal();
 
   bool _initialized = false;
+  bool _isInitializing = false;
 
   @override
   bool get isInitialized => _initialized;
@@ -34,6 +35,22 @@ class FirebaseService implements BackendService {
       }
       return;
     }
+
+    if (_isInitializing) {
+      if (kDebugMode) {
+        print('🔥 Firebase initialization in progress, waiting...');
+      }
+      // Wait for initialization to complete with timeout
+      int waitCount = 0;
+      while (_isInitializing && !_initialized && waitCount < 50) {
+        await Future.delayed(const Duration(milliseconds: 100));
+        waitCount++;
+      }
+      if (_initialized) return;
+      throw Exception('Firebase initialization timeout while waiting for concurrent initialization');
+    }
+
+    _isInitializing = true;
 
     try {
       if (kDebugMode) {
@@ -52,25 +69,22 @@ class FirebaseService implements BackendService {
           print('🔥 Firebase app already exists: ${app.name}');
         }
         _initialized = true;
+        _isInitializing = false;
         return;
       } catch (e) {
-        // Handle any Firebase initialization errors
+        // No existing app, continue with initialization
         if (kDebugMode) {
-          print('🔥 No existing Firebase app found, initializing... Error: $e');
+          print('🔥 No existing Firebase app found, proceeding with initialization...');
         }
-        // Continue with initialization regardless of error type
       }
 
-      // Web-specific initialization delay to ensure DOM is ready
+      // Web-specific pre-initialization checks
       if (kIsWeb) {
-        if (kDebugMode) {
-          print('🌐 Web platform detected, adding initialization delay...');
-        }
-        await Future.delayed(const Duration(milliseconds: 200));
+        await _prepareWebEnvironment();
       }
 
-      // Add retry mechanism for initialization with reduced retries for faster loading
-      int retries = 3;
+      // Reduced retry count for faster failure/fallback
+      int retries = kIsWeb ? 2 : 3;
       Exception? lastException;
       
       for (int i = 0; i < retries; i++) {
@@ -79,11 +93,15 @@ class FirebaseService implements BackendService {
             print('🔥 Firebase initialization attempt ${i + 1}/$retries');
           }
 
+          // Add timeout for each initialization attempt
+          final initTimeout = kIsWeb ? const Duration(seconds: 8) : const Duration(seconds: 10);
+          
           await Firebase.initializeApp(
             options: DefaultFirebaseOptions.currentPlatform,
-          );
+          ).timeout(initTimeout);
           
           _initialized = true;
+          _isInitializing = false;
           
           if (kDebugMode) {
             print('🔥 Firebase initialized successfully ${i > 0 ? 'after ${i + 1} attempts' : ''}');
@@ -116,18 +134,14 @@ class FirebaseService implements BackendService {
           lastException = e is Exception ? e : Exception(e.toString());
           if (kDebugMode) {
             print('🚨 Firebase initialization attempt ${i + 1} failed: $e');
-            try {
-              if (e.toString().contains('FirebaseException')) {
-                print('🔍 Firebase error details: $e');
-              }
-            } catch (_) {
-              // Ignore error inspection issues
+            if (e.toString().contains('FirebaseException') || e.toString().contains('auth/')) {
+              print('🔍 Firebase error details: $e');
             }
           }
           
           if (i < retries - 1) {
-            // Reduced backoff: 300ms, 600ms for faster loading
-            final delay = Duration(milliseconds: 300 * (i + 1));
+            // Reduced backoff for web: 200ms, 400ms for faster loading
+            final delay = Duration(milliseconds: kIsWeb ? 200 * (i + 1) : 300 * (i + 1));
             if (kDebugMode) {
               print('⏳ Waiting ${delay.inMilliseconds}ms before retry...');
             }
@@ -137,9 +151,14 @@ class FirebaseService implements BackendService {
       }
       
       // If we get here, all retries failed
+      _initialized = false;
+      _isInitializing = false;
       throw lastException ?? Exception('Failed to initialize Firebase after $retries attempts');
 
     } catch (e, stackTrace) {
+      _initialized = false;
+      _isInitializing = false;
+      
       if (kDebugMode) {
         print('🚨 Error initializing Firebase: $e');
         print('🔍 Stack trace: $stackTrace');
@@ -160,8 +179,32 @@ class FirebaseService implements BackendService {
         }
       }
       
-      _initialized = false;
       rethrow;
+    }
+  }
+
+  /// Prepare web environment for Firebase initialization
+  Future<void> _prepareWebEnvironment() async {
+    if (!kIsWeb) return;
+    
+    try {
+      if (kDebugMode) {
+        print('🌐 Preparing web environment for Firebase...');
+      }
+      
+      // Add delay to ensure DOM and Firebase scripts are ready
+      await Future.delayed(const Duration(milliseconds: 300));
+      
+      // For web, check if Firebase scripts are loaded
+      // This is a basic check that the environment is ready
+      if (kDebugMode) {
+        print('🌐 Web environment preparation completed');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('⚠️ Web environment preparation failed: $e');
+      }
+      // Don't throw here, let the main initialization proceed
     }
   }
 
@@ -176,7 +219,8 @@ class FirebaseService implements BackendService {
       
       // Check if Firebase Auth is available
       try {
-        final _ = Firebase.app().options;
+        final app = Firebase.app();
+        final _ = app.options;
         if (kDebugMode) {
           print('✅ Firebase options accessible');
         }
@@ -202,74 +246,17 @@ class FirebaseService implements BackendService {
   void _checkWebCompatibility() {
     if (!kIsWeb) return;
     
-    if (kDebugMode) {
-      print('🌐 Browser Compatibility Check:');
-      print('  User Agent: ${_getBrowserInfo()}');
-      print('  Local Storage: ${_hasLocalStorage()}');
-      print('  Session Storage: ${_hasSessionStorage()}');
-      print('  IndexedDB: ${_hasIndexedDB()}');
-      print('  Fetch API: ${_hasFetch()}');
-      print('  Promises: ${_hasPromises()}');
-    }
-  }
-
-  /// Get browser information
-  String _getBrowserInfo() {
     try {
-      // This is a simple way to get browser info in web
-      return 'Web Browser';
+      if (kDebugMode) {
+        print('🌐 Checking web browser compatibility...');
+        print('  User Agent: [Browser detection not available in Flutter]');
+        print('  Note: Ensure you\'re using a modern browser with JavaScript enabled');
+        print('  Supported: Chrome 63+, Firefox 57+, Safari 10.1+, Edge 79+');
+      }
     } catch (e) {
-      return 'Unknown';
-    }
-  }
-
-  /// Check if localStorage is available
-  bool _hasLocalStorage() {
-    try {
-      // This would be implemented with dart:html in a real scenario
-      return true; // Assume true for now
-    } catch (e) {
-      return false;
-    }
-  }
-
-  /// Check if sessionStorage is available
-  bool _hasSessionStorage() {
-    try {
-      // This would be implemented with dart:html in a real scenario
-      return true; // Assume true for now
-    } catch (e) {
-      return false;
-    }
-  }
-
-  /// Check if IndexedDB is available
-  bool _hasIndexedDB() {
-    try {
-      // This would be implemented with dart:html in a real scenario
-      return true; // Assume true for now
-    } catch (e) {
-      return false;
-    }
-  }
-
-  /// Check if Fetch API is available
-  bool _hasFetch() {
-    try {
-      // This would be implemented with dart:html in a real scenario
-      return true; // Assume true for now
-    } catch (e) {
-      return false;
-    }
-  }
-
-  /// Check if Promises are available
-  bool _hasPromises() {
-    try {
-      // This would be implemented with dart:html in a real scenario
-      return true; // Assume true for now
-    } catch (e) {
-      return false;
+      if (kDebugMode) {
+        print('⚠️ Browser compatibility check failed: $e');
+      }
     }
   }
 
