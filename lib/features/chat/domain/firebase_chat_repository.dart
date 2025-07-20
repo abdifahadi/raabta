@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'chat_repository.dart';
 import 'models/conversation_model.dart';
 import 'models/message_model.dart';
@@ -476,6 +477,100 @@ class FirebaseChatRepository implements ChatRepository {
       await batch.commit();
     } catch (e) {
       throw Exception('Failed to delete conversation: $e');
+    }
+  }
+
+  /// Save FCM token for a user
+  Future<void> saveFCMToken(String userId, String token) async {
+    try {
+      final tokenDoc = _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('fcmTokens')
+          .doc(token);
+
+      await tokenDoc.set({
+        'token': token,
+        'platform': _getCurrentPlatform(),
+        'createdAt': FieldValue.serverTimestamp(),
+        'lastUsed': FieldValue.serverTimestamp(),
+        'isActive': true,
+      }, SetOptions(merge: true));
+    } catch (e) {
+      throw Exception('Failed to save FCM token: $e');
+    }
+  }
+
+  /// Remove FCM token for a user
+  Future<void> removeFCMToken(String userId, String token) async {
+    try {
+      await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('fcmTokens')
+          .doc(token)
+          .update({'isActive': false});
+    } catch (e) {
+      throw Exception('Failed to remove FCM token: $e');
+    }
+  }
+
+  /// Get active FCM tokens for a user
+  Future<List<String>> getFCMTokens(String userId) async {
+    try {
+      final snapshot = await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('fcmTokens')
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      return snapshot.docs
+          .map((doc) => doc.data()['token'] as String)
+          .toList();
+    } catch (e) {
+      throw Exception('Failed to get FCM tokens: $e');
+    }
+  }
+
+  /// Clean up old FCM tokens (older than 30 days)
+  Future<void> cleanupOldFCMTokens(String userId) async {
+    try {
+      final cutoffDate = DateTime.now().subtract(const Duration(days: 30));
+      final snapshot = await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('fcmTokens')
+          .where('lastUsed', isLessThan: Timestamp.fromDate(cutoffDate))
+          .get();
+
+      final batch = _firestore.batch();
+      for (final doc in snapshot.docs) {
+        batch.delete(doc.reference);
+      }
+
+      await batch.commit();
+    } catch (e) {
+      throw Exception('Failed to cleanup old FCM tokens: $e');
+    }
+  }
+
+  /// Get current platform string
+  String _getCurrentPlatform() {
+    if (kIsWeb) return 'web';
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android:
+        return 'android';
+      case TargetPlatform.iOS:
+        return 'ios';
+      case TargetPlatform.macOS:
+        return 'macos';
+      case TargetPlatform.windows:
+        return 'windows';
+      case TargetPlatform.linux:
+        return 'linux';
+      default:
+        return 'unknown';
     }
   }
 }

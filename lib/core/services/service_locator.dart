@@ -3,6 +3,7 @@ import 'firebase_service.dart';
 import 'storage_repository.dart';
 import 'firebase_storage_repository.dart';
 import 'media_picker_service.dart';
+import 'notification_service.dart';
 import 'package:raabta/features/auth/domain/user_repository.dart';
 import 'package:raabta/features/auth/domain/firebase_user_repository.dart';
 import 'package:raabta/features/auth/domain/user_profile_repository.dart';
@@ -41,6 +42,9 @@ class ServiceLocator {
 
   /// Media picker service instance
   MediaPickerService? _mediaPickerService;
+
+  /// Notification service instance
+  NotificationService? _notificationService;
 
   /// Track initialization state
   bool _isInitialized = false;
@@ -100,6 +104,10 @@ class ServiceLocator {
 
       // Initialize media picker service
       _mediaPickerService = MediaPickerService();
+
+      // Initialize notification service
+      _notificationService = NotificationService();
+      await _notificationService!.initialize();
 
       _isInitialized = true;
       
@@ -172,9 +180,18 @@ class ServiceLocator {
     return _mediaPickerService!;
   }
 
+  /// Get notification service
+  NotificationService get notificationService {
+    if (_notificationService == null) {
+      throw StateError('ServiceLocator not initialized. Call initialize() first.');
+    }
+    return _notificationService!;
+  }
+
   /// Safe getters that return null if not initialized
   AuthProvider? get authProviderOrNull => _authProvider;
   UserRepository? get userRepositoryOrNull => _userRepository;
   UserProfileRepository? get userProfileRepositoryOrNull => _userProfileRepository;
   BackendService? get backendServiceOrNull => _backendService;
+  NotificationService? get notificationServiceOrNull => _notificationService;
 }

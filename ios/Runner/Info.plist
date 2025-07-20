@@ -48,6 +48,12 @@
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	
+	<!-- Push Notifications -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
+	
 	<!-- Permissions -->
 	<key>NSCameraUsageDescription</key>
 	<string>This app needs access to camera to take photos and videos for sharing in chats.</string>

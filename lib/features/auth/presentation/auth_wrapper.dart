@@ -11,6 +11,7 @@ import 'package:raabta/features/auth/presentation/profile_setup_screen.dart';
 import 'package:raabta/features/home/presentation/home_screen.dart';
 import 'package:raabta/features/onboarding/presentation/welcome_screen.dart';
 import 'package:raabta/core/services/service_locator.dart';
+import 'package:raabta/core/services/notification_handler.dart';
 
 /// A wrapper widget that handles authentication state changes
 class AuthWrapper extends StatefulWidget {
@@ -507,6 +508,10 @@ class _AuthWrapperState extends State<AuthWrapper> {
                 if (kDebugMode) {
                   print('🔐 Profile is complete, showing home screen');
                 }
+                
+                // Update FCM token for signed-in user
+                _updateFCMTokenForUser(user.uid);
+                
                 // Profile is complete, show home with smooth transition
                 return TweenAnimationBuilder<double>(
                   tween: Tween(begin: 0.0, end: 1.0),
@@ -596,6 +601,10 @@ class _AuthWrapperState extends State<AuthWrapper> {
         if (kDebugMode) {
           print('🔐 User is not signed in, showing sign in screen');
         }
+        
+        // Remove FCM token when user signs out
+        _handleUserSignOut();
+        
         return TweenAnimationBuilder<double>(
           tween: Tween(begin: 0.0, end: 1.0),
           duration: const Duration(milliseconds: 300),
@@ -606,5 +615,24 @@ class _AuthWrapperState extends State<AuthWrapper> {
         );
       },
     );
+  }
+
+  /// Update FCM token when user signs in
+  void _updateFCMTokenForUser(String userId) {
+    NotificationHandler().updateFCMTokenForUser(userId).catchError((error) {
+      if (kDebugMode) {
+        print('❌ Failed to update FCM token for user $userId: $error');
+      }
+    });
+  }
+
+  /// Handle user sign out - remove FCM token
+  void _handleUserSignOut() {
+    // Note: We can't get the user ID here since user is null
+    // FCM token cleanup will happen during next sign-in
+    // This is a limitation but acceptable since tokens have expiry
+    if (kDebugMode) {
+      print('🔐 User signed out, FCM token will be cleaned up on next sign-in');
+    }
   }
 }

@@ -104,4 +104,16 @@ abstract class ChatRepository {
 
   /// Delete a conversation
   Future<void> deleteConversation(String conversationId);
+
+  /// Save FCM token for a user
+  Future<void> saveFCMToken(String userId, String token);
+
+  /// Remove FCM token for a user
+  Future<void> removeFCMToken(String userId, String token);
+
+  /// Get active FCM tokens for a user
+  Future<List<String>> getFCMTokens(String userId);
+
+  /// Clean up old FCM tokens
+  Future<void> cleanupOldFCMTokens(String userId);
 }
