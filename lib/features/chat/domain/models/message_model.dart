@@ -280,7 +280,7 @@ class MessageModel {
 
   /// Get group ID for group messages
   String? get groupId {
-    return isGroupMessage ? metadata?['groupId'] as String? : null;
+    return isGroupMessage ? (metadata?['groupId'] as String?) : null;
   }
 
   /// Check if this message was sent in a specific group
