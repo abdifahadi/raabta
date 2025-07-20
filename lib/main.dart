@@ -231,7 +231,7 @@ class MyApp extends StatelessWidget {
         ),
         cardTheme: const CardTheme(
           elevation: 2,
-          shape: const RoundedRectangleBorder(
+                      shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.all(Radius.circular(12)),
           ),
         ),
