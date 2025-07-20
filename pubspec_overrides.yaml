@@ -1,0 +1,10 @@
+# This file overrides pubspec.yaml dependencies to fix the file_picker
+# circular dependency issue on desktop platforms
+dependency_overrides:
+  # Override file_picker to use a version that doesn't have circular dependency issues
+  file_picker: ^8.0.7
+  
+  # Ensure proper platform-specific implementations are used
+  file_selector_linux: ^0.9.3+2
+  file_selector_macos: ^0.9.4+2  
+  file_selector_windows: ^0.9.3+3
