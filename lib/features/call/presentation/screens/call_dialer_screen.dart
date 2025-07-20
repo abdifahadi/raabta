@@ -329,9 +329,9 @@ class _CallDialerScreenState extends State<CallDialerScreen>
       final call = await callService.startCall(
         receiverId: widget.targetUser.uid,
         callType: callType,
-        callerName: currentUserProfile.displayName,
+        callerName: currentUserProfile.displayName ?? 'Unknown',
         callerPhotoUrl: currentUserProfile.photoUrl,
-        receiverName: widget.targetUser.displayName,
+        receiverName: widget.targetUser.displayName ?? 'Unknown',
         receiverPhotoUrl: widget.targetUser.photoUrl,
       );
 

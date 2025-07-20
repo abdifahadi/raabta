@@ -26,6 +26,7 @@ class _CallScreenState extends State<CallScreen> {
   Timer? _controlsTimer;
   int _remoteUid = 0;
   bool _remoteVideoMuted = false;
+  bool _remoteAudioMuted = false; // Add missing variable
   
   // Call duration
   Timer? _durationTimer;

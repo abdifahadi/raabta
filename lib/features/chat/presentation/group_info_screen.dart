@@ -595,7 +595,7 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            if (profile?.email != null) Text(profile.email!),
+                            if (profile?.email != null) Text(profile?.email!),
                             if (isAdmin)
                               Text(
                                 'Admin',
