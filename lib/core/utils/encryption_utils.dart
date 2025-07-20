@@ -134,7 +134,7 @@ class EncryptionUtils {
 
       // Derive key using PBKDF2
       final pbkdf2 = Pbkdf2(
-        macAlgorithm: Hmac.sha256(),
+        macAlgorithm: Hmac(sha256, []),
         iterations: iterations,
         bits: 256, // 32 bytes * 8 bits
       );
@@ -176,7 +176,7 @@ class EncryptionUtils {
 
 /// PBKDF2 implementation for key derivation
 class Pbkdf2 {
-  final MacAlgorithm macAlgorithm;
+  final Hmac macAlgorithm;
   final int iterations;
   final int bits;
 
@@ -195,12 +195,13 @@ class Pbkdf2 {
     final key = Uint8List(keyLength);
 
     final hmac = Hmac(sha256, passwordBytes);
-    final blockCount = (keyLength + macAlgorithm.macLength - 1) ~/ macAlgorithm.macLength;
+    const macLength = 32; // SHA-256 output length
+    final blockCount = (keyLength + macLength - 1) ~/ macLength;
 
     for (int i = 1; i <= blockCount; i++) {
       final block = _computeBlock(hmac, nonce, i);
-      final blockStart = (i - 1) * macAlgorithm.macLength;
-      final blockEnd = math.min(blockStart + macAlgorithm.macLength, keyLength);
+      final blockStart = (i - 1) * macLength;
+      final blockEnd = math.min(blockStart + macLength, keyLength);
       key.setRange(blockStart, blockEnd, block);
     }
 

@@ -5,7 +5,7 @@ import '../../../../core/services/service_locator.dart';
 import '../../../../features/auth/domain/models/user_profile_model.dart';
 
 class CallDialerScreen extends StatefulWidget {
-  final UserProfile targetUser;
+  final UserProfileModel targetUser;
 
   const CallDialerScreen({
     super.key,

@@ -454,7 +454,7 @@ class CallService {
 
       // Join channel (no token for Phase 1)
       await _engine!.joinChannel(
-        token: null, // No token in Phase 1
+        token: "", // No token in Phase 1
         channelId: channelName,
         uid: 0, // Let Agora assign UID
         options: const ChannelMediaOptions(

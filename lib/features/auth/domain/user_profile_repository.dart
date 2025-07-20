@@ -29,4 +29,7 @@ abstract class UserProfileRepository {
 
   /// Mark profile as complete
   Future<void> markProfileComplete(String uid);
+
+  /// Get all users for group creation
+  Future<List<UserProfileModel>> getAllUsers();
 }

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
 import 'package:raabta/features/auth/domain/models/user_profile_model.dart';
 import 'package:raabta/features/auth/domain/user_profile_repository.dart';
 import 'package:raabta/features/auth/domain/auth_repository.dart';
@@ -299,7 +298,6 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
         MessageBubble(
           message: message,
           isMe: isMe,
-          showTimestamp: true,
           onReply: () => _replyToMessage(message),
           onLongPress: () {
             HapticFeedback.lightImpact();
@@ -362,7 +360,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                       '${widget.group.members.length} members',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
                     ),
                   ],
@@ -499,7 +497,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                   Text(
                     'Sending media...',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
                   ),
                 ],
