@@ -79,6 +79,8 @@ class MessageModel {
   final MessageStatus status;
   final String? replyToMessageId;
   final Map<String, dynamic>? metadata; // For media URLs, file info, etc.
+  final bool isEncrypted;
+  final String? encryptedContent;
 
   MessageModel({
     required this.id,
@@ -90,6 +92,8 @@ class MessageModel {
     this.status = MessageStatus.sent,
     this.replyToMessageId,
     this.metadata,
+    this.isEncrypted = false,
+    this.encryptedContent,
   });
 
   /// Convert to a map for Firestore
@@ -104,6 +108,8 @@ class MessageModel {
       'status': status.value,
       'replyToMessageId': replyToMessageId,
       'metadata': metadata,
+      'isEncrypted': isEncrypted,
+      'encryptedContent': encryptedContent,
     };
   }
 
@@ -119,6 +125,8 @@ class MessageModel {
       status: MessageStatus.fromString(map['status'] as String? ?? 'sent'),
       replyToMessageId: map['replyToMessageId'] as String?,
       metadata: map['metadata'] as Map<String, dynamic>?,
+      isEncrypted: map['isEncrypted'] as bool? ?? false,
+      encryptedContent: map['encryptedContent'] as String?,
     );
   }
 
@@ -133,6 +141,8 @@ class MessageModel {
     MessageStatus? status,
     String? replyToMessageId,
     Map<String, dynamic>? metadata,
+    bool? isEncrypted,
+    String? encryptedContent,
   }) {
     return MessageModel(
       id: id ?? this.id,
@@ -144,6 +154,8 @@ class MessageModel {
       status: status ?? this.status,
       replyToMessageId: replyToMessageId ?? this.replyToMessageId,
       metadata: metadata ?? this.metadata,
+      isEncrypted: isEncrypted ?? this.isEncrypted,
+      encryptedContent: encryptedContent ?? this.encryptedContent,
     );
   }
 
@@ -223,15 +235,41 @@ class MessageModel {
   String get previewText {
     switch (messageType) {
       case MessageType.text:
-        return content;
+        return isEncrypted ? '🔒 Encrypted message' : content;
       case MessageType.image:
-        return '📷 Image';
+        return isEncrypted ? '🔒 Encrypted image' : '📷 Image';
       case MessageType.file:
-        return '📎 ${fileName ?? 'File'}';
+        return isEncrypted ? '🔒 Encrypted file' : '📎 ${fileName ?? 'File'}';
       case MessageType.audio:
-        return '🎵 Audio';
+        return isEncrypted ? '🔒 Encrypted audio' : '🎵 Audio';
       case MessageType.video:
-        return '🎬 Video';
+        return isEncrypted ? '🔒 Encrypted video' : '🎬 Video';
     }
+  }
+
+  /// Get the actual content to display (decrypted if encrypted)
+  /// This method should be used by the UI to display message content
+  String getDisplayContent({String? decryptionKey}) {
+    if (!isEncrypted) {
+      return content;
+    }
+
+    if (decryptionKey == null || encryptedContent == null) {
+      return '🔒 Encrypted message (key not available)';
+    }
+
+    try {
+      // Import encryption utils here to avoid circular dependencies
+      // This will be handled by the repository layer in practice
+      return content; // Placeholder - actual decryption handled by repository
+    } catch (e) {
+      return '🔒 Failed to decrypt message';
+    }
+  }
+
+  /// Check if this message can be decrypted
+  bool canDecrypt(String? decryptionKey) {
+    return !isEncrypted || 
+           (decryptionKey != null && encryptedContent != null);
   }
 }

@@ -116,4 +116,16 @@ abstract class ChatRepository {
 
   /// Clean up old FCM tokens
   Future<void> cleanupOldFCMTokens(String userId);
+
+  /// Enable end-to-end encryption for a conversation
+  Future<String> enableEncryption(String conversationId);
+
+  /// Disable end-to-end encryption for a conversation
+  Future<void> disableEncryption(String conversationId);
+
+  /// Check if a conversation has encryption enabled
+  bool isEncryptionEnabled(String conversationId);
+
+  /// Get decrypted message content
+  String getDecryptedContent(MessageModel message);
 }

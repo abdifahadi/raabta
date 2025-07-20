@@ -73,6 +73,10 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
             
             const Divider(),
             
+            _buildEncryptionTile(),
+            
+            const Divider(),
+            
             _buildSettingsTile(
               icon: Icons.clear_all,
               title: 'Clear Chat History',
@@ -274,6 +278,48 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
     );
   }
 
+  Widget _buildEncryptionTile() {
+    final isEncrypted = _chatRepository.isEncryptionEnabled(widget.conversation.id);
+    
+    return ListTile(
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: (isEncrypted ? Colors.green : Colors.grey).withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(
+          isEncrypted ? Icons.lock : Icons.lock_open,
+          color: isEncrypted ? Colors.green : Colors.grey,
+          size: 24,
+        ),
+      ),
+      title: Text(
+        isEncrypted ? 'End-to-End Encryption Enabled' : 'Enable End-to-End Encryption',
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      subtitle: Text(
+        isEncrypted 
+            ? 'Your messages are secured with end-to-end encryption'
+            : 'Secure your messages with end-to-end encryption',
+        style: TextStyle(
+          fontSize: 14,
+          color: Colors.grey[600],
+        ),
+      ),
+      trailing: Switch(
+        value: isEncrypted,
+        onChanged: _isLoading ? null : _toggleEncryption,
+        activeColor: Colors.green,
+      ),
+      onTap: _isLoading ? null : () => _toggleEncryption(!isEncrypted),
+      contentPadding: EdgeInsets.zero,
+    );
+  }
+
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     final difference = now.difference(date);
@@ -348,6 +394,54 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
       }
     } catch (e) {
       _showSnackBar('Failed to update block settings: ${e.toString()}', Colors.red);
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _toggleEncryption(bool enable) async {
+    if (enable) {
+      final confirm = await _showConfirmDialog(
+        title: 'Enable End-to-End Encryption',
+        message: 'This will enable end-to-end encryption for this conversation. '
+                'All future messages will be encrypted. '
+                'Make sure the other person also has encryption enabled to read your messages.',
+        confirmText: 'Enable',
+      );
+
+      if (!confirm) return;
+    } else {
+      final confirm = await _showConfirmDialog(
+        title: 'Disable End-to-End Encryption',
+        message: 'This will disable end-to-end encryption for this conversation. '
+                'Future messages will not be encrypted.',
+        confirmText: 'Disable',
+      );
+
+      if (!confirm) return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      if (enable) {
+        final encryptionKey = await _chatRepository.enableEncryption(widget.conversation.id);
+        _showSnackBar('End-to-end encryption enabled', Colors.green);
+        
+        // Show the encryption key to the user (in a real app, this would be handled more securely)
+        if (mounted) {
+          _showEncryptionKeyDialog(encryptionKey);
+        }
+      } else {
+        await _chatRepository.disableEncryption(widget.conversation.id);
+        _showSnackBar('End-to-end encryption disabled', Colors.orange);
+      }
+    } catch (e) {
+      _showSnackBar('Failed to update encryption settings: ${e.toString()}', Colors.red);
     } finally {
       setState(() {
         _isLoading = false;
@@ -452,6 +546,71 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
         content: Text(message),
         backgroundColor: color,
       ),
+    );
+  }
+
+  void _showEncryptionKeyDialog(String encryptionKey) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.lock, color: Colors.green),
+              SizedBox(width: 8),
+              Text('Encryption Key Generated'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'A unique encryption key has been generated for this conversation. '
+                'In a production app, this would be securely shared with the other participant.',
+                style: TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Encryption Key:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey[300]!),
+                ),
+                child: SelectableText(
+                  encryptionKey,
+                  style: const TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                '⚠️ Note: This is a demo implementation. In production, keys would be exchanged securely using proper key exchange protocols.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.orange,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Got it'),
+            ),
+          ],
+        );
+      },
     );
   }
 }
