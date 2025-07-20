@@ -1,17 +1,17 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../../domain/models/call_model.dart';
-import '../../../../core/services/service_locator.dart';
+import 'package:raabta/features/call/domain/models/call_model.dart';
+import '../../../../core/services/call_service.dart';
 
 class CallScreen extends StatefulWidget {
   final CallModel call;
+  final bool isIncoming;
 
   const CallScreen({
     super.key,
     required this.call,
+    this.isIncoming = false,
   });
 
   @override
@@ -19,173 +19,128 @@ class CallScreen extends StatefulWidget {
 }
 
 class _CallScreenState extends State<CallScreen> {
-  final callService = ServiceLocator().callService;
-  
-  // UI state
-  bool _isControlsVisible = true;
+  final CallService _callService = CallService();
+  final bool _isVideoEnabled = true;
+  bool _isConnecting = false;
+  bool _localControlsVisible = true;
   Timer? _controlsTimer;
+
+  // Mock remote UID for web compatibility
   int _remoteUid = 0;
-  bool _remoteVideoMuted = false;
-  
-  // Call duration
-  Timer? _durationTimer;
-  int _duration = 0;
-  
-  // Streams
-  StreamSubscription? _callEventSubscription;
-  StreamSubscription? _callStateSubscription;
 
   @override
   void initState() {
     super.initState();
-    _setupListeners();
-    _startDurationTimer();
-    _startControlsTimer();
-    
-    // Keep screen on during call
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    _initializeCall();
   }
 
   @override
   void dispose() {
     _controlsTimer?.cancel();
-    _durationTimer?.cancel();
-    _callEventSubscription?.cancel();
-    _callStateSubscription?.cancel();
-    
-    // Restore system UI
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    
+    _cleanupCall();
     super.dispose();
   }
 
-  void _setupListeners() {
-    // Listen to call events
-    _callEventSubscription = callService.callEventStream.listen((event) {
-      if (!mounted) return;
-      
-      switch (event['type']) {
-        case 'userJoined':
-          setState(() {
-            _remoteUid = event['remoteUid'];
-          });
-          break;
-          
-        case 'userOffline':
-          setState(() {
-            _remoteUid = 0;
-          });
-          // End call if remote user leaves
-          _endCall();
-          break;
-          
-        case 'remoteVideoStateChanged':
-          setState(() {
-            _remoteVideoMuted = event['state'] != 'remoteVideoStateDecoding';
-          });
-          break;
-          
-        case 'remoteAudioStateChanged':
-          setState(() {
-            // _remoteAudioMuted = event['state'] != 'remoteAudioStateDecoding'; // This line is removed
-          });
-          break;
-          
-        case 'error':
-          _showError('Call error: ${event['message']}');
-          break;
-      }
+  Future<void> _initializeCall() async {
+    setState(() {
+      _isConnecting = true;
     });
-  }
 
-  void _startDurationTimer() {
-    _durationTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (mounted) {
-        setState(() {
-          _duration++;
-        });
-      }
-    });
+    try {
+      // Mock call initialization for web compatibility
+      await Future.delayed(const Duration(seconds: 2));
+      setState(() {
+        _isConnecting = false;
+        _remoteUid = 12345; // Mock remote user ID
+      });
+      
+      _startControlsTimer();
+    } catch (e) {
+      _showErrorMessage('Failed to connect: $e');
+    }
   }
 
   void _startControlsTimer() {
     _controlsTimer?.cancel();
-    _controlsTimer = Timer(const Duration(seconds: 5), () {
+    _controlsTimer = Timer(const Duration(seconds: 3), () {
       if (mounted) {
         setState(() {
-          _isControlsVisible = false;
+          _localControlsVisible = false;
         });
       }
     });
   }
 
-  String _formatDuration(int seconds) {
-    final minutes = seconds ~/ 60;
-    final remainingSeconds = seconds % 60;
-    return '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
+  void _toggleControlsVisibility() {
+    setState(() {
+      _localControlsVisible = !_localControlsVisible;
+    });
+    if (_localControlsVisible) {
+      _startControlsTimer();
+    }
+  }
+
+  Future<void> _cleanupCall() async {
+    try {
+      await _callService.endCall();
+    } catch (e) {
+      debugPrint('Error during cleanup: $e');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isVideoCall = widget.call.callType == CallType.video;
-
     return Scaffold(
       backgroundColor: Colors.black,
-      body: GestureDetector(
-        onTap: () {
-          setState(() {
-            _isControlsVisible = !_isControlsVisible;
-          });
-          if (_isControlsVisible) {
-            _startControlsTimer();
-          }
-        },
-        child: Stack(
-          children: [
-            // Remote video or avatar
-            if (isVideoCall && _remoteUid != 0 && !_remoteVideoMuted)
-              _buildRemoteVideo()
-            else
-              _buildRemoteAvatar(),
-            
-            // Local video (for video calls)
-            if (isVideoCall) _buildLocalVideo(),
-            
-            // Top bar with call info
-            _buildTopBar(),
-            
-            // Bottom controls
-            if (_isControlsVisible) _buildBottomControls(),
-          ],
+      body: SafeArea(
+        child: GestureDetector(
+          onTap: _toggleControlsVisibility,
+          child: Stack(
+            children: [
+              // Main video area
+              _buildMainVideoArea(),
+              
+              // Local video view (self view)
+              if (widget.call.callType == CallType.video)
+                _buildLocalVideoView(),
+              
+              // Call info overlay
+              if (_localControlsVisible) _buildCallInfoOverlay(),
+              
+              // Call controls
+              if (_localControlsVisible) _buildCallControls(),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildRemoteVideo() {
-    return SizedBox.expand(
-      child: _remoteUid != 0
-          ? AgoraVideoView(
-              controller: VideoViewController.remote(
-                rtcEngine: callService.engine!,
-                canvas: VideoCanvas(uid: _remoteUid),
-                connection: RtcConnection(channelId: widget.call.channelName),
-              ),
-            )
-          : Container(
-              color: Colors.black,
-              child: const Center(
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                ),
-              ),
-            ),
-    );
-  }
+  Widget _buildMainVideoArea() {
+    if (_isConnecting) {
+      return _buildConnectingScreen();
+    }
 
-  Widget _buildRemoteAvatar() {
-    final isConnected = _remoteUid != 0;
-    
+    if (widget.call.callType == CallType.video && _remoteUid != 0) {
+      // For web compatibility, show placeholder instead of actual video
+      return Container(
+        width: double.infinity,
+        height: double.infinity,
+        color: Colors.black,
+        child: const Center(
+          child: Text(
+            'Video call active\n(Web preview mode)',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Audio call or no remote video
     return Container(
       width: double.infinity,
       height: double.infinity,
@@ -203,10 +158,9 @@ class _CallScreenState extends State<CallScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Profile picture
           Container(
-            width: 160,
-            height: 160,
+            width: 120,
+            height: 120,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
@@ -223,7 +177,7 @@ class _CallScreenState extends State<CallScreen> {
                         color: Colors.grey[800],
                         child: const Icon(
                           Icons.person,
-                          size: 60,
+                          size: 50,
                           color: Colors.white54,
                         ),
                       ),
@@ -231,7 +185,7 @@ class _CallScreenState extends State<CallScreen> {
                         color: Colors.grey[800],
                         child: const Icon(
                           Icons.person,
-                          size: 60,
+                          size: 50,
                           color: Colors.white54,
                         ),
                       ),
@@ -240,51 +194,43 @@ class _CallScreenState extends State<CallScreen> {
                       color: Colors.grey[800],
                       child: const Icon(
                         Icons.person,
-                        size: 60,
+                        size: 50,
                         color: Colors.white54,
                       ),
                     ),
             ),
           ),
-          
           const SizedBox(height: 24),
-          
-          // Name
           Text(
             widget.call.receiverName,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 24,
+              fontSize: 22,
               fontWeight: FontWeight.bold,
             ),
           ),
-          
           const SizedBox(height: 8),
-          
-          // Status
-          Text(
-            isConnected ? 'Connected' : 'Connecting...',
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.7),
-              fontSize: 16,
-            ),
-          ),
-          
-          if (!isConnected) ...[
+          if (_isConnecting) ...[
             const SizedBox(height: 16),
             const CircularProgressIndicator(
               color: Colors.white54,
-              strokeWidth: 2,
             ),
           ],
+          Text(
+            _getCallStatusText(),
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.8),
+              fontSize: 14,
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildLocalVideo() {
+  Widget _buildLocalVideoView() {
     return Positioned(
-      top: 100,
+      top: 50,
       right: 16,
       child: Container(
         width: 120,
@@ -298,11 +244,18 @@ class _CallScreenState extends State<CallScreen> {
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(10),
-          child: callService.isVideoEnabled
-              ? AgoraVideoView(
-                  controller: VideoViewController(
-                    rtcEngine: callService.engine!,
-                    canvas: const VideoCanvas(uid: 0),
+          child: _isVideoEnabled
+              ? Container(
+                  color: Colors.grey[900],
+                  child: const Center(
+                    child: Text(
+                      'Local video\n(Web preview)',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white54,
+                        fontSize: 12,
+                      ),
+                    ),
                   ),
                 )
               : Container(
@@ -310,7 +263,7 @@ class _CallScreenState extends State<CallScreen> {
                   child: const Icon(
                     Icons.videocam_off,
                     color: Colors.white54,
-                    size: 32,
+                    size: 30,
                   ),
                 ),
         ),
@@ -318,10 +271,10 @@ class _CallScreenState extends State<CallScreen> {
     );
   }
 
-  Widget _buildTopBar() {
+  Widget _buildCallInfoOverlay() {
     return AnimatedPositioned(
       duration: const Duration(milliseconds: 300),
-      top: _isControlsVisible ? 0 : -100,
+      top: _localControlsVisible ? 0 : -100,
       left: 0,
       right: 0,
       child: Container(
@@ -338,7 +291,6 @@ class _CallScreenState extends State<CallScreen> {
         ),
         child: Row(
           children: [
-            // Back button (minimize call)
             IconButton(
               onPressed: () => Navigator.of(context).pop(),
               icon: const Icon(
@@ -347,7 +299,6 @@ class _CallScreenState extends State<CallScreen> {
                 size: 28,
               ),
             ),
-            
             Expanded(
               child: Column(
                 children: [
@@ -361,7 +312,7 @@ class _CallScreenState extends State<CallScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    _formatDuration(_duration),
+                    _getCallStatusText(),
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.8),
                       fontSize: 14,
@@ -370,8 +321,6 @@ class _CallScreenState extends State<CallScreen> {
                 ],
               ),
             ),
-            
-            // Connection indicator
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
@@ -379,7 +328,7 @@ class _CallScreenState extends State<CallScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
-                _remoteUid != 0 ? 'Connected' : 'Connecting',
+                _remoteUid != 0 ? 'Connected' : 'Connecting...',
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 12,
@@ -393,10 +342,10 @@ class _CallScreenState extends State<CallScreen> {
     );
   }
 
-  Widget _buildBottomControls() {
+  Widget _buildCallControls() {
     return AnimatedPositioned(
       duration: const Duration(milliseconds: 300),
-      bottom: _isControlsVisible ? 0 : -150,
+      bottom: _localControlsVisible ? 0 : -100,
       left: 0,
       right: 0,
       child: Container(
@@ -416,21 +365,19 @@ class _CallScreenState extends State<CallScreen> {
           children: [
             // Mute button
             _buildControlButton(
-              icon: callService.isMuted ? Icons.mic_off : Icons.mic,
-              isActive: !callService.isMuted,
-              onPressed: () {
-                callService.toggleMute();
+              icon: _callService.isMuted ? Icons.mic_off : Icons.mic,
+              onPressed: () async {
+                await _callService.toggleMute();
                 setState(() {});
               },
             ),
             
-            // Video button (for video calls)
+            // Video toggle (only for video calls)
             if (widget.call.callType == CallType.video)
               _buildControlButton(
-                icon: callService.isVideoEnabled ? Icons.videocam : Icons.videocam_off,
-                isActive: callService.isVideoEnabled,
-                onPressed: () {
-                  callService.toggleVideo();
+                icon: _callService.isVideoEnabled ? Icons.videocam : Icons.videocam_off,
+                onPressed: () async {
+                  await _callService.toggleVideo();
                   setState(() {});
                 },
               ),
@@ -439,25 +386,25 @@ class _CallScreenState extends State<CallScreen> {
             _buildControlButton(
               icon: Icons.call_end,
               color: Colors.red,
-              size: 65,
               onPressed: _endCall,
             ),
             
             // Speaker button
             _buildControlButton(
-              icon: callService.isSpeakerEnabled ? Icons.volume_up : Icons.volume_down,
-              isActive: callService.isSpeakerEnabled,
-              onPressed: () {
-                callService.toggleSpeaker();
+              icon: _callService.isSpeakerEnabled ? Icons.volume_up : Icons.volume_down,
+              onPressed: () async {
+                await _callService.toggleSpeaker();
                 setState(() {});
               },
             ),
             
-            // Camera switch (for video calls)
+            // Camera switch (only for video calls)
             if (widget.call.callType == CallType.video)
               _buildControlButton(
                 icon: Icons.flip_camera_ios,
-                onPressed: () => callService.switchCamera(),
+                onPressed: () async {
+                  // Camera switch functionality would go here
+                },
               ),
           ],
         ),
@@ -468,15 +415,14 @@ class _CallScreenState extends State<CallScreen> {
   Widget _buildControlButton({
     required IconData icon,
     Color? color,
-    bool isActive = true,
-    double size = 55,
     required VoidCallback onPressed,
+    bool isActive = true,
   }) {
     return GestureDetector(
       onTap: onPressed,
       child: Container(
-        width: size,
-        height: size,
+        width: 60,
+        height: 60,
         decoration: BoxDecoration(
           color: color ?? (isActive ? Colors.white.withValues(alpha: 0.2) : Colors.red.withValues(alpha: 0.8)),
           shape: BoxShape.circle,
@@ -487,25 +433,117 @@ class _CallScreenState extends State<CallScreen> {
         ),
         child: Icon(
           icon,
+          size: 24,
           color: Colors.white,
-          size: size * 0.4,
         ),
       ),
     );
   }
 
+  Widget _buildConnectingScreen() {
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0xFF2C1810),
+            Color(0xFF1A1A1A),
+            Color(0xFF0D0D0D),
+          ],
+        ),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.3),
+                width: 3,
+              ),
+            ),
+            child: ClipOval(
+              child: widget.call.receiverPhotoUrl.isNotEmpty
+                  ? CachedNetworkImage(
+                      imageUrl: widget.call.receiverPhotoUrl,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(
+                        color: Colors.grey[800],
+                        child: const Icon(
+                          Icons.person,
+                          size: 50,
+                          color: Colors.white54,
+                        ),
+                      ),
+                      errorWidget: (context, url, error) => Container(
+                        color: Colors.grey[800],
+                        child: const Icon(
+                          Icons.person,
+                          size: 50,
+                          color: Colors.white54,
+                        ),
+                      ),
+                    )
+                  : Container(
+                      color: Colors.grey[800],
+                      child: const Icon(
+                        Icons.person,
+                        size: 50,
+                        color: Colors.white54,
+                      ),
+                    ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            widget.call.receiverName,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Connecting...',
+            style: TextStyle(
+              color: Colors.white54,
+              fontSize: 16,
+            ),
+          ),
+          const SizedBox(height: 16),
+          const CircularProgressIndicator(
+            color: Colors.white54,
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getCallStatusText() {
+    if (_isConnecting) return 'Connecting...';
+    if (_remoteUid != 0) return 'Connected';
+    return widget.isIncoming ? 'Incoming call' : 'Calling...';
+  }
+
   void _endCall() async {
     try {
-      await callService.endCall();
+      await _cleanupCall();
       if (mounted) {
         Navigator.of(context).pop();
       }
     } catch (e) {
-      _showError('Failed to end call: $e');
+      _showErrorMessage('Failed to end call: $e');
     }
   }
 
-  void _showError(String message) {
+  void _showErrorMessage(String message) {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
