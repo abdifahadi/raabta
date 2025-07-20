@@ -353,7 +353,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> with SingleTi
               children: [
                 CircleAvatar(
                   radius: 28,
-                  backgroundColor: Colors.deepPurple.withOpacity(0.1),
+                  backgroundColor: Colors.deepPurple.withValues(alpha: 0.1),
                   backgroundImage: otherUser?.photoUrl != null
                       ? NetworkImage(otherUser!.photoUrl!)
                       : null,
@@ -608,7 +608,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> with SingleTi
           children: [
             CircleAvatar(
               radius: 28,
-                             backgroundColor: Colors.deepPurple.withOpacity(0.1),
+                             backgroundColor: Colors.deepPurple.withValues(alpha: 0.1),
               backgroundImage: group.photoUrl != null
                   ? NetworkImage(group.photoUrl!)
                   : null,
