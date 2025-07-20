@@ -177,10 +177,10 @@ class _UserListScreenState extends State<UserListScreen> {
           Container(
             padding: const EdgeInsets.all(16.0),
             decoration: BoxDecoration(
-              color: Colors.deepPurple.withOpacity(0.05),
+              color: Colors.deepPurple.withOpacity( 0.05),
               border: Border(
                 bottom: BorderSide(
-                  color: Colors.grey.withOpacity(0.2),
+                  color: Colors.grey.withOpacity( 0.2),
                 ),
               ),
             ),
@@ -288,7 +288,7 @@ class _UserListScreenState extends State<UserListScreen> {
         contentPadding: const EdgeInsets.all(12),
         leading: CircleAvatar(
           radius: 28,
-          backgroundColor: Colors.deepPurple.withOpacity(0.1),
+          backgroundColor: Colors.deepPurple.withOpacity( 0.1),
           backgroundImage: user.photoUrl != null 
               ? NetworkImage(user.photoUrl!)
               : null,
