@@ -105,7 +105,7 @@ void main() async {
                     width: 100,
                     height: 100,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withOpacity( 0.2),
                       borderRadius: BorderRadius.circular(50),
                     ),
                     child: const Icon(
@@ -132,7 +132,7 @@ void main() async {
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withOpacity( 0.9),
                         height: 1.4,
                       ),
                     ),
@@ -143,7 +143,7 @@ void main() async {
                       padding: const EdgeInsets.all(16.0),
                       margin: const EdgeInsets.symmetric(horizontal: 20),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.3),
+                        color: Colors.black.withOpacity( 0.3),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(

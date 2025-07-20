@@ -146,7 +146,7 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
         children: [
           CircleAvatar(
             radius: 30,
-            backgroundColor: Colors.deepPurple.withOpacity(0.1),
+            backgroundColor: Colors.deepPurple.withOpacity( 0.1),
             backgroundImage: widget.otherUser.photoUrl != null
                 ? NetworkImage(widget.otherUser.photoUrl!)
                 : null,
@@ -221,7 +221,7 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: iconColor.withOpacity(0.1),
+          color: iconColor.withOpacity( 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(
@@ -285,7 +285,7 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: (isEncrypted ? Colors.green : Colors.grey).withOpacity(0.1),
+          color: (isEncrypted ? Colors.green : Colors.grey).withOpacity( 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(
