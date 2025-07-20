@@ -38,19 +38,49 @@ void main() async {
     try {
       if (kDebugMode) {
         log('🔥 Initializing Firebase...');
+        log('🌍 Platform detected: ${kIsWeb ? 'Web' : 'Native'}');
+        log('🔧 Using Firebase options for current platform');
       }
       
+      // Add timeout for Firebase initialization
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
+      ).timeout(
+        kIsWeb ? const Duration(seconds: 10) : const Duration(seconds: 15),
+        onTimeout: () {
+          if (kDebugMode) {
+            log('⏰ Firebase initialization timeout');
+          }
+          throw TimeoutException('Firebase initialization timeout', kIsWeb ? const Duration(seconds: 10) : const Duration(seconds: 15));
+        },
       );
       
       if (kDebugMode) {
         log('✅ Firebase initialized successfully');
+        
+        // Verify Firebase app is working
+        final app = Firebase.app();
+        log('✅ Firebase app verified: ${app.name} - Project: ${app.options.projectId}');
+        
+        if (kIsWeb) {
+          log('🌐 Web Firebase config:');
+          log('  - Auth Domain: ${app.options.authDomain}');
+          log('  - Storage Bucket: ${app.options.storageBucket}');
+          log('  - API Key Length: ${app.options.apiKey.length} chars');
+        }
       }
     } catch (firebaseError, firebaseStackTrace) {
       if (kDebugMode) {
         log('❌ Firebase initialization failed: $firebaseError');
         log('🔍 Firebase Stack Trace: $firebaseStackTrace');
+        
+        // Additional debugging for web
+        if (kIsWeb) {
+          log('🌐 Web-specific debugging:');
+          log('  - Check if Firebase scripts are loaded in index.html');
+          log('  - Verify network connectivity');
+          log('  - Check browser console for additional errors');
+        }
       }
       
       // Log the error but don't stop the app - some features might still work
@@ -149,7 +179,7 @@ void main() async {
                     width: 100,
                     height: 100,
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
+                      color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(50),
                     ),
                     child: const Icon(
@@ -178,7 +208,7 @@ void main() async {
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.white.withValues(alpha: 0.9),
+                        color: Colors.white.withOpacity(0.9),
                         height: 1.4,
                       ),
                     ),
@@ -189,7 +219,7 @@ void main() async {
                       padding: const EdgeInsets.all(16.0),
                       margin: const EdgeInsets.symmetric(horizontal: 20),
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.3),
+                        color: Colors.black.withOpacity(0.3),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -311,10 +341,10 @@ class MyApp extends StatelessWidget {
             ),
           ),
         ),
-        cardTheme: const CardThemeData(
+        cardTheme: CardTheme(
           elevation: 2,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(12)),
+            borderRadius: BorderRadius.circular(12),
           ),
         ),
       ),
