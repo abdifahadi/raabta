@@ -293,6 +293,14 @@ class MessageBubble extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        if (message.isEncrypted) ...[
+          Icon(
+            Icons.lock,
+            size: 12,
+            color: isMe ? Colors.white70 : Colors.grey[600],
+          ),
+          const SizedBox(width: 4),
+        ],
         Text(
           DateFormat('HH:mm').format(message.timestamp),
           style: TextStyle(

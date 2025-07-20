@@ -5,11 +5,14 @@ import 'models/conversation_model.dart';
 import 'models/message_model.dart';
 import '../../../core/services/media_picker_service.dart';
 import '../../../core/services/firebase_storage_repository.dart';
+import '../../../core/services/encryption_key_manager.dart';
+import '../../../core/utils/encryption_utils.dart';
 
 /// Firebase implementation of ChatRepository
 class FirebaseChatRepository implements ChatRepository {
   final FirebaseFirestore _firestore;
   final FirebaseStorageRepository _storageRepository;
+  final EncryptionKeyManager _encryptionKeyManager;
   static const String _conversationsCollection = 'conversations';
   static const String _messagesSubcollection = 'messages';
 
@@ -17,8 +20,10 @@ class FirebaseChatRepository implements ChatRepository {
   FirebaseChatRepository({
     FirebaseFirestore? firestore,
     FirebaseStorageRepository? storageRepository,
+    EncryptionKeyManager? encryptionKeyManager,
   }) : _firestore = firestore ?? FirebaseFirestore.instance,
-        _storageRepository = storageRepository ?? FirebaseStorageRepository();
+        _storageRepository = storageRepository ?? FirebaseStorageRepository(),
+        _encryptionKeyManager = encryptionKeyManager ?? EncryptionKeyManager();
 
   /// Get conversations collection reference
   CollectionReference<Map<String, dynamic>> get _conversationsRef =>
@@ -102,15 +107,32 @@ class FirebaseChatRepository implements ChatRepository {
       final messagesRef = _getMessagesRef(conversationId);
       final messageDoc = messagesRef.doc();
       
+      // Check if encryption is enabled for this conversation
+      final isEncrypted = _encryptionKeyManager.requiresEncryption(conversationId);
+      String finalContent = content;
+      String? encryptedContent;
+
+      if (isEncrypted) {
+        final encryptionKey = _encryptionKeyManager.getConversationKey(conversationId);
+        if (encryptionKey != null) {
+          // Encrypt the content
+          encryptedContent = EncryptionUtils.encryptWithAES(content, encryptionKey);
+          // For encrypted messages, store a placeholder in the content field
+          finalContent = '🔒 Encrypted message';
+        }
+      }
+      
       final message = MessageModel(
         id: messageDoc.id,
         senderId: senderId,
         receiverId: receiverId,
-        content: content,
+        content: finalContent,
         timestamp: DateTime.now(),
         messageType: messageType,
         replyToMessageId: replyToMessageId,
         metadata: metadata,
+        isEncrypted: isEncrypted,
+        encryptedContent: encryptedContent,
       );
 
       // Use batch to ensure atomicity
@@ -244,7 +266,10 @@ class FirebaseChatRepository implements ChatRepository {
         .snapshots()
         .map((snapshot) {
       return snapshot.docs
-          .map((doc) => MessageModel.fromMap(doc.data(), doc.id))
+          .map((doc) {
+            final message = MessageModel.fromMap(doc.data(), doc.id);
+            return _decryptMessageIfNeeded(message, conversationId);
+          })
           .toList();
     });
   }
@@ -266,7 +291,10 @@ class FirebaseChatRepository implements ChatRepository {
 
       final snapshot = await query.get();
       return snapshot.docs
-          .map((doc) => MessageModel.fromMap(doc.data(), doc.id))
+          .map((doc) {
+            final message = MessageModel.fromMap(doc.data(), doc.id);
+            return _decryptMessageIfNeeded(message, conversationId);
+          })
           .toList();
     } catch (e) {
       throw Exception('Failed to get messages with pagination: $e');
@@ -571,6 +599,89 @@ class FirebaseChatRepository implements ChatRepository {
         return 'linux';
       default:
         return 'unknown';
+    }
+  }
+
+  @override
+  Future<String> enableEncryption(String conversationId) async {
+    try {
+      final key = _encryptionKeyManager.enableEncryption(conversationId);
+      
+      // Optional: Update conversation metadata to indicate encryption is enabled
+      await updateConversationMetadata(conversationId, {
+        'encryptionEnabled': true,
+        'encryptionEnabledAt': FieldValue.serverTimestamp(),
+      });
+      
+      return key;
+    } catch (e) {
+      throw Exception('Failed to enable encryption: $e');
+    }
+  }
+
+  @override
+  Future<void> disableEncryption(String conversationId) async {
+    try {
+      _encryptionKeyManager.disableEncryption(conversationId);
+      
+      // Optional: Update conversation metadata to indicate encryption is disabled
+      await updateConversationMetadata(conversationId, {
+        'encryptionEnabled': false,
+        'encryptionDisabledAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      throw Exception('Failed to disable encryption: $e');
+    }
+  }
+
+  @override
+  bool isEncryptionEnabled(String conversationId) {
+    return _encryptionKeyManager.requiresEncryption(conversationId);
+  }
+
+  @override
+  String getDecryptedContent(MessageModel message) {
+    if (!message.isEncrypted) {
+      return message.content;
+    }
+
+    if (message.encryptedContent == null) {
+      return '🔒 Encrypted message (content not available)';
+    }
+
+    try {
+      // This method would be called from the UI layer with the conversation ID
+      // For now, we'll return a placeholder since we need the conversation context
+      return '🔒 Encrypted message';
+    } catch (e) {
+      return '🔒 Failed to decrypt message';
+    }
+  }
+
+  /// Decrypt message if needed (internal helper method)
+  MessageModel _decryptMessageIfNeeded(MessageModel message, String conversationId) {
+    if (!message.isEncrypted || message.encryptedContent == null) {
+      return message;
+    }
+
+    final encryptionKey = _encryptionKeyManager.getConversationKey(conversationId);
+    if (encryptionKey == null) {
+      return message.copyWith(
+        content: '🔒 Encrypted message (key not available)',
+      );
+    }
+
+    try {
+      final decryptedContent = EncryptionUtils.decryptWithAES(
+        message.encryptedContent!,
+        encryptionKey,
+      );
+      
+      return message.copyWith(content: decryptedContent);
+    } catch (e) {
+      return message.copyWith(
+        content: '🔒 Failed to decrypt message',
+      );
     }
   }
 }

@@ -4,6 +4,7 @@ import 'storage_repository.dart';
 import 'firebase_storage_repository.dart';
 import 'media_picker_service.dart';
 import 'notification_service.dart';
+import 'encryption_key_manager.dart';
 import 'package:raabta/features/auth/domain/user_repository.dart';
 import 'package:raabta/features/auth/domain/firebase_user_repository.dart';
 import 'package:raabta/features/auth/domain/user_profile_repository.dart';
@@ -45,6 +46,9 @@ class ServiceLocator {
 
   /// Notification service instance
   NotificationService? _notificationService;
+
+  /// Encryption key manager instance
+  EncryptionKeyManager? _encryptionKeyManager;
 
   /// Track initialization state
   bool _isInitialized = false;
@@ -97,9 +101,13 @@ class ServiceLocator {
       // Initialize storage repository
       _storageRepository = FirebaseStorageRepository();
 
+      // Initialize encryption key manager
+      _encryptionKeyManager = EncryptionKeyManager();
+
       // Initialize chat repository with storage dependency
       _chatRepository = FirebaseChatRepository(
         storageRepository: _storageRepository!,
+        encryptionKeyManager: _encryptionKeyManager!,
       );
 
       // Initialize media picker service
@@ -188,10 +196,19 @@ class ServiceLocator {
     return _notificationService!;
   }
 
+  /// Get encryption key manager
+  EncryptionKeyManager get encryptionKeyManager {
+    if (_encryptionKeyManager == null) {
+      throw StateError('ServiceLocator not initialized. Call initialize() first.');
+    }
+    return _encryptionKeyManager!;
+  }
+
   /// Safe getters that return null if not initialized
   AuthProvider? get authProviderOrNull => _authProvider;
   UserRepository? get userRepositoryOrNull => _userRepository;
   UserProfileRepository? get userProfileRepositoryOrNull => _userProfileRepository;
   BackendService? get backendServiceOrNull => _backendService;
   NotificationService? get notificationServiceOrNull => _notificationService;
+  EncryptionKeyManager? get encryptionKeyManagerOrNull => _encryptionKeyManager;
 }
