@@ -88,7 +88,7 @@ class FirebaseService implements BackendService {
       log('🔥 Fallback Firebase initialization attempt');
 
       // Add timeout for initialization attempt
-      final initTimeout = kIsWeb ? const Duration(seconds: 8) : const Duration(seconds: 10);
+      const initTimeout = kIsWeb ? Duration(seconds: 8) : Duration(seconds: 10);
       
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
@@ -147,24 +147,6 @@ class FirebaseService implements BackendService {
     }
   }
 
-  /// Prepare web environment for Firebase initialization
-  Future<void> _prepareWebEnvironment() async {
-    if (!kIsWeb) return;
-    
-    try {
-      log('🌐 Preparing web environment for Firebase...');
-      
-      // Add delay to ensure DOM and Firebase scripts are ready
-      await Future.delayed(const Duration(milliseconds: 300));
-      
-      // For web, check if Firebase scripts are loaded
-      // This is a basic check that the environment is ready
-      log('🌐 Web environment preparation completed');
-    } catch (e) {
-      log('⚠️ Web environment preparation failed: $e');
-      // Don't throw here, let the main initialization proceed
-    }
-  }
 
   /// Validate Firebase setup specifically for web
   Future<void> _validateWebFirebaseSetup() async {

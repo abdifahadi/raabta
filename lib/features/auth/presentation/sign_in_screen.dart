@@ -239,11 +239,11 @@ class _SignInScreenState extends State<SignInScreen>
                           width: 100,
                           height: 100,
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
+                            color: Colors.white.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(50),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
+                                color: Colors.black.withValues(alpha: 0.2),
                                 blurRadius: 20,
                                 offset: const Offset(0, 10),
                               ),
@@ -276,7 +276,7 @@ class _SignInScreenState extends State<SignInScreen>
                           'Sign in to continue your conversations',
                           style: TextStyle(
                             fontSize: 16,
-                            color: Colors.white.withOpacity(0.9),
+                            color: Colors.white.withValues(alpha: 0.9),
                             height: 1.4,
                           ),
                           textAlign: TextAlign.center,
@@ -317,7 +317,7 @@ class _SignInScreenState extends State<SignInScreen>
                             Text(
                               'Signing you in...',
                               style: TextStyle(
-                                color: Colors.white.withOpacity(0.9),
+                                color: Colors.white.withValues(alpha: 0.9),
                                 fontSize: 14,
                               ),
                             ),
@@ -335,10 +335,10 @@ class _SignInScreenState extends State<SignInScreen>
                   child: Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
+                      color: Colors.white.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.2),
+                                              border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.2),
                         width: 1,
                       ),
                     ),
@@ -346,7 +346,7 @@ class _SignInScreenState extends State<SignInScreen>
                       children: [
                         Icon(
                           Icons.security,
-                          color: Colors.white.withOpacity(0.9),
+                          color: Colors.white.withValues(alpha: 0.9),
                           size: 24,
                         ),
                         const SizedBox(width: 16),
@@ -367,7 +367,7 @@ class _SignInScreenState extends State<SignInScreen>
                                 'Your data is protected with industry-standard encryption',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Colors.white.withOpacity(0.8),
+                                  color: Colors.white.withValues(alpha: 0.8),
                                   height: 1.3,
                                 ),
                               ),
@@ -388,7 +388,7 @@ class _SignInScreenState extends State<SignInScreen>
                     'By signing in, you agree to our Terms of Service\nand Privacy Policy',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.white.withOpacity(0.7),
+                      color: Colors.white.withValues(alpha: 0.7),
                       height: 1.4,
                     ),
                     textAlign: TextAlign.center,

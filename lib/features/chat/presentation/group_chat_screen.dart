@@ -361,7 +361,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                       '${widget.group.members.length} members',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
                     ),
                   ],
@@ -498,7 +498,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                   Text(
                     'Sending media...',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
                   ),
                 ],
