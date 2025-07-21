@@ -227,7 +227,7 @@ class _GroupCreationScreenState extends State<GroupCreationScreen> {
                           height: 100,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                             border: Border.all(
                               color: Theme.of(context).colorScheme.primary,
                               width: 2,
@@ -253,7 +253,7 @@ class _GroupCreationScreenState extends State<GroupCreationScreen> {
                       Text(
                         'Tap to add group photo',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -280,7 +280,7 @@ class _GroupCreationScreenState extends State<GroupCreationScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
+                      color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
                       border: Border(
                         bottom: BorderSide(
                           color: Theme.of(context).dividerColor,

@@ -226,11 +226,11 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
                         width: 100,
                         height: 100,
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(50),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
+                                                              color: Colors.black.withValues(alpha: 0.2),
                               blurRadius: 20,
                               offset: const Offset(0, 10),
                             ),
@@ -278,7 +278,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
                         'Help others get to know you better',
                         style: TextStyle(
                           fontSize: 16,
-                          color: Colors.white.withOpacity(0.9),
+                          color: Colors.white.withValues(alpha: 0.9),
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -301,7 +301,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: Colors.black.withValues(alpha: 0.1),
                             blurRadius: 20,
                             offset: const Offset(0, 10),
                           ),
@@ -372,7 +372,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
                                     borderRadius: BorderRadius.circular(28),
                                   ),
                                   elevation: 8,
-                                  shadowColor: const Color(0xFF667eea).withOpacity(0.4),
+                                  shadowColor: const Color(0xFF667eea).withValues(alpha: 0.4),
                                 ),
                                 child: _isLoading
                                     ? const SizedBox(

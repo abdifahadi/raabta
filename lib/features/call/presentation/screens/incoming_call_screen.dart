@@ -128,12 +128,12 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: Colors.white.withOpacity(0.3),
+                                color: Colors.white.withValues(alpha: 0.3),
                                 width: 4,
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.white.withOpacity(0.2),
+                                  color: Colors.white.withValues(alpha: 0.2),
                                   blurRadius: 20,
                                   spreadRadius: 5,
                                 ),
@@ -255,7 +255,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: color.withOpacity(0.4),
+              color: color.withValues(alpha: 0.4),
               blurRadius: 15,
               spreadRadius: 3,
             ),
