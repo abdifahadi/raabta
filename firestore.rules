@@ -29,9 +29,10 @@ service cloud.firestore {
       allow update: if request.auth != null && 
         request.auth.uid in resource.data.members;
       
-      // Only group creator can delete group
+      // Only group creator or admins can delete group
       allow delete: if request.auth != null && 
-        request.auth.uid == resource.data.createdBy;
+        (request.auth.uid == resource.data.createdBy ||
+         request.auth.uid in resource.data.adminIds);
       
       // Messages subcollection for groups
       match /messages/{messageId} {
@@ -49,9 +50,10 @@ service cloud.firestore {
           request.auth.uid == resource.data.senderId &&
           request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.members;
         
-        // Only sender can delete their own messages
+        // Only sender or group admins can delete messages
         allow delete: if request.auth != null && 
-          request.auth.uid == resource.data.senderId;
+          (request.auth.uid == resource.data.senderId ||
+           request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.adminIds);
       }
     }
     
@@ -67,11 +69,11 @@ service cloud.firestore {
         request.resource.data.participants.size() == 2;
         
       allow update: if request.auth != null && 
-        request.auth.uid in resource.data.participants &&
-        request.resource.data.participants == resource.data.participants;
+        request.auth.uid in resource.data.participants;
       
-      // Prevent conversation deletion
-      allow delete: if false;
+      // Allow conversation participants to delete conversations
+      allow delete: if request.auth != null && 
+        request.auth.uid in resource.data.participants;
       
       // Messages subcollection for conversations
       match /messages/{messageId} {
