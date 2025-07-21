@@ -7,6 +7,7 @@ import 'dart:developer';
 import 'core/config/firebase_options.dart';
 import 'core/services/service_locator.dart';
 import 'core/services/logging_service.dart';
+import 'core/platform/agora_web_platform_fix.dart';
 
 import 'core/services/notification_handler.dart';
 import 'features/auth/presentation/auth_wrapper.dart';
@@ -67,6 +68,24 @@ void main() async {
           log('  - Auth Domain: ${app.options.authDomain}');
           log('  - Storage Bucket: ${app.options.storageBucket}');
           log('  - API Key Length: ${app.options.apiKey.length} chars');
+        }
+      }
+
+      // Initialize Agora web compatibility fixes
+      if (kIsWeb) {
+        if (kDebugMode) {
+          log('🎥 Initializing Agora web compatibility fixes...');
+        }
+        try {
+          AgoraWebCompatibility.initialize();
+          if (kDebugMode) {
+            log('✅ Agora web compatibility initialized successfully');
+          }
+        } catch (agoraError) {
+          if (kDebugMode) {
+            log('⚠️ Agora web compatibility initialization failed: $agoraError');
+          }
+          // Continue - this is not critical for app startup
         }
       }
     } catch (firebaseError, firebaseStackTrace) {
