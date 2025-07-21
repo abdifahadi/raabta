@@ -1,0 +1,40 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+import '../../features/call/domain/models/call_model.dart';
+
+abstract class AgoraServiceInterface {
+  // State getters
+  bool get isInCall;
+  bool get isVideoEnabled;
+  bool get isMuted;
+  bool get isSpeakerEnabled;
+  String? get currentChannelName;
+  Set<int> get remoteUsers;
+  
+  // Streams
+  Stream<Map<String, dynamic>> get callEventStream;
+  Stream<CallModel?> get currentCallStream;
+  
+  // Core methods
+  Future<void> initialize();
+  Future<bool> checkPermissions(CallType callType);
+  Future<void> joinCall({
+    required String channelName,
+    required CallType callType,
+    int? uid,
+  });
+  Future<void> leaveCall();
+  
+  // Call controls
+  Future<void> toggleMute();
+  Future<void> toggleVideo();
+  Future<void> toggleSpeaker();
+  Future<void> switchCamera();
+  
+  // Video views
+  Widget createLocalVideoView();
+  Widget createRemoteVideoView(int uid);
+  
+  // Cleanup
+  void dispose();
+}

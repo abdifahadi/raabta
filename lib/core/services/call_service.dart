@@ -2,23 +2,19 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 import 'package:flutter/material.dart';
 import '../../features/call/domain/models/call_model.dart';
-import 'agora_service.dart';
+import 'agora_service_interface.dart';
+import 'agora_service_factory.dart';
 
 class CallService {
   static final CallService _instance = CallService._internal();
   factory CallService() => _instance;
   CallService._internal();
 
-  // Use real Agora service for non-web platforms
-  final AgoraService _agoraService = AgoraService();
+  // Use platform-appropriate Agora service
+  final AgoraServiceInterface _agoraService = AgoraServiceFactory.getInstance();
   
-  String? _currentChannelName;
-  bool _isInCall = false;
-  
-  // Video settings
-  bool _isVideoEnabled = true;
-  bool _isAudioEnabled = true;
-  bool _isSpeakerEnabled = false;
+  // Deprecated fields - using AgoraService directly now
+  // These are kept for backward compatibility but not used
   
   // Callbacks
   Function(String userId)? onUserJoined;

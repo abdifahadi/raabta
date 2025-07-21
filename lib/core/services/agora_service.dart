@@ -6,9 +6,10 @@ import 'package:permission_handler/permission_handler.dart';
 import '../../features/call/domain/models/call_model.dart';
 import '../config/agora_config.dart';
 import 'agora_token_service.dart';
-import 'agora_web_compatibility.dart';
 
-class AgoraService {
+import 'agora_service_interface.dart';
+
+class AgoraService implements AgoraServiceInterface {
   static final AgoraService _instance = AgoraService._internal();
   factory AgoraService() => _instance;
   AgoraService._internal();
@@ -39,18 +40,27 @@ class AgoraService {
   final Set<int> _remoteUsers = <int>{};
   
   // Getters
+  @override
   bool get isInCall => _isInCall;
+  @override
   bool get isVideoEnabled => _isVideoEnabled;
+  @override
   bool get isMuted => !_isAudioEnabled;
+  @override
   bool get isSpeakerEnabled => _isSpeakerEnabled;
+  @override
   String? get currentChannelName => _currentChannelName;
+  @override
   Set<int> get remoteUsers => Set.from(_remoteUsers);
   
   // Streams
+  @override
   Stream<Map<String, dynamic>> get callEventStream => _callEventController.stream;
+  @override
   Stream<CallModel?> get currentCallStream => _currentCallController.stream;
 
   /// Initialize Agora RTC Engine
+  @override
   Future<void> initialize() async {
     try {
       if (_engine != null) {
@@ -206,6 +216,7 @@ class AgoraService {
   }
 
   /// Check and request permissions
+  @override
   Future<bool> checkPermissions(CallType callType) async {
     try {
       // On web, permissions are handled by the browser
@@ -246,6 +257,7 @@ class AgoraService {
   }
 
   /// Join a call channel
+  @override
   Future<void> joinCall({
     required String channelName,
     required CallType callType,
@@ -311,6 +323,7 @@ class AgoraService {
   }
 
   /// Leave the current call
+  @override
   Future<void> leaveCall() async {
     try {
       if (_engine == null || !_isInCall) {
@@ -351,6 +364,7 @@ class AgoraService {
   }
 
   /// Toggle microphone mute
+  @override
   Future<void> toggleMute() async {
     try {
       if (_engine == null) return;
@@ -370,6 +384,7 @@ class AgoraService {
   }
 
   /// Toggle video
+  @override
   Future<void> toggleVideo() async {
     try {
       if (_engine == null) return;
@@ -396,6 +411,7 @@ class AgoraService {
   }
 
   /// Toggle speaker
+  @override
   Future<void> toggleSpeaker() async {
     try {
       if (_engine == null) return;
@@ -415,6 +431,7 @@ class AgoraService {
   }
 
   /// Switch camera (front/back)
+  @override
   Future<void> switchCamera() async {
     try {
       if (_engine == null) return;
@@ -457,6 +474,7 @@ class AgoraService {
   }
 
   /// Create local video view widget
+  @override
   Widget createLocalVideoView() {
     if (_engine == null) {
       return Container(
@@ -506,6 +524,7 @@ class AgoraService {
   }
 
   /// Create remote video view widget
+  @override
   Widget createRemoteVideoView(int uid) {
     if (_engine == null) {
       return Container(
@@ -557,6 +576,7 @@ class AgoraService {
   }
 
   /// Dispose and cleanup
+  @override
   void dispose() async {
     try {
       if (_isInCall) {
