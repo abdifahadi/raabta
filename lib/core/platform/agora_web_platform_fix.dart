@@ -2,12 +2,7 @@
 
 import 'dart:async';
 import 'dart:html' as html;
-
-// Conditional import for dart:ui only when available
-import 'dart:ui' as ui show platformViewRegistry;
-
-// Safe platform detection using the standard Flutter method
-bool get isWeb => identical(0, 0.0);
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 /// Web-safe wrapper for Agora platform view operations
 class AgoraWebPlatformFix {
@@ -19,7 +14,7 @@ class AgoraWebPlatformFix {
     if (_initialized) return;
     _initialized = true;
 
-    if (!isWeb) return;
+    if (!kIsWeb) return;
 
     try {
       _setupWebPlatformViews();
@@ -30,66 +25,28 @@ class AgoraWebPlatformFix {
 
   /// Register a view factory with safe platform view registry handling
   static void registerViewFactory(String viewType, html.Element Function(int) factory) {
-    if (!isWeb) return;
+    if (!kIsWeb) return;
 
     try {
       _viewFactories[viewType] = factory;
       
-      // Only attempt to use platformViewRegistry if we're on web and it's available
-      if (_isPlatformViewRegistryAvailable()) {
-        _registerWithPlatformViewRegistry(viewType, factory);
-      } else {
-        // Fallback for web environments where platformViewRegistry is not available
-        _registerWithFallbackMethod(viewType, factory);
-      }
+      // Use HTML-based fallback implementation for Web
+      _registerWithHtmlFallback(viewType, factory);
     } catch (e) {
       print('AgoraWebPlatformFix: Failed to register view factory $viewType: $e');
       // Continue execution even if registration fails
     }
   }
 
-  /// Check if platformViewRegistry is available
-  static bool _isPlatformViewRegistryAvailable() {
-    if (!isWeb) return false;
-    
+  /// Register with HTML-based fallback method for Web
+  static void _registerWithHtmlFallback(String viewType, html.Element Function(int) factory) {
     try {
-      // Safe check for platformViewRegistry availability
-      // This uses the identical(0, 0.0) pattern recommended by Flutter team
-      return identical(0, 0.0) && _hasPlatformViewRegistryObject();
+      // Store the factory for manual creation when needed
+      _viewFactories[viewType] = factory;
+      print('AgoraWebPlatformFix: Using HTML fallback registration for $viewType');
     } catch (e) {
-      return false;
+      print('AgoraWebPlatformFix: HTML fallback registration failed: $e');
     }
-  }
-
-  /// Check if the platformViewRegistry object exists
-  static bool _hasPlatformViewRegistryObject() {
-    try {
-      // Attempt to access platformViewRegistry
-      final registry = ui.platformViewRegistry;
-      return registry != null;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  /// Register with the actual platformViewRegistry
-  static void _registerWithPlatformViewRegistry(String viewType, html.Element Function(int) factory) {
-    try {
-      ui.platformViewRegistry.registerViewFactory(viewType, (int viewId) {
-        return factory(viewId);
-      });
-    } catch (e) {
-      print('AgoraWebPlatformFix: platformViewRegistry registration failed: $e');
-      // Fall back to alternative method
-      _registerWithFallbackMethod(viewType, factory);
-    }
-  }
-
-  /// Fallback registration method for environments without platformViewRegistry
-  static void _registerWithFallbackMethod(String viewType, html.Element Function(int) factory) {
-    // Store the factory for manual creation when needed
-    _viewFactories[viewType] = factory;
-    print('AgoraWebPlatformFix: Using fallback registration for $viewType');
   }
 
   /// Setup web-specific platform view handling
@@ -163,7 +120,7 @@ class AgoraWebPlatformFix {
 class AgoraWebCompatibility {
   /// Initialize Agora web compatibility
   static void initialize() {
-    if (!isWeb) return;
+    if (!kIsWeb) return;
     
     AgoraWebPlatformFix.initialize();
     
