@@ -2,12 +2,16 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 import 'package:flutter/material.dart';
 import '../../features/call/domain/models/call_model.dart';
+import 'agora_service.dart';
 
 class CallService {
   static final CallService _instance = CallService._internal();
   factory CallService() => _instance;
   CallService._internal();
 
+  // Use real Agora service for non-web platforms
+  final AgoraService _agoraService = AgoraService();
+  
   String? _currentChannelName;
   bool _isInCall = false;
   
@@ -30,29 +34,31 @@ class CallService {
       StreamController<CallModel?>.broadcast();
   
   // Getters
-  bool get isInCall => _isInCall;
-  bool get isVideoEnabled => _isVideoEnabled;
-  bool get isMuted => !_isAudioEnabled;
-  bool get isSpeakerEnabled => _isSpeakerEnabled;
-  String? get currentChannelName => _currentChannelName;
+  bool get isInCall => kIsWeb ? _isInCall : _agoraService.isInCall;
+  bool get isVideoEnabled => kIsWeb ? _isVideoEnabled : _agoraService.isVideoEnabled;
+  bool get isMuted => kIsWeb ? !_isAudioEnabled : _agoraService.isMuted;
+  bool get isSpeakerEnabled => kIsWeb ? _isSpeakerEnabled : _agoraService.isSpeakerEnabled;
+  String? get currentChannelName => kIsWeb ? _currentChannelName : _agoraService.currentChannelName;
   
   // Streams
-  Stream<Map<String, dynamic>> get callEventStream => _callEventController.stream;
-  Stream<CallModel?> get currentCallStream => _currentCallController.stream;
+  Stream<Map<String, dynamic>> get callEventStream => kIsWeb ? _callEventController.stream : _agoraService.callEventStream;
+  Stream<CallModel?> get currentCallStream => kIsWeb ? _currentCallController.stream : _agoraService.currentCallStream;
 
   Future<void> initialize() async {
     try {
-      // For web compatibility, we'll use mock implementation
       if (kIsWeb) {
+        // For web compatibility, we'll use mock implementation
         if (kDebugMode) {
           debugPrint('CallService: Web mode - using mock implementation');
         }
         return;
       }
       
-      // In a real implementation, we would initialize the actual engine here
+      // Initialize real Agora service for mobile/desktop
+      await _agoraService.initialize();
+      
       if (kDebugMode) {
-        debugPrint('CallService: Initialized successfully');
+        debugPrint('CallService: Initialized successfully with Agora');
       }
     } catch (e) {
       if (kDebugMode) {
@@ -69,11 +75,11 @@ class CallService {
     required CallType callType,
   }) async {
     try {
-      _currentChannelName = channelName;
-      _isInCall = true;
-      
       if (kIsWeb) {
         // Mock join call for web
+        _currentChannelName = channelName;
+        _isInCall = true;
+        
         if (kDebugMode) {
           debugPrint('CallService: Mock joining call $channelName');
         }
@@ -92,14 +98,23 @@ class CallService {
         return;
       }
       
-      // Real implementation would go here
+      // Use real Agora service for mobile/desktop
+      await _agoraService.joinCall(
+        channelName: channelName,
+        callType: callType,
+        uid: uid,
+      );
+      
       if (kDebugMode) {
-        debugPrint('CallService: Joined call $channelName successfully');
+        debugPrint('CallService: Joined call $channelName successfully with Agora');
       }
       
     } catch (e) {
-      _isInCall = false;
-      _currentChannelName = null;
+      if (kIsWeb) {
+        _isInCall = false;
+        _currentChannelName = null;
+      }
+      
       if (kDebugMode) {
         debugPrint('CallService: Failed to join call: $e');
       }
@@ -169,13 +184,11 @@ class CallService {
         return;
       }
       
-      // Real implementation would go here
-      _isInCall = false;
-      _currentChannelName = null;
-      _currentCallController.add(null);
+      // Use real Agora service for mobile/desktop
+      await _agoraService.leaveCall();
       
       if (kDebugMode) {
-        debugPrint('CallService: Call ended successfully');
+        debugPrint('CallService: Call ended successfully with Agora');
       }
     } catch (e) {
       if (kDebugMode) {
@@ -187,18 +200,19 @@ class CallService {
 
   Future<void> toggleMute() async {
     try {
-      _isAudioEnabled = !_isAudioEnabled;
-      
       if (kIsWeb) {
+        _isAudioEnabled = !_isAudioEnabled;
         if (kDebugMode) {
           debugPrint('CallService: Mock toggled audio: ${_isAudioEnabled ? 'unmuted' : 'muted'}');
         }
         return;
       }
       
-      // Real implementation would go here
+      // Use real Agora service for mobile/desktop
+      await _agoraService.toggleMute();
+      
       if (kDebugMode) {
-        debugPrint('CallService: Audio ${_isAudioEnabled ? 'unmuted' : 'muted'}');
+        debugPrint('CallService: Audio toggled with Agora');
       }
     } catch (e) {
       if (kDebugMode) {
@@ -210,18 +224,19 @@ class CallService {
 
   Future<void> toggleVideo() async {
     try {
-      _isVideoEnabled = !_isVideoEnabled;
-      
       if (kIsWeb) {
+        _isVideoEnabled = !_isVideoEnabled;
         if (kDebugMode) {
           debugPrint('CallService: Mock toggled video: ${_isVideoEnabled ? 'enabled' : 'disabled'}');
         }
         return;
       }
       
-      // Real implementation would go here
+      // Use real Agora service for mobile/desktop
+      await _agoraService.toggleVideo();
+      
       if (kDebugMode) {
-        debugPrint('CallService: Video ${_isVideoEnabled ? 'enabled' : 'disabled'}');
+        debugPrint('CallService: Video toggled with Agora');
       }
     } catch (e) {
       if (kDebugMode) {
@@ -233,18 +248,19 @@ class CallService {
 
   Future<void> toggleSpeaker() async {
     try {
-      _isSpeakerEnabled = !_isSpeakerEnabled;
-      
       if (kIsWeb) {
+        _isSpeakerEnabled = !_isSpeakerEnabled;
         if (kDebugMode) {
           debugPrint('CallService: Mock toggled speaker: ${_isSpeakerEnabled ? 'enabled' : 'disabled'}');
         }
         return;
       }
       
-      // Real implementation would go here
+      // Use real Agora service for mobile/desktop
+      await _agoraService.toggleSpeaker();
+      
       if (kDebugMode) {
-        debugPrint('CallService: Speaker ${_isSpeakerEnabled ? 'enabled' : 'disabled'}');
+        debugPrint('CallService: Speaker toggled with Agora');
       }
     } catch (e) {
       if (kDebugMode) {
@@ -263,9 +279,11 @@ class CallService {
         return;
       }
       
-      // Real implementation would go here
+      // Use real Agora service for mobile/desktop
+      await _agoraService.switchCamera();
+      
       if (kDebugMode) {
-        debugPrint('CallService: Camera switched');
+        debugPrint('CallService: Camera switched with Agora');
       }
     } catch (e) {
       if (kDebugMode) {
@@ -276,7 +294,21 @@ class CallService {
   }
 
   void dispose() {
+    if (!kIsWeb) {
+      _agoraService.dispose();
+    }
     _callEventController.close();
     _currentCallController.close();
+  }
+  
+  // Additional methods for video views (mobile/desktop only)
+  Widget? createLocalVideoView() {
+    if (kIsWeb) return null;
+    return _agoraService.createLocalVideoView();
+  }
+  
+  Widget? createRemoteVideoView(int uid) {
+    if (kIsWeb) return null;
+    return _agoraService.createRemoteVideoView(uid);
   }
 }
