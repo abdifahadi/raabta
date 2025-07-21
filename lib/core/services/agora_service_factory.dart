@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'agora_service_interface.dart';
 import 'agora_service.dart';
-import 'agora_service_web.dart' if (dart.library.io) 'agora_service_web_stub.dart';
+import 'agora_service_web_stub.dart' if (dart.library.html) 'agora_service_web.dart';
 
 class AgoraServiceFactory {
   static AgoraServiceInterface? _instance;
