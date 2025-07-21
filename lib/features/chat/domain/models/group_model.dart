@@ -7,6 +7,7 @@ class GroupModel {
   final String? photoUrl;
   final List<String> members;
   final List<String> adminIds;
+  final String createdBy; // Added this field for Firestore rules
   final DateTime createdAt;
   final DateTime updatedAt;
   final String? lastMessage;
@@ -23,6 +24,7 @@ class GroupModel {
     this.photoUrl,
     required this.members,
     required this.adminIds,
+    required this.createdBy, // Added this field
     required this.createdAt,
     required this.updatedAt,
     this.lastMessage,
@@ -82,6 +84,7 @@ class GroupModel {
       'photoUrl': photoUrl,
       'members': members,
       'adminIds': adminIds,
+      'createdBy': createdBy, // Added this field
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
       'lastMessage': lastMessage,
@@ -104,6 +107,7 @@ class GroupModel {
       photoUrl: map['photoUrl'] as String?,
       members: List<String>.from(map['members'] ?? []),
       adminIds: List<String>.from(map['adminIds'] ?? []),
+      createdBy: map['createdBy'] as String? ?? map['adminIds']?[0] ?? '', // Fallback to first admin
       createdAt: (map['createdAt'] as Timestamp).toDate(),
       updatedAt: (map['updatedAt'] as Timestamp).toDate(),
       lastMessage: map['lastMessage'] as String?,
@@ -125,6 +129,7 @@ class GroupModel {
     String? photoUrl,
     List<String>? members,
     List<String>? adminIds,
+    String? createdBy, // Added this field
     DateTime? createdAt,
     DateTime? updatedAt,
     String? lastMessage,
@@ -141,6 +146,7 @@ class GroupModel {
       photoUrl: photoUrl ?? this.photoUrl,
       members: members ?? this.members,
       adminIds: adminIds ?? this.adminIds,
+      createdBy: createdBy ?? this.createdBy, // Added this field
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       lastMessage: lastMessage ?? this.lastMessage,
@@ -177,6 +183,7 @@ class GroupModel {
       photoUrl: photoUrl,
       members: allMembers,
       adminIds: [creatorId], // Creator is the initial admin
+      createdBy: creatorId, // Added this field
       createdAt: now,
       updatedAt: now,
       unreadCounts: unreadCounts,
