@@ -3,8 +3,8 @@ dependency_overrides:
   # Override file_picker to use a version compatible with Dart SDK 3.3.4
   file_picker: ^5.5.0
   
-  # Override agora_rtc_engine to use web-compatible version
-  agora_rtc_engine: ^6.3.2
+  # Override agora_rtc_engine to use newer version
+  agora_rtc_engine: ^6.5.2
   
   # Ensure proper platform-specific implementations are used
   file_selector_linux: ^0.9.3+2

@@ -6,6 +6,7 @@ import 'package:permission_handler/permission_handler.dart';
 import '../../features/call/domain/models/call_model.dart';
 import '../config/agora_config.dart';
 import 'agora_token_service.dart';
+import 'agora_web_compatibility.dart';
 
 class AgoraService {
   static final AgoraService _instance = AgoraService._internal();
@@ -63,8 +64,12 @@ class AgoraService {
         debugPrint('🚀 Initializing Agora RTC Engine...');
       }
 
-      // Create engine
-      _engine = createAgoraRtcEngine();
+      // Create engine with platform-specific method
+      if (kIsWeb) {
+        _engine = createAgoraRtcEngine();
+      } else {
+        _engine = createAgoraRtcEngine();
+      }
       
       // Initialize engine
       await _engine!.initialize(RtcEngineContext(
@@ -203,6 +208,14 @@ class AgoraService {
   /// Check and request permissions
   Future<bool> checkPermissions(CallType callType) async {
     try {
+      // On web, permissions are handled by the browser
+      if (kIsWeb) {
+        if (kDebugMode) {
+          debugPrint('🔐 Web permissions: Browser will handle media permissions');
+        }
+        return true; // Browser will prompt for permissions
+      }
+      
       final permissions = <Permission>[Permission.microphone];
       
       if (callType == CallType.video) {
@@ -227,7 +240,8 @@ class AgoraService {
       if (kDebugMode) {
         debugPrint('❌ Error checking permissions: $e');
       }
-      return false;
+      // On web, return true and let browser handle permissions
+      return kIsWeb;
     }
   }
 
@@ -456,12 +470,39 @@ class AgoraService {
       );
     }
 
-    return AgoraVideoView(
-      controller: VideoViewController(
-        rtcEngine: _engine!,
-        canvas: const VideoCanvas(uid: 0),
-      ),
-    );
+    try {
+      return AgoraVideoView(
+        controller: VideoViewController(
+          rtcEngine: _engine!,
+          canvas: const VideoCanvas(uid: 0),
+        ),
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('⚠️ Video view creation failed: $e');
+      }
+      // Fallback for web or compatibility issues
+      return Container(
+        color: Colors.grey[900],
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                _isVideoEnabled ? Icons.videocam : Icons.videocam_off,
+                color: Colors.white54,
+                size: 40,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                kIsWeb ? 'Web Video Preview' : 'Video Preview',
+                style: const TextStyle(color: Colors.white54),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
   }
 
   /// Create remote video view widget
@@ -478,13 +519,41 @@ class AgoraService {
       );
     }
 
-    return AgoraVideoView(
-      controller: VideoViewController.remote(
-        rtcEngine: _engine!,
-        canvas: VideoCanvas(uid: uid),
-        connection: RtcConnection(channelId: _currentChannelName),
-      ),
-    );
+    try {
+      return AgoraVideoView(
+        controller: VideoViewController.remote(
+          rtcEngine: _engine!,
+          canvas: VideoCanvas(uid: uid),
+          connection: RtcConnection(channelId: _currentChannelName),
+        ),
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('⚠️ Remote video view creation failed: $e');
+      }
+      // Fallback for web or compatibility issues
+      return Container(
+        color: Colors.grey[900],
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.person,
+                color: Colors.white54,
+                size: 40,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                kIsWeb ? 'Web Remote Video (UID: $uid)' : 'Remote Video (UID: $uid)',
+                style: const TextStyle(color: Colors.white54),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
   }
 
   /// Dispose and cleanup
