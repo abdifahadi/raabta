@@ -19,6 +19,7 @@ import 'package:raabta/features/call/domain/repositories/call_repository.dart';
 import 'package:raabta/features/call/data/firebase_call_repository.dart';
 import 'call_service.dart';
 import 'agora_token_service.dart';
+import 'agora_web_compatibility.dart';
 import 'package:flutter/foundation.dart';
 
 /// Service locator for dependency injection
@@ -175,12 +176,18 @@ class ServiceLocator {
       // Initialize call repository
       _callRepository = FirebaseCallRepository();
 
-      // Initialize call service
-      _callService = CallService();
-      await _callService!.initialize();
+      // Initialize call service and Agora services conditionally
+      if (AgoraWebCompatibility.canInitializeAgora) {
+        _callService = CallService();
+        await _callService!.initialize();
 
-      // Initialize Agora token service
-      _agoraTokenService = AgoraTokenService();
+        // Initialize Agora token service
+        _agoraTokenService = AgoraTokenService();
+      } else {
+        if (kDebugMode) {
+          log('⚠️ Skipping Agora initialization for web compatibility');
+        }
+      }
 
       _isInitialized = true;
       
@@ -288,6 +295,9 @@ class ServiceLocator {
   /// Get call service
   CallService get callService {
     if (_callService == null) {
+      if (!AgoraWebCompatibility.canInitializeAgora) {
+        throw UnsupportedError('Call service is not available on this platform. ${AgoraWebCompatibility.platformMessage}');
+      }
       throw StateError('ServiceLocator not initialized. Call initialize() first.');
     }
     return _callService!;
@@ -296,6 +306,9 @@ class ServiceLocator {
   /// Get Agora token service
   AgoraTokenService get agoraTokenService {
     if (_agoraTokenService == null) {
+      if (!AgoraWebCompatibility.canInitializeAgora) {
+        throw UnsupportedError('Agora token service is not available on this platform. ${AgoraWebCompatibility.platformMessage}');
+      }
       throw StateError('ServiceLocator not initialized. Call initialize() first.');
     }
     return _agoraTokenService!;
