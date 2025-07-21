@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:html' as html;
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
+import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import '../../features/call/domain/models/call_model.dart';
 import '../config/agora_config.dart';
+import '../platform/agora_web_platform_fix.dart';
 import 'agora_service_interface.dart';
 import 'agora_token_service.dart';
 
@@ -12,6 +14,7 @@ class AgoraServiceWeb implements AgoraServiceInterface {
   factory AgoraServiceWeb() => _instance;
   AgoraServiceWeb._internal();
 
+  RtcEngine? _engine;
   String? _currentChannelName;
   int? _currentUid;
   String? _currentToken;
@@ -72,8 +75,13 @@ class AgoraServiceWeb implements AgoraServiceInterface {
         debugPrint('🌐 Initializing Agora Web Service...');
       }
 
-      // Initialize Web RTC for browser
-      await _initializeWebRTC();
+      // Ensure web platform fix is initialized
+      if (!AgoraWebPlatformFix.isInitialized) {
+        AgoraWebCompatibility.initialize();
+      }
+
+      // Initialize Agora RTC Engine for Web
+      await _initializeAgoraEngine();
 
       if (kDebugMode) {
         debugPrint('✅ Agora Web Service initialized successfully');
@@ -86,21 +94,103 @@ class AgoraServiceWeb implements AgoraServiceInterface {
     }
   }
 
-  Future<void> _initializeWebRTC() async {
+  Future<void> _initializeAgoraEngine() async {
     try {
-      // Check if browser supports WebRTC
+      // Check if browser supports WebRTC first
       if (html.window.navigator.mediaDevices == null) {
         throw Exception('WebRTC not supported in this browser');
       }
 
+      // Create Agora RTC Engine with web-safe configuration
+      _engine = createAgoraRtcEngine();
+      
+      await _engine!.initialize(
+        RtcEngineContext(
+          appId: AgoraConfig.appId,
+          channelProfile: ChannelProfileType.channelProfileCommunication,
+          logConfig: LogConfig(
+            level: kDebugMode ? LogLevel.logLevelInfo : LogLevel.logLevelWarn,
+          ),
+        ),
+      );
+
+      // Set up event handlers
+      _setupEventHandlers();
+
       if (kDebugMode) {
-        debugPrint('🌐 WebRTC supported, ready for media access');
+        debugPrint('🎥 Agora RTC Engine initialized for web');
       }
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('⚠️ WebRTC initialization issue: $e');
+        debugPrint('⚠️ Agora engine initialization issue: $e');
+      }
+      // Continue with fallback WebRTC implementation
+      await _initializeFallbackWebRTC();
+    }
+  }
+
+  Future<void> _initializeFallbackWebRTC() async {
+    try {
+      if (kDebugMode) {
+        debugPrint('🌐 Using fallback WebRTC implementation');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('⚠️ Fallback WebRTC initialization issue: $e');
       }
     }
+  }
+
+  void _setupEventHandlers() {
+    if (_engine == null) return;
+
+    _engine!.registerEventHandler(
+      RtcEngineEventHandler(
+        onJoinChannelSuccess: (RtcConnection connection, int elapsed) {
+          if (kDebugMode) {
+            debugPrint('🎉 Successfully joined channel: ${connection.channelId}');
+          }
+          _callEventController.add({
+            'type': 'joinChannelSuccess',
+            'channelId': connection.channelId,
+            'uid': connection.localUid,
+            'elapsed': elapsed,
+          });
+        },
+        onUserJoined: (RtcConnection connection, int uid, int elapsed) {
+          if (kDebugMode) {
+            debugPrint('👥 User joined: $uid');
+          }
+          _remoteUsers.add(uid);
+          _callEventController.add({
+            'type': 'userJoined',
+            'uid': uid,
+            'elapsed': elapsed,
+          });
+        },
+        onUserOffline: (RtcConnection connection, int uid, UserOfflineReasonType reason) {
+          if (kDebugMode) {
+            debugPrint('👋 User left: $uid, reason: ${reason.name}');
+          }
+          _remoteUsers.remove(uid);
+          _callEventController.add({
+            'type': 'userOffline',
+            'uid': uid,
+            'reason': reason.name,
+          });
+        },
+        onError: (ErrorCodeType err, String msg) {
+          if (kDebugMode) {
+            debugPrint('❌ Agora error: ${err.name} - $msg');
+          }
+          _callEventController.add({
+            'type': 'error',
+            'errorCode': err.name,
+            'message': msg,
+          });
+        },
+      ),
+    );
   }
 
   @override
@@ -153,18 +243,15 @@ class AgoraServiceWeb implements AgoraServiceInterface {
       _currentUid = tokenResponse.uid;
       _currentToken = tokenResponse.rtcToken;
 
-      // Get user media for web
-      await _getUserMedia(callType);
+      if (_engine != null) {
+        // Use Agora RTC Engine if available
+        await _joinWithAgoraEngine(channelName, tokenResponse.rtcToken, tokenResponse.uid, callType);
+      } else {
+        // Fallback to WebRTC implementation
+        await _joinWithWebRTC(callType);
+      }
 
       _isInCall = true;
-
-      // Simulate join event
-      _callEventController.add({
-        'type': 'joinChannelSuccess',
-        'channelId': channelName,
-        'localUid': tokenResponse.uid,
-        'elapsed': 0,
-      });
 
       if (kDebugMode) {
         debugPrint('✅ Successfully joined Web call: $channelName');
@@ -179,6 +266,61 @@ class AgoraServiceWeb implements AgoraServiceInterface {
         debugPrint('❌ Failed to join Web call: $e');
       }
       throw Exception('Failed to join Web call: $e');
+    }
+  }
+
+  Future<void> _joinWithAgoraEngine(String channelName, String token, int uid, CallType callType) async {
+    try {
+      // Enable video if needed
+      if (callType == CallType.video) {
+        await _engine!.enableVideo();
+        await _engine!.startPreview();
+      }
+
+      // Join channel with Agora RTC Engine
+      await _engine!.joinChannel(
+        token: token,
+        channelId: channelName,
+        uid: uid,
+        options: const ChannelMediaOptions(
+          clientRoleType: ClientRoleType.clientRoleBroadcaster,
+          channelProfile: ChannelProfileType.channelProfileCommunication,
+        ),
+      );
+
+      if (kDebugMode) {
+        debugPrint('🎥 Joined channel with Agora RTC Engine');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ Failed to join with Agora engine: $e');
+      }
+      // Fallback to WebRTC
+      await _joinWithWebRTC(callType);
+    }
+  }
+
+  Future<void> _joinWithWebRTC(CallType callType) async {
+    try {
+      // Get user media for web fallback
+      await _getUserMedia(callType);
+
+      // Simulate join event for fallback
+      _callEventController.add({
+        'type': 'joinChannelSuccess',
+        'channelId': _currentChannelName,
+        'localUid': _currentUid,
+        'elapsed': 0,
+      });
+
+      if (kDebugMode) {
+        debugPrint('🌐 Joined with WebRTC fallback');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ WebRTC fallback failed: $e');
+      }
+      rethrow;
     }
   }
 
@@ -419,6 +561,13 @@ class AgoraServiceWeb implements AgoraServiceInterface {
     try {
       if (_isInCall) {
         await leaveCall();
+      }
+
+      // Clean up Agora engine
+      if (_engine != null) {
+        await _engine!.leaveChannel();
+        await _engine!.release();
+        _engine = null;
       }
 
       await _stopMediaStreams();

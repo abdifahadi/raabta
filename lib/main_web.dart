@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'core/config/firebase_options.dart';
+import 'core/platform/agora_web_platform_fix.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -10,6 +11,15 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     debugPrint('✅ Firebase initialized successfully');
+    
+    // Initialize Agora web compatibility fixes
+    try {
+      AgoraWebCompatibility.initialize();
+      debugPrint('✅ Agora web compatibility initialized successfully');
+    } catch (agoraError) {
+      debugPrint('⚠️ Agora web compatibility initialization failed: $agoraError');
+      // Continue - this is not critical for app startup
+    }
   } catch (e) {
     debugPrint('❌ Firebase initialization failed: $e');
   }
