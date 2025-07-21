@@ -156,6 +156,7 @@ class ServiceLocator {
 
       // Initialize group chat repository
       _groupChatRepository = FirebaseGroupChatRepository(
+        firestore: null, // Use default FirebaseFirestore instance
         storageRepository: _storageRepository!,
         encryptionKeyManager: _encryptionKeyManager!,
       );

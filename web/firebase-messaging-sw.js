@@ -47,7 +47,7 @@ if (messaging) {
     const notificationOptions = {
       body: payload.notification?.body || 'New message',
       icon: '/icons/Icon-192.png',
-      badge: '/icons/Icon-72.png',
+      badge: '/icons/Icon-192.png',
       tag: payload.data?.conversationId || 'raabta-notification',
       data: payload.data,
       actions: [
