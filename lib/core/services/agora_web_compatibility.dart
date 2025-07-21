@@ -1,28 +1,33 @@
 import 'package:flutter/foundation.dart';
 
 /// Web compatibility layer for Agora RTC Engine
-/// This handles the platformViewRegistry issue on web platforms
+/// This handles cross-platform support for Agora RTC Engine
 class AgoraWebCompatibility {
   static bool get isWebSupported {
-    // Check if we're on web and if Agora web support is available
+    // Web is now fully supported with Agora Web SDK
     return kIsWeb;
   }
 
   static bool get canUseVideoCall {
-    // For now, disable video calls on web due to compatibility issues
-    // This can be enabled later when Agora web support is properly configured
-    return !kIsWeb;
+    // Video calls are now supported on all platforms including web
+    return true;
   }
 
   static String get platformMessage {
     if (kIsWeb) {
-      return 'Video calling is currently not supported on web platform. Please use the mobile app for video calls.';
+      return 'Web calling is supported with Agora Web SDK.';
     }
-    return 'Video calling is supported on this platform.';
+    return 'Native calling is supported with Agora RTC Engine.';
   }
 
   /// Check if Agora services can be initialized
   static bool get canInitializeAgora {
-    return !kIsWeb; // Disable Agora initialization on web for now
+    // Agora is now supported on all platforms
+    return true;
+  }
+
+  /// Get platform-specific engine creation method
+  static bool get useWebEngine {
+    return kIsWeb;
   }
 }
