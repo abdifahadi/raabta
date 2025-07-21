@@ -72,8 +72,9 @@ dependencies:
   encrypt: ^5.0.3
   crypto: ^3.0.3
   
-  # Audio/Video Calling (disabled for web compatibility)
-  # agora_rtc_engine: ^6.5.2
+  # Audio/Video Calling
+  agora_rtc_engine: ^6.5.2
+  cloud_functions: ^4.7.6
 
 dev_dependencies:
   flutter_test:

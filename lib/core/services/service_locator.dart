@@ -18,6 +18,7 @@ import 'package:raabta/features/chat/domain/firebase_group_chat_repository.dart'
 import 'package:raabta/features/call/domain/repositories/call_repository.dart';
 import 'package:raabta/features/call/data/firebase_call_repository.dart';
 import 'call_service.dart';
+import 'agora_token_service.dart';
 import 'package:flutter/foundation.dart';
 
 /// Service locator for dependency injection
@@ -65,6 +66,9 @@ class ServiceLocator {
 
   /// Call service instance
   CallService? _callService;
+
+  /// Agora token service instance
+  AgoraTokenService? _agoraTokenService;
 
   /// Track initialization state
   bool _isInitialized = false;
@@ -174,6 +178,9 @@ class ServiceLocator {
       // Initialize call service
       _callService = CallService();
       await _callService!.initialize();
+
+      // Initialize Agora token service
+      _agoraTokenService = AgoraTokenService();
 
       _isInitialized = true;
       
@@ -286,6 +293,14 @@ class ServiceLocator {
     return _callService!;
   }
 
+  /// Get Agora token service
+  AgoraTokenService get agoraTokenService {
+    if (_agoraTokenService == null) {
+      throw StateError('ServiceLocator not initialized. Call initialize() first.');
+    }
+    return _agoraTokenService!;
+  }
+
   /// Safe getters that return null if not initialized
   AuthProvider? get authProviderOrNull => _authProvider;
   UserRepository? get userRepositoryOrNull => _userRepository;
@@ -295,4 +310,5 @@ class ServiceLocator {
   EncryptionKeyManager? get encryptionKeyManagerOrNull => _encryptionKeyManager;
   CallRepository? get callRepositoryOrNull => _callRepository;
   CallService? get callServiceOrNull => _callService;
+  AgoraTokenService? get agoraTokenServiceOrNull => _agoraTokenService;
 }
