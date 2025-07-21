@@ -1,9 +1,12 @@
 # This file overrides pubspec.yaml dependencies to fix compatibility issues
 dependency_overrides:
-  # Override file_picker to use a version compatible with Dart SDK 3.3.4
-  file_picker: ^5.5.0
+  # Override file_picker to use GitHub master branch for latest fixes
+  file_picker:
+    git:
+      url: https://github.com/miguelpruivo/flutter_file_picker.git
+      ref: master
   
-  # Override agora_rtc_engine to use newer version
+  # Override agora_rtc_engine to use newer version with Web support
   agora_rtc_engine: ^6.5.2
   
   # Ensure proper platform-specific implementations are used
@@ -13,3 +16,6 @@ dependency_overrides:
   
   # Web compatibility fixes
   web: ^0.5.1
+  
+  # Additional overrides for cross-platform compatibility
+  permission_handler: ^10.4.5
