@@ -12,13 +12,19 @@ service cloud.firestore {
       allow create: if request.auth != null && request.auth.uid == userId;
       allow update: if request.auth != null && request.auth.uid == userId;
       allow delete: if request.auth != null && request.auth.uid == userId;
+      
+      // FCM tokens subcollection
+      match /fcmTokens/{tokenId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
     }
     
     // Groups collection - for group chats
     match /groups/{groupId} {
-      // Only group members can read group data
+      // Allow read if user is in members array OR if checking for group existence
       allow read: if request.auth != null && 
-        request.auth.uid in resource.data.members;
+        (request.auth.uid in resource.data.members || 
+         resource == null);
       
       // Group creator and members can create groups
       allow create: if request.auth != null && 
@@ -27,18 +33,21 @@ service cloud.firestore {
         
       // Only group members can update group (for adding/removing members, updating name, etc.)
       allow update: if request.auth != null && 
-        request.auth.uid in resource.data.members;
+        (request.auth.uid in resource.data.members ||
+         request.auth.uid in request.resource.data.members);
       
-      // Only group creator or admins can delete group
+      // Only group creator or admins can delete group, OR if user is leaving and no members left
       allow delete: if request.auth != null && 
         (request.auth.uid == resource.data.createdBy ||
-         request.auth.uid in resource.data.adminIds);
+         request.auth.uid in resource.data.adminIds ||
+         resource.data.members.size() == 0);
       
       // Messages subcollection for groups
       match /messages/{messageId} {
         // Only group members can read messages
         allow read: if request.auth != null && 
-          request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.members;
+          (request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.members ||
+           resource == null);
         
         // Only group members can create messages
         allow create: if request.auth != null && 
@@ -59,9 +68,10 @@ service cloud.firestore {
     
     // Conversations collection (for private chats)
     match /conversations/{conversationId} {
-      // Only participants can read conversation metadata
+      // Allow read if user is in participants array OR checking for existence
       allow read: if request.auth != null && 
-        request.auth.uid in resource.data.participants;
+        (request.auth.uid in resource.data.participants ||
+         resource == null);
       
       // Only participants can create/update conversations
       allow create: if request.auth != null && 
@@ -69,17 +79,20 @@ service cloud.firestore {
         request.resource.data.participants.size() == 2;
         
       allow update: if request.auth != null && 
-        request.auth.uid in resource.data.participants;
+        (request.auth.uid in resource.data.participants ||
+         request.auth.uid in request.resource.data.participants);
       
       // Allow conversation participants to delete conversations
       allow delete: if request.auth != null && 
-        request.auth.uid in resource.data.participants;
+        (request.auth.uid in resource.data.participants ||
+         resource == null);
       
       // Messages subcollection for conversations
       match /messages/{messageId} {
         // Only conversation participants can read messages
         allow read: if request.auth != null && 
-          request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+          (request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants ||
+           resource == null);
         
         // Only sender can create messages, and they must be a participant
         allow create: if request.auth != null && 
@@ -91,9 +104,10 @@ service cloud.firestore {
           request.auth.uid == resource.data.senderId &&
           request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
         
-        // Only sender can delete their own messages
+        // Only sender can delete their own messages OR if conversation is being deleted
         allow delete: if request.auth != null && 
-          request.auth.uid == resource.data.senderId;
+          (request.auth.uid == resource.data.senderId ||
+           resource == null);
       }
     }
     
@@ -102,7 +116,8 @@ service cloud.firestore {
       // Only participants can read call session data
       allow read: if request.auth != null && 
         (request.auth.uid == resource.data.callerId || 
-         request.auth.uid == resource.data.receiverId);
+         request.auth.uid == resource.data.receiverId ||
+         resource == null);
       
       // Only caller can create call sessions
       allow create: if request.auth != null && 
@@ -116,17 +131,21 @@ service cloud.firestore {
       // Both participants can delete call session
       allow delete: if request.auth != null && 
         (request.auth.uid == resource.data.callerId || 
-         request.auth.uid == resource.data.receiverId);
+         request.auth.uid == resource.data.receiverId ||
+         resource == null);
     }
     
     // Notifications collection - for push notifications
     match /notifications/{notificationId} {
       // Only the recipient can read their notifications
       allow read: if request.auth != null && 
-        request.auth.uid == resource.data.userId;
+        (request.auth.uid == resource.data.userId ||
+         resource == null);
       
-      // System can create notifications, users cannot directly create
-      allow create: if request.auth != null;
+      // System can create notifications, authenticated users can create for themselves
+      allow create: if request.auth != null &&
+        (request.auth.uid == request.resource.data.userId ||
+         request.resource.data.userId == null);
         
       // Only recipient can update their notifications (mark as read, etc.)
       allow update: if request.auth != null && 
@@ -134,7 +153,8 @@ service cloud.firestore {
       
       // Only recipient can delete their notifications
       allow delete: if request.auth != null && 
-        request.auth.uid == resource.data.userId;
+        (request.auth.uid == resource.data.userId ||
+         resource == null);
     }
     
     // Helper match for any other collections that might be added
