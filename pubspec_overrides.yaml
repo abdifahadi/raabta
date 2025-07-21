@@ -1,8 +1,7 @@
-# This file overrides pubspec.yaml dependencies to fix the file_picker
-# circular dependency issue on desktop platforms
+# This file overrides pubspec.yaml dependencies to fix compatibility issues
 dependency_overrides:
-  # Override file_picker to use a version that doesn't have circular dependency issues
-  file_picker: ^8.0.7
+  # Override file_picker to use a version compatible with Dart SDK 3.3.4
+  file_picker: ^5.5.0
   
   # Ensure proper platform-specific implementations are used
   file_selector_linux: ^0.9.3+2

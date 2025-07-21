@@ -44,8 +44,8 @@ dependencies:
   cloud_firestore: ^4.17.0
   
   # Media and file handling
-  file_picker: ^8.0.7
-  image_picker: ^1.1.2
+  file_picker: ^5.5.0
+  image_picker: ^1.0.7
   video_player: ^2.8.2
   cached_network_image: ^3.3.1
   # audioplayers: ^6.0.0  # Temporarily disabled for web compatibility
@@ -53,20 +53,20 @@ dependencies:
   # UI enhancements
   photo_view: ^0.14.0
   flutter_chat_bubble: ^2.0.2
-  animations: ^2.0.11
+  animations: ^2.0.7
   
   # Utilities
-  intl: ^0.19.0
+  intl: ^0.18.1
   shared_preferences: ^2.2.2
   path_provider: ^2.1.2
   mime: ^1.0.4
-  uuid: ^4.3.3
+  uuid: ^3.0.7
   logger: ^2.0.2+1
-  http: ^1.1.0
-  permission_handler: ^11.3.1
+  http: ^0.13.6
+  permission_handler: ^10.4.5
   share_plus: ^7.2.2
   web: ^0.5.1
-  flutter_local_notifications: ^17.2.2
+  flutter_local_notifications: ^15.1.2
   
   # Encryption
   encrypt: ^5.0.3
