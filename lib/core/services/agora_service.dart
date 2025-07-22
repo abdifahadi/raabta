@@ -17,7 +17,7 @@ class AgoraService implements AgoraServiceInterface {
   RtcEngine? _engine;
   String? _currentChannelName;
   int? _currentUid;
-  String? _currentToken;
+  String? _currentToken; // Used for token renewal
   bool _isInCall = false;
   
   // Video settings
@@ -74,30 +74,32 @@ class AgoraService implements AgoraServiceInterface {
         debugPrint('🚀 Initializing Agora RTC Engine...');
       }
 
-      // Create engine with platform-specific method
-      if (kIsWeb) {
-        _engine = createAgoraRtcEngine();
-      } else {
-        _engine = createAgoraRtcEngine();
-      }
+      // Create engine
+      _engine = createAgoraRtcEngine();
       
-      // Initialize engine
+      // Initialize engine with proper configuration
       await _engine!.initialize(RtcEngineContext(
         appId: AgoraConfig.appId,
         channelProfile: ChannelProfileType.channelProfileCommunication,
+        logConfig: LogConfig(
+          level: kDebugMode ? LogLevel.logLevelInfo : LogLevel.logLevelWarn,
+          filePath: '', // Use default log path
+        ),
       ));
 
-      // Set up event handlers
+      // Set up event handlers BEFORE enabling audio/video
       _setupEventHandlers();
 
-      // Enable audio and video
+      // Enable audio (always needed)
       await _engine!.enableAudio();
+      
+      // Enable video (will be configured per call type)
       await _engine!.enableVideo();
 
-      // Set default audio route
+      // Set default audio route (earpiece by default)
       await _engine!.setDefaultAudioRouteToSpeakerphone(false);
 
-      // Configure video settings
+      // Configure video settings with sensible defaults
       await _engine!.setVideoEncoderConfiguration(
         VideoEncoderConfiguration(
           dimensions: VideoDimensions(
@@ -106,13 +108,20 @@ class AgoraService implements AgoraServiceInterface {
           ),
           frameRate: AgoraConfig.videoFrameRate,
           bitrate: AgoraConfig.videoBitrate,
+          orientationMode: OrientationMode.orientationModeAdaptive,
         ),
       );
+
+      // Set client role for communication scenario
+      await _engine!.setClientRole(role: ClientRoleType.clientRoleBroadcaster);
 
       if (kDebugMode) {
         debugPrint('✅ Agora RTC Engine initialized successfully');
       }
     } catch (e) {
+      // Reset engine on initialization failure
+      _engine = null;
+      
       if (kDebugMode) {
         debugPrint('❌ Failed to initialize Agora engine: $e');
       }
@@ -224,7 +233,7 @@ class AgoraService implements AgoraServiceInterface {
         if (kDebugMode) {
           debugPrint('🔐 Web permissions: Browser will handle media permissions');
         }
-        return true; // Browser will prompt for permissions
+        return true; // Browser will prompt for permissions when needed
       }
       
       final permissions = <Permission>[Permission.microphone];
@@ -233,16 +242,56 @@ class AgoraService implements AgoraServiceInterface {
         permissions.add(Permission.camera);
       }
 
-      final statuses = await permissions.request();
+      // First check current permission status
+      final currentStatuses = <Permission, PermissionStatus>{};
+      for (final permission in permissions) {
+        currentStatuses[permission] = await permission.status;
+      }
+
+      // Request permissions for those that are not granted
+      final permissionsToRequest = <Permission>[];
+      for (final entry in currentStatuses.entries) {
+        if (entry.value != PermissionStatus.granted) {
+          permissionsToRequest.add(entry.key);
+        }
+      }
+
+      if (permissionsToRequest.isNotEmpty) {
+        if (kDebugMode) {
+          debugPrint('🔐 Requesting permissions: ${permissionsToRequest.map((p) => p.toString()).join(', ')}');
+        }
+        
+        final requestedStatuses = await permissionsToRequest.request();
+        
+        // Combine current and requested statuses
+        for (final entry in requestedStatuses.entries) {
+          currentStatuses[entry.key] = entry.value;
+        }
+      }
       
-      final allGranted = statuses.values.every(
+      final allGranted = currentStatuses.values.every(
         (status) => status == PermissionStatus.granted
       );
 
       if (kDebugMode) {
-        debugPrint('🔐 Permissions check: ${allGranted ? 'Granted' : 'Denied'}');
-        for (final entry in statuses.entries) {
-          debugPrint('  ${entry.key}: ${entry.value}');
+        debugPrint('🔐 Permissions check result: ${allGranted ? 'All Granted' : 'Some Denied'}');
+        for (final entry in currentStatuses.entries) {
+          debugPrint('  ${entry.key.toString().split('.').last}: ${entry.value.toString().split('.').last}');
+        }
+      }
+
+      if (!allGranted) {
+        // Check for permanently denied permissions
+        final permanentlyDenied = currentStatuses.entries
+            .where((entry) => entry.value == PermissionStatus.permanentlyDenied)
+            .map((entry) => entry.key.toString().split('.').last)
+            .toList();
+            
+        if (permanentlyDenied.isNotEmpty) {
+          if (kDebugMode) {
+            debugPrint('⚠️ Permanently denied permissions: ${permanentlyDenied.join(', ')}');
+          }
+          throw Exception('Permissions permanently denied: ${permanentlyDenied.join(', ')}. Please enable them in device settings.');
         }
       }
 
@@ -252,7 +301,12 @@ class AgoraService implements AgoraServiceInterface {
         debugPrint('❌ Error checking permissions: $e');
       }
       // On web, return true and let browser handle permissions
-      return kIsWeb;
+      if (kIsWeb) {
+        return true;
+      }
+      
+      // Re-throw the exception for native platforms
+      rethrow;
     }
   }
 
@@ -264,52 +318,97 @@ class AgoraService implements AgoraServiceInterface {
     int? uid,
   }) async {
     try {
+      // Ensure engine is initialized
       if (_engine == null) {
+        if (kDebugMode) {
+          debugPrint('🔧 Engine not initialized, initializing now...');
+        }
         await initialize();
       }
 
-      // Check permissions
-      final hasPermissions = await checkPermissions(callType);
-      if (!hasPermissions) {
-        throw Exception('Required permissions not granted');
+      if (_engine == null) {
+        throw Exception('Failed to initialize Agora engine');
+      }
+
+      // Check if already in a call
+      if (_isInCall) {
+        throw Exception('Already in a call. Please end current call first.');
       }
 
       if (kDebugMode) {
         debugPrint('🎯 Joining call: $channelName (${callType.name})');
       }
 
-      // Generate token
+      // Check permissions BEFORE generating token
+      final hasPermissions = await checkPermissions(callType);
+      if (!hasPermissions) {
+        throw Exception('Required microphone and camera permissions not granted. Please enable permissions in settings.');
+      }
+
+      // Generate token with better error handling
       final tokenResponse = await _tokenService.generateToken(
         channelName: channelName,
         uid: uid,
       );
 
+      if (kDebugMode) {
+        debugPrint('🔑 Token generated: ${tokenResponse.toString()}');
+      }
+
       _currentChannelName = channelName;
       _currentUid = tokenResponse.uid;
       _currentToken = tokenResponse.rtcToken;
 
-      // Configure for call type
+      // Configure engine for call type
       if (callType == CallType.video) {
-        await _engine!.enableVideo();
+        await _engine!.enableLocalVideo(true);
         await _engine!.startPreview();
+        _isVideoEnabled = true;
       } else {
-        await _engine!.disableVideo();
+        await _engine!.enableLocalVideo(false);
+        await _engine!.stopPreview();
+        _isVideoEnabled = false;
       }
 
-      // Join channel
+      // Enable audio by default
+      await _engine!.muteLocalAudioStream(false);
+      _isAudioEnabled = true;
+
+      // Configure channel media options
+      final options = ChannelMediaOptions(
+        clientRoleType: ClientRoleType.clientRoleBroadcaster,
+        channelProfile: ChannelProfileType.channelProfileCommunication,
+        autoSubscribeAudio: true,
+        autoSubscribeVideo: callType == CallType.video,
+        publishCameraTrack: callType == CallType.video,
+        publishMicrophoneTrack: true,
+      );
+
+      // Join channel with comprehensive error handling
+      if (kDebugMode) {
+        debugPrint('🚀 Joining channel with UID: ${tokenResponse.uid}');
+      }
+
       await _engine!.joinChannel(
         token: tokenResponse.rtcToken,
         channelId: channelName,
         uid: tokenResponse.uid,
-        options: const ChannelMediaOptions(),
+        options: options,
       );
 
       _isInCall = true;
 
       if (kDebugMode) {
-        debugPrint('✅ Successfully joined call: $channelName');
+        debugPrint('✅ Successfully initiated join for call: $channelName');
+        debugPrint('   - Channel: $channelName');
+        debugPrint('   - UID: ${tokenResponse.uid}');
+        debugPrint('   - Call Type: ${callType.name}');
+        debugPrint('   - Has Token: ${tokenResponse.rtcToken.isNotEmpty}');
       }
+
+      // The actual join success will be confirmed in onJoinChannelSuccess callback
     } catch (e) {
+      // Clean up state on failure
       _isInCall = false;
       _currentChannelName = null;
       _currentUid = null;
@@ -318,7 +417,22 @@ class AgoraService implements AgoraServiceInterface {
       if (kDebugMode) {
         debugPrint('❌ Failed to join call: $e');
       }
-      throw Exception('Failed to join call: $e');
+      
+      // Provide more specific error messages
+      String errorMessage = 'Failed to join call: ';
+      if (e.toString().contains('permissions')) {
+        errorMessage += 'Microphone/camera permissions required';
+      } else if (e.toString().contains('token')) {
+        errorMessage += 'Authentication failed';
+      } else if (e.toString().contains('network')) {
+        errorMessage += 'Network connection issue';
+      } else if (e.toString().contains('already in a call')) {
+        errorMessage += 'Already in a call';
+      } else {
+        errorMessage += e.toString();
+      }
+      
+      throw Exception(errorMessage);
     }
   }
 
@@ -497,25 +611,51 @@ class AgoraService implements AgoraServiceInterface {
       );
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('⚠️ Video view creation failed: $e');
+        debugPrint('⚠️ Local video view creation failed: $e');
       }
-      // Fallback for web or compatibility issues
+      // Fallback UI with better status indication
       return Container(
         color: Colors.grey[900],
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: _isVideoEnabled ? Colors.green : Colors.grey,
+            width: 2,
+          ),
+        ),
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 _isVideoEnabled ? Icons.videocam : Icons.videocam_off,
-                color: Colors.white54,
-                size: 40,
+                color: _isVideoEnabled ? Colors.green : Colors.white54,
+                size: 48,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               Text(
-                kIsWeb ? 'Web Video Preview' : 'Video Preview',
-                style: const TextStyle(color: Colors.white54),
+                _isVideoEnabled ? 'Camera Active' : 'Camera Off',
+                style: TextStyle(
+                  color: _isVideoEnabled ? Colors.green : Colors.white54,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
+              const SizedBox(height: 4),
+              Text(
+                kIsWeb ? 'Web Local Video' : 'Local Video',
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 12,
+                ),
+              ),
+              if (_currentUid != null)
+                Text(
+                  'UID: $_currentUid',
+                  style: const TextStyle(
+                    color: Colors.white38,
+                    fontSize: 10,
+                  ),
+                ),
             ],
           ),
         ),
@@ -550,24 +690,66 @@ class AgoraService implements AgoraServiceInterface {
       if (kDebugMode) {
         debugPrint('⚠️ Remote video view creation failed: $e');
       }
-      // Fallback for web or compatibility issues
+      // Enhanced fallback UI for remote user
+      final isUserConnected = _remoteUsers.contains(uid);
       return Container(
-        color: Colors.grey[900],
+        color: Colors.grey[800],
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: isUserConnected ? Colors.blue : Colors.grey,
+            width: 2,
+          ),
+        ),
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
-                Icons.person,
-                color: Colors.white54,
-                size: 40,
+              Icon(
+                isUserConnected ? Icons.person : Icons.person_outline,
+                color: isUserConnected ? Colors.blue : Colors.white54,
+                size: 48,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               Text(
-                kIsWeb ? 'Web Remote Video (UID: $uid)' : 'Remote Video (UID: $uid)',
-                style: const TextStyle(color: Colors.white54),
-                textAlign: TextAlign.center,
+                isUserConnected ? 'User Connected' : 'Waiting for User',
+                style: TextStyle(
+                  color: isUserConnected ? Colors.blue : Colors.white54,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
+              const SizedBox(height: 4),
+              Text(
+                kIsWeb ? 'Web Remote Video' : 'Remote Video',
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 12,
+                ),
+              ),
+              Text(
+                'UID: $uid',
+                style: const TextStyle(
+                  color: Colors.white38,
+                  fontSize: 10,
+                ),
+              ),
+              if (isUserConnected)
+                Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Text(
+                    'LIVE',
+                    style: TextStyle(
+                      color: Colors.blue,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
             ],
           ),
         ),

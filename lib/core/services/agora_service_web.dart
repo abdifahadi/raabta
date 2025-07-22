@@ -20,7 +20,7 @@ class AgoraServiceWeb implements AgoraServiceInterface {
   RtcEngine? _engine;
   String? _currentChannelName;
   int? _currentUid;
-  String? _currentToken;
+  String? _currentToken; // Used for token renewal in web
   bool _isInCall = false;
   
   // Video settings
@@ -204,23 +204,77 @@ class AgoraServiceWeb implements AgoraServiceInterface {
         return true;
       }
 
-      // Check browser media permissions
+            // Check if we're in a secure context (HTTPS or localhost) - only on web
+      if (kIsWeb) {
+        try {
+          if (html.window.location.protocol != 'https:' && 
+              !html.window.location.hostname!.contains('localhost') &&
+              !html.window.location.hostname!.contains('127.0.0.1')) {
+            if (kDebugMode) {
+              debugPrint('⚠️ Web calls require HTTPS or localhost');
+            }
+            throw Exception('Web calls require HTTPS connection. Please use HTTPS or localhost.');
+          }
+        } catch (e) {
+          // If location access fails, continue with permission check
+          if (kDebugMode) {
+            debugPrint('⚠️ Could not check location protocol: $e');
+          }
+        }
+      }
+
+      // Check if browser supports WebRTC
+      if (html.window.navigator.mediaDevices == null) {
+        throw Exception('WebRTC not supported in this browser. Please use a modern browser like Chrome, Firefox, or Safari.');
+      }
+
+      // Request browser media permissions
       final constraints = <String, dynamic>{
         'audio': true,
-        'video': callType == CallType.video,
+        'video': callType == CallType.video ? {
+          'width': {'ideal': AgoraConfig.videoWidth},
+          'height': {'ideal': AgoraConfig.videoHeight},
+          'frameRate': {'ideal': AgoraConfig.videoFrameRate},
+        } : false,
       };
 
-      await html.window.navigator.mediaDevices!.getUserMedia(constraints);
-      
-      if (kDebugMode) {
-        debugPrint('🔐 Web permissions granted for ${callType.name}');
+      try {
+        final stream = await html.window.navigator.mediaDevices!.getUserMedia(constraints);
+        
+        // Stop the stream immediately - we just needed to check permissions
+        for (final track in stream.getTracks()) {
+          track.stop();
+        }
+        
+        if (kDebugMode) {
+          debugPrint('🔐 Web permissions granted for ${callType.name}');
+        }
+        return true;
+      } catch (permissionError) {
+        if (kDebugMode) {
+          debugPrint('❌ Web media permissions denied: $permissionError');
+        }
+        
+        String errorMessage = 'Media permissions required for calls. ';
+        if (permissionError.toString().contains('NotAllowedError')) {
+          errorMessage += 'Please allow microphone';
+          if (callType == CallType.video) {
+            errorMessage += ' and camera';
+          }
+          errorMessage += ' access in your browser.';
+        } else if (permissionError.toString().contains('NotFoundError')) {
+          errorMessage += 'No microphone or camera found on your device.';
+        } else {
+          errorMessage += 'Please check your browser settings.';
+        }
+        
+        throw Exception(errorMessage);
       }
-      return true;
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('❌ Web permissions denied: $e');
+        debugPrint('❌ Web permissions check error: $e');
       }
-      return false;
+      rethrow;
     }
   }
 
@@ -235,36 +289,61 @@ class AgoraServiceWeb implements AgoraServiceInterface {
         debugPrint('🌐 Joining Web call: $channelName (${callType.name})');
       }
 
-      // Check permissions first
-      final hasPermissions = await checkPermissions(callType);
-      if (!hasPermissions) {
-        throw Exception('Media permissions required for calls');
+      // Check if already in a call
+      if (_isInCall) {
+        throw Exception('Already in a call. Please end current call first.');
       }
 
-      // Generate token (still needed for authentication)
+      // Check permissions first with detailed error handling
+      try {
+        await checkPermissions(callType);
+      } catch (permissionError) {
+        throw Exception('Web permissions error: ${permissionError.toString()}');
+      }
+
+      // Generate token with fallback support
       final tokenResponse = await _tokenService.generateToken(
         channelName: channelName,
         uid: uid,
       );
 
+      if (kDebugMode) {
+        debugPrint('🔑 Web token generated: ${tokenResponse.toString()}');
+      }
+
       _currentChannelName = channelName;
       _currentUid = tokenResponse.uid;
       _currentToken = tokenResponse.rtcToken;
 
-      if (_engine != null) {
-        // Use Agora RTC Engine if available
-        await _joinWithAgoraEngine(channelName, tokenResponse.rtcToken, tokenResponse.uid, callType);
-      } else {
-        // Fallback to WebRTC implementation
-        await _joinWithWebRTC(callType);
-      }
+      try {
+        if (_engine != null) {
+          // Use Agora RTC Engine if available
+          await _joinWithAgoraEngine(channelName, tokenResponse.rtcToken, tokenResponse.uid, callType);
+        } else {
+          // Fallback to WebRTC implementation
+          await _joinWithWebRTC(callType);
+        }
 
-      _isInCall = true;
+        _isInCall = true;
 
-      if (kDebugMode) {
-        debugPrint('✅ Successfully joined Web call: $channelName');
+        if (kDebugMode) {
+          debugPrint('✅ Successfully joined Web call: $channelName');
+          debugPrint('   - Channel: $channelName');
+          debugPrint('   - UID: ${tokenResponse.uid}');
+          debugPrint('   - Call Type: ${callType.name}');
+          debugPrint('   - Using: ${_engine != null ? 'Agora SDK' : 'WebRTC Fallback'}');
+        }
+      } catch (joinError) {
+        // Reset state on join failure
+        _isInCall = false;
+        _currentChannelName = null;
+        _currentUid = null;
+        _currentToken = null;
+        
+        throw Exception('Failed to establish call connection: ${joinError.toString()}');
       }
     } catch (e) {
+      // Ensure state is clean on any failure
       _isInCall = false;
       _currentChannelName = null;
       _currentUid = null;
@@ -273,37 +352,69 @@ class AgoraServiceWeb implements AgoraServiceInterface {
       if (kDebugMode) {
         debugPrint('❌ Failed to join Web call: $e');
       }
-      throw Exception('Failed to join Web call: $e');
+      
+      // Provide more specific error messages for web
+      String errorMessage = 'Web call failed: ';
+      if (e.toString().contains('permissions')) {
+        errorMessage += 'Browser permissions required';
+      } else if (e.toString().contains('HTTPS')) {
+        errorMessage += 'HTTPS connection required';
+      } else if (e.toString().contains('WebRTC')) {
+        errorMessage += 'Browser not supported';
+      } else if (e.toString().contains('token')) {
+        errorMessage += 'Authentication failed';
+      } else {
+        errorMessage += e.toString().replaceAll('Exception: ', '');
+      }
+      
+      throw Exception(errorMessage);
     }
   }
 
   Future<void> _joinWithAgoraEngine(String channelName, String token, int uid, CallType callType) async {
     try {
-      // Enable video if needed
+      // Configure engine for call type
       if (callType == CallType.video) {
-        await _engine!.enableVideo();
+        await _engine!.enableLocalVideo(true);
         await _engine!.startPreview();
+        _isVideoEnabled = true;
+      } else {
+        await _engine!.enableLocalVideo(false);
+        _isVideoEnabled = false;
       }
+
+      // Enable audio by default
+      await _engine!.muteLocalAudioStream(false);
+      _isAudioEnabled = true;
+
+      // Configure channel media options for web
+      final options = ChannelMediaOptions(
+        clientRoleType: ClientRoleType.clientRoleBroadcaster,
+        channelProfile: ChannelProfileType.channelProfileCommunication,
+        autoSubscribeAudio: true,
+        autoSubscribeVideo: callType == CallType.video,
+        publishCameraTrack: callType == CallType.video,
+        publishMicrophoneTrack: true,
+      );
 
       // Join channel with Agora RTC Engine
       await _engine!.joinChannel(
         token: token,
         channelId: channelName,
         uid: uid,
-        options: const ChannelMediaOptions(
-          clientRoleType: ClientRoleType.clientRoleBroadcaster,
-          channelProfile: ChannelProfileType.channelProfileCommunication,
-        ),
+        options: options,
       );
 
       if (kDebugMode) {
-        debugPrint('🎥 Joined channel with Agora RTC Engine');
+        debugPrint('🎥 Joined channel with Agora RTC Engine for web');
+        debugPrint('   - Video enabled: $_isVideoEnabled');
+        debugPrint('   - Audio enabled: $_isAudioEnabled');
       }
     } catch (e) {
       if (kDebugMode) {
         debugPrint('❌ Failed to join with Agora engine: $e');
       }
-      // Fallback to WebRTC
+      // Fallback to WebRTC if Agora SDK fails on web
       await _joinWithWebRTC(callType);
     }
   }
