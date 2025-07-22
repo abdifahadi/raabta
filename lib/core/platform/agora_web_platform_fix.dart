@@ -29,8 +29,11 @@ class AgoraWebPlatformFix {
     try {
       _viewFactories[viewType] = factory;
       
-      // Use our universal platform view registry
-      UniversalPlatformViewRegistry.registerViewFactory(viewType, factory);
+      // Use our universal platform view registry with safe registration
+      final success = UniversalPlatformViewRegistry.tryRegisterViewFactory(viewType, factory);
+      if (!success) {
+        print('AgoraWebPlatformFix: Safe registration failed for $viewType, but continuing...');
+      }
     } catch (e) {
       print('AgoraWebPlatformFix: Failed to register view factory $viewType: $e');
       // Continue execution even if registration fails

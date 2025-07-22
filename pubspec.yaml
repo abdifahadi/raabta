@@ -40,7 +40,7 @@ dependencies:
   firebase_auth: ^5.7.0
   firebase_storage: ^12.4.10
   firebase_messaging: ^15.2.10
-  google_sign_in: ^7.1.1
+  google_sign_in: ^6.2.2
   cloud_firestore: ^5.6.12
   
   # Media and file handling
@@ -85,7 +85,7 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^6.0.0
+  flutter_lints: ^4.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
