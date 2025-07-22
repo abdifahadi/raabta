@@ -1,7 +1,0 @@
-
-# dependency_overrides:
-#   agora_rtc_engine:
-#     git:
-#       url: https://github.com/AgoraIO-Extensions/Agora-Flutter-SDK
-#       ref: main
-

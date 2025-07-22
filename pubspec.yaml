@@ -44,7 +44,7 @@ dependencies:
   cloud_firestore: ^4.17.4
   
   # Media and file handling
-  file_picker: ^5.5.0
+  file_picker: ^6.1.1
   image_picker: ^1.0.7
   video_player: ^2.8.2
   cached_network_image: ^3.3.1
@@ -73,7 +73,10 @@ dependencies:
   crypto: ^3.0.3
   
   # Audio/Video Calling - Full platform support
-  agora_rtc_engine: ^6.3.2
+  agora_rtc_engine:
+    git:
+      url: https://github.com/AgoraIO-Extensions/Agora-Flutter-SDK
+      ref: main
   cloud_functions: ^4.7.6
 
 dev_dependencies:
