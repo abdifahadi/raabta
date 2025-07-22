@@ -40,10 +40,20 @@ class CallService {
   Stream<Map<String, dynamic>> get callEventStream => _agoraService.callEventStream;
   Stream<CallModel?> get currentCallStream => _agoraService.currentCallStream;
 
+  bool _isInitialized = false;
+  
   Future<void> initialize() async {
+    if (_isInitialized) {
+      if (kDebugMode) {
+        debugPrint('CallService: Already initialized');
+      }
+      return;
+    }
+    
     try {
       // Initialize real Agora service for all platforms including web
       await _agoraService.initialize();
+      _isInitialized = true;
       
       if (kDebugMode) {
         debugPrint('CallService: Initialized successfully with Agora (${kIsWeb ? 'Web' : 'Native'} mode)');
@@ -63,6 +73,14 @@ class CallService {
     required CallType callType,
   }) async {
     try {
+      // Ensure CallService is initialized before joining
+      if (!_isInitialized) {
+        if (kDebugMode) {
+          debugPrint('CallService: Auto-initializing before joining call');
+        }
+        await initialize();
+      }
+      
       // Use real Agora service for all platforms
       await _agoraService.joinCall(
         channelName: channelName,

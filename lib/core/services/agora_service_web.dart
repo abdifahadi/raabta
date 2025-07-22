@@ -8,7 +8,7 @@ import '../platform/agora_web_platform_fix.dart';
 import 'agora_service_interface.dart';
 import 'agora_token_service.dart';
 
-// Conditional import for web-specific functionality
+// Conditional import for web-specific functionality with proper error handling
 import 'web_html_stub.dart'
     if (dart.library.html) 'dart:html' as html;
 
@@ -204,14 +204,18 @@ class AgoraServiceWeb implements AgoraServiceInterface {
         return true;
       }
 
-            // Check if we're in a secure context (HTTPS or localhost) - only on web
+      // Check if we're in a secure context (HTTPS or localhost) - only on web
       if (kIsWeb) {
         try {
-          if (html.window.location.protocol != 'https:' && 
-              !html.window.location.hostname!.contains('localhost') &&
-              !html.window.location.hostname!.contains('127.0.0.1')) {
+          final protocol = html.window.location.protocol;
+          final hostname = html.window.location.hostname;
+          
+          if (protocol != 'https:' && 
+              hostname != null &&
+              !hostname.contains('localhost') &&
+              !hostname.contains('127.0.0.1')) {
             if (kDebugMode) {
-              debugPrint('⚠️ Web calls require HTTPS or localhost');
+              debugPrint('⚠️ Web calls require HTTPS or localhost. Current: $protocol//$hostname');
             }
             throw Exception('Web calls require HTTPS connection. Please use HTTPS or localhost.');
           }
