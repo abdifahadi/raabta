@@ -1,5 +1,10 @@
 // Stub for dart:html when not on web platform
 
+class Location {
+  String protocol = 'https:';
+  String? hostname = 'localhost';
+}
+
 class MediaStream {
   List<dynamic> getTracks() => [];
   List<dynamic> getAudioTracks() => [];
@@ -8,6 +13,7 @@ class MediaStream {
 
 class Window {
   Navigator get navigator => Navigator();
+  Location get location => Location();
 }
 
 class Navigator {

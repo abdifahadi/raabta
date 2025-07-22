@@ -92,9 +92,7 @@ class _CallScreenState extends State<CallScreen> {
         debugPrint('📞 Initializing call: ${widget.call.channelName}');
       }
 
-      // Ensure call service is initialized first
-      await _callService.initialize();
-
+      // The call service will automatically initialize if needed
       // Join the call using the real service
       await _callService.joinCall(
         channelName: widget.call.channelName,
@@ -117,19 +115,33 @@ class _CallScreenState extends State<CallScreen> {
         debugPrint('❌ Call initialization failed: $e');
       }
       
-      // Provide user-friendly error messages
-      String userFriendlyMessage = 'Failed to connect to call';
-      if (e.toString().contains('permissions')) {
-        userFriendlyMessage = 'Please grant microphone and camera permissions';
-      } else if (e.toString().contains('network')) {
-        userFriendlyMessage = 'Network connection issue. Please check your internet';
-      } else if (e.toString().contains('HTTPS')) {
-        userFriendlyMessage = 'Secure connection required for web calls';
-      } else if (e.toString().contains('WebRTC')) {
-        userFriendlyMessage = 'Your browser doesn\'t support video calls';
-      }
-      
+      // Provide user-friendly error messages based on platform and error type
+      String userFriendlyMessage = _getErrorMessage(e.toString());
       _showErrorMessage(userFriendlyMessage);
+    }
+  }
+  
+  String _getErrorMessage(String error) {
+    if (error.contains('permissions')) {
+      return kIsWeb 
+        ? 'Please allow microphone and camera access in your browser'
+        : 'Please grant microphone and camera permissions in app settings';
+    } else if (error.contains('network')) {
+      return 'Network connection issue. Please check your internet connection';
+    } else if (error.contains('HTTPS')) {
+      return 'Secure connection required. Please use HTTPS or localhost for web calls';
+    } else if (error.contains('WebRTC')) {
+      return 'Your browser doesn\'t support video calls. Please use Chrome, Firefox, or Safari';
+    } else if (error.contains('token')) {
+      return 'Authentication failed. Please try again';
+    } else if (error.contains('already in a call')) {
+      return 'Already in a call. Please end the current call first';
+    } else if (error.contains('Web call failed')) {
+      return error.replaceAll('Exception: ', '');
+    } else {
+      return kIsWeb 
+        ? 'Web call connection failed. Please refresh and try again'
+        : 'Failed to connect to call. Please try again';
     }
   }
 

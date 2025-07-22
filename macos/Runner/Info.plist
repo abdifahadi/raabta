@@ -28,5 +28,24 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	
+	<!-- macOS Permissions for Agora RTC -->
+	<key>NSCameraUsageDescription</key>
+	<string>This app needs access to camera for video calls and sharing media in chats.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app needs access to microphone for audio/video calls and recording audio messages.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>This app needs access to photo library to share images and videos in chats.</string>
+	
+	<!-- Network access for calls -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
+	
+	<!-- Background modes for calls -->
+	<key>LSUIElement</key>
+	<false/>
 </dict>
 </plist>
