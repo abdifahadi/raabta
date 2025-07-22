@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 import 'package:flutter/material.dart';
-import 'package:agora_rtc_engine/agora_rtc_engine.dart';
+// Conditional import to avoid agora_rtc_engine on Web
+import 'agora_rtc_engine_stub.dart'
+    if (dart.library.io) 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../features/call/domain/models/call_model.dart';
 import '../config/agora_config.dart';
@@ -63,6 +65,11 @@ class AgoraService implements AgoraServiceInterface {
   @override
   Future<void> initialize() async {
     try {
+      // Prevent initialization on Web platform
+      if (kIsWeb) {
+        throw UnsupportedError('AgoraService should not be used on Web platform. Use AgoraWebService instead.');
+      }
+      
       if (_engine != null) {
         if (kDebugMode) {
           debugPrint('🎯 Agora engine already initialized');

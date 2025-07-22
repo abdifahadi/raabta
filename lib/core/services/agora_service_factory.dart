@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'agora_service_interface.dart';
 import 'agora_service.dart';
-import 'agora_service_web_stub.dart' if (dart.library.html) 'agora_service_web.dart';
+import 'agora_web_service.dart';
 
 class AgoraServiceFactory {
   static AgoraServiceInterface? _instance;
@@ -13,8 +13,10 @@ class AgoraServiceFactory {
     }
     
     if (kIsWeb) {
-      _instance = AgoraServiceWeb();
+      // Use pure Web implementation that avoids agora_rtc_engine
+      _instance = AgoraWebService();
     } else {
+      // Use native implementation with agora_rtc_engine
       _instance = AgoraService();
     }
     

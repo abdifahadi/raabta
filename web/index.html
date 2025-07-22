@@ -94,20 +94,26 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-storage-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-messaging-compat.js"></script>
   
-  <!-- Agora Web RTC SDK and Iris Web Wrapper for agora_rtc_engine 6.3.0 -->
-  <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.20.2.js"></script>
-  <script src="https://download.agora.io/sdk/release/iris-web-rtc_n450_w4220_0.8.6.js"></script>
+  <!-- Agora Web RTC SDK - Latest stable version -->
+  <script src="https://download.agora.io/sdk/release/AgoraRTC_N.js"></script>
   
-  <!-- Additional Agora Web SDK support for video calling -->
+  <!-- Agora Web SDK initialization for Flutter Web -->
   <script>
-    // Initialize Agora Web compatibility
-    window.AgoraRTC = window.AgoraRTC || {};
-    console.log('Agora Web SDK loaded:', !!window.AgoraRTC);
-    
-    // Ensure proper initialization
+    // Initialize Agora Web SDK
     window.addEventListener('load', function() {
       if (window.AgoraRTC) {
-        console.log('Agora RTC ready for Flutter Web');
+        console.log('✅ Agora Web SDK loaded successfully');
+        
+        // Set global configuration for better Web compatibility
+        window.AgoraRTC.setLogLevel(1); // Warning level
+        
+        // Enable debug mode for development
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+          window.AgoraRTC.setLogLevel(0); // Debug level for localhost
+          console.log('🐛 Agora debug mode enabled for development');
+        }
+      } else {
+        console.error('❌ Agora Web SDK failed to load');
       }
     });
   </script>
