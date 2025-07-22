@@ -1,6 +1,5 @@
 import 'dart:async';
-import 'dart:html' as html;
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import '../../features/call/domain/models/call_model.dart';
@@ -8,6 +7,10 @@ import '../config/agora_config.dart';
 import '../platform/agora_web_platform_fix.dart';
 import 'agora_service_interface.dart';
 import 'agora_token_service.dart';
+
+// Conditional import for web-specific functionality
+import 'web_html_stub.dart'
+    if (dart.library.html) 'dart:html' as html;
 
 class AgoraServiceWeb implements AgoraServiceInterface {
   static final AgoraServiceWeb _instance = AgoraServiceWeb._internal();
@@ -96,8 +99,8 @@ class AgoraServiceWeb implements AgoraServiceInterface {
 
   Future<void> _initializeAgoraEngine() async {
     try {
-      // Check if browser supports WebRTC first
-      if (html.window.navigator.mediaDevices == null) {
+      // Check if browser supports WebRTC first (only on web)
+      if (kIsWeb && html.window.navigator.mediaDevices == null) {
         throw Exception('WebRTC not supported in this browser');
       }
 
@@ -170,7 +173,7 @@ class AgoraServiceWeb implements AgoraServiceInterface {
         },
         onUserOffline: (RtcConnection connection, int uid, UserOfflineReasonType reason) {
           if (kDebugMode) {
-            debugPrint('👋 User left: $uid, reason: ${reason.name}');
+            debugPrint('�� User left: $uid, reason: ${reason.name}');
           }
           _remoteUsers.remove(uid);
           _callEventController.add({
@@ -196,6 +199,11 @@ class AgoraServiceWeb implements AgoraServiceInterface {
   @override
   Future<bool> checkPermissions(CallType callType) async {
     try {
+      if (!kIsWeb) {
+        // On non-web platforms, assume permissions are handled elsewhere
+        return true;
+      }
+
       // Check browser media permissions
       final constraints = <String, dynamic>{
         'audio': true,
@@ -303,7 +311,9 @@ class AgoraServiceWeb implements AgoraServiceInterface {
   Future<void> _joinWithWebRTC(CallType callType) async {
     try {
       // Get user media for web fallback
-      await _getUserMedia(callType);
+      if (kIsWeb) {
+        await _getUserMedia(callType);
+      }
 
       // Simulate join event for fallback
       _callEventController.add({
@@ -325,6 +335,8 @@ class AgoraServiceWeb implements AgoraServiceInterface {
   }
 
   Future<void> _getUserMedia(CallType callType) async {
+    if (!kIsWeb) return;
+
     try {
       final constraints = <String, dynamic>{
         'audio': true,
@@ -391,6 +403,8 @@ class AgoraServiceWeb implements AgoraServiceInterface {
   }
 
   Future<void> _stopMediaStreams() async {
+    if (!kIsWeb) return;
+
     try {
       if (_localStream != null) {
         for (final track in _localStream!.getTracks()) {
@@ -417,7 +431,7 @@ class AgoraServiceWeb implements AgoraServiceInterface {
     try {
       _isAudioEnabled = !_isAudioEnabled;
       
-      if (_localStream != null) {
+      if (kIsWeb && _localStream != null) {
         final audioTracks = _localStream!.getAudioTracks();
         for (final track in audioTracks) {
           track.enabled = _isAudioEnabled;
@@ -439,7 +453,7 @@ class AgoraServiceWeb implements AgoraServiceInterface {
     try {
       _isVideoEnabled = !_isVideoEnabled;
       
-      if (_localStream != null) {
+      if (kIsWeb && _localStream != null) {
         final videoTracks = _localStream!.getVideoTracks();
         for (final track in videoTracks) {
           track.enabled = _isVideoEnabled;
@@ -474,7 +488,7 @@ class AgoraServiceWeb implements AgoraServiceInterface {
   @override
   Future<void> switchCamera() async {
     try {
-      if (_localStream != null) {
+      if (kIsWeb && _localStream != null) {
         // Web camera switching is more complex - simplified for compatibility
         if (kDebugMode) {
           debugPrint('📱 Web camera switch requested (simplified)');
@@ -536,9 +550,9 @@ class AgoraServiceWeb implements AgoraServiceInterface {
               size: 48,
             ),
             const SizedBox(height: 12),
-            Text(
+            const Text(
               'Web Remote Video',
-              style: const TextStyle(
+              style: TextStyle(
                 color: Colors.white60,
                 fontSize: 16,
               ),

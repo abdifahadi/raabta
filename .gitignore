@@ -47,3 +47,4 @@ flutter.tar.xz
 # Flutter SDK files
 flutter/
 *.tar.xz
+google-chrome-stable_current_amd64.deb
