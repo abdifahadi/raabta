@@ -1,3 +1,6 @@
+export 'agora_service.dart'
+    if (dart.library.html) 'agora_web_service.dart';
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'agora_service_interface.dart';
 import 'agora_service.dart';

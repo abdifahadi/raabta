@@ -1,7 +1,31 @@
 // Stub implementation for agora_rtc_engine on Web platform
-// This prevents compilation errors when agora_rtc_engine is not available
+// This prevents compilation errors when agora_rtc_engine is not available on web
 
 import 'package:flutter/material.dart';
+
+class AgoraRtcEngine {
+  static Future<void> create(String appId) async {
+    throw UnsupportedError('agora_rtc_engine not supported on Web');
+  }
+  
+  static Future<void> destroy() async {}
+  
+  static Future<void> joinChannel(
+      String token, String channelName, String optionalInfo, int uid) async {
+    throw UnsupportedError('agora_rtc_engine not supported on Web');
+  }
+  
+  static Future<void> leaveChannel() async {}
+  static Future<void> enableAudio() async {}
+  static Future<void> disableAudio() async {}
+  static Future<void> enableVideo() async {}
+  static Future<void> disableVideo() async {}
+  static Future<void> muteLocalAudioStream(bool muted) async {}
+  static Future<void> muteLocalVideoStream(bool muted) async {}
+  static Future<void> switchCamera() async {}
+  static Future<void> setEnableSpeakerphone(bool enabled) async {}
+  static Future<void> renewToken(String token) async {}
+}
 
 class RtcEngine {
   static RtcEngine? createAgoraRtcEngine() => null;
@@ -141,17 +165,30 @@ class VideoCanvas {
 
 class RtcConnection {
   final String? channelId;
+  final int localUid;
   
-  RtcConnection({this.channelId});
+  RtcConnection({this.channelId, this.localUid = 0});
+}
+
+class RtcStats {
+  final int duration;
+  final int txBytes;
+  final int rxBytes;
+  
+  RtcStats({
+    this.duration = 0,
+    this.txBytes = 0,
+    this.rxBytes = 0,
+  });
 }
 
 class RtcEngineEventHandler {
   final Function(RtcConnection, int)? onJoinChannelSuccess;
   final Function(RtcConnection, int, int)? onUserJoined;
-  final Function(RtcConnection, int, dynamic)? onUserOffline;
-  final Function(RtcConnection, dynamic)? onLeaveChannel;
-  final Function(dynamic, String)? onError;
-  final Function(RtcConnection, dynamic, dynamic)? onConnectionStateChanged;
+  final Function(RtcConnection, int, UserOfflineReasonType)? onUserOffline;
+  final Function(RtcConnection, RtcStats)? onLeaveChannel;
+  final Function(ErrorCodeType, String)? onError;
+  final Function(RtcConnection, ConnectionStateType, ConnectionChangedReasonType)? onConnectionStateChanged;
   final Function(RtcConnection, String)? onTokenPrivilegeWillExpire;
   
   RtcEngineEventHandler({
