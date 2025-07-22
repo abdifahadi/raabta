@@ -88,6 +88,13 @@ class _CallScreenState extends State<CallScreen> {
     });
 
     try {
+      if (kDebugMode) {
+        debugPrint('📞 Initializing call: ${widget.call.channelName}');
+      }
+
+      // Ensure call service is initialized first
+      await _callService.initialize();
+
       // Join the call using the real service
       await _callService.joinCall(
         channelName: widget.call.channelName,
@@ -96,12 +103,33 @@ class _CallScreenState extends State<CallScreen> {
         callType: widget.call.callType,
       );
       
+      if (kDebugMode) {
+        debugPrint('📞 Call join initiated successfully');
+      }
+      
       _startControlsTimer();
     } catch (e) {
       setState(() {
         _isConnecting = false;
       });
-      _showErrorMessage('Failed to connect: $e');
+      
+      if (kDebugMode) {
+        debugPrint('❌ Call initialization failed: $e');
+      }
+      
+      // Provide user-friendly error messages
+      String userFriendlyMessage = 'Failed to connect to call';
+      if (e.toString().contains('permissions')) {
+        userFriendlyMessage = 'Please grant microphone and camera permissions';
+      } else if (e.toString().contains('network')) {
+        userFriendlyMessage = 'Network connection issue. Please check your internet';
+      } else if (e.toString().contains('HTTPS')) {
+        userFriendlyMessage = 'Secure connection required for web calls';
+      } else if (e.toString().contains('WebRTC')) {
+        userFriendlyMessage = 'Your browser doesn\'t support video calls';
+      }
+      
+      _showErrorMessage(userFriendlyMessage);
     }
   }
 
@@ -146,6 +174,9 @@ class _CallScreenState extends State<CallScreen> {
             children: [
               // Main video area
               _buildMainVideoArea(),
+              
+              // Connection status overlay
+              if (_isConnecting) _buildConnectingOverlay(),
               
               // Local video view (self view)
               if (widget.call.callType == CallType.video)
@@ -610,13 +641,67 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   void _showErrorMessage(String message) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: Colors.red,
+    if (!mounted) return;
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF2C2C2C),
+        title: const Text(
+          'Call Error',
+          style: TextStyle(color: Colors.white),
         ),
-      );
-    }
+        content: Text(
+          message,
+          style: const TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              Navigator.of(context).pop(); // Exit call screen
+            },
+            child: const Text(
+              'OK',
+              style: TextStyle(color: Colors.blue),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildConnectingOverlay() {
+    return Container(
+      color: Colors.black.withOpacity(0.7),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Connecting...',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Joining ${widget.call.callType.name} call',
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
