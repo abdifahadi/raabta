@@ -1,6 +1,7 @@
 // ignore_for_file: avoid_web_libraries_in_flutter
 
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:raabta/agora_web_stub_fix.dart' as web_stub;
 
 /// Web-safe wrapper for Agora platform view operations
 class AgoraWebPlatformFix {
@@ -28,24 +29,15 @@ class AgoraWebPlatformFix {
     try {
       _viewFactories[viewType] = factory;
       
-      // Use HTML-based fallback implementation for Web
-      _registerWithHtmlFallback(viewType, factory);
+      // Use our cross-platform safe registerViewFactory
+      web_stub.registerViewFactory(viewType, factory);
     } catch (e) {
       print('AgoraWebPlatformFix: Failed to register view factory $viewType: $e');
       // Continue execution even if registration fails
     }
   }
 
-  /// Register with HTML-based fallback method for Web
-  static void _registerWithHtmlFallback(String viewType, dynamic factory) {
-    try {
-      // Store the factory for manual creation when needed
-      _viewFactories[viewType] = factory;
-      print('AgoraWebPlatformFix: Using HTML fallback registration for $viewType');
-    } catch (e) {
-      print('AgoraWebPlatformFix: HTML fallback registration failed: $e');
-    }
-  }
+
 
   /// Setup web-specific platform view handling
   static void _setupWebPlatformViews() {
