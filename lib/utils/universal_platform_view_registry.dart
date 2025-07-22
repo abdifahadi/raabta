@@ -1,5 +1,7 @@
 // lib/utils/universal_platform_view_registry.dart
 
+import 'package:flutter/foundation.dart' show kDebugMode, debugPrint;
+
 // Conditional imports for platform-specific implementations
 import 'universal_platform_view_registry_stub.dart'
     if (dart.library.html) 'universal_platform_view_registry_web.dart'
@@ -40,7 +42,7 @@ class UniversalPlatformViewRegistry {
       return true;
     } catch (e) {
       // Log the error but don't crash the app
-      print('UniversalPlatformViewRegistry: Safe registration failed for $viewType: $e');
+      if (kDebugMode) debugPrint('UniversalPlatformViewRegistry: Safe registration failed for $viewType: $e');
       return false;
     }
   }

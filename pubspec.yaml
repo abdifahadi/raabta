@@ -65,16 +65,17 @@ dependencies:
   http: ^1.4.0
   permission_handler: ^12.0.1
   share_plus: ^11.0.0
-  web: ^1.1.1
+  web: ^1.0.0
   flutter_local_notifications: ^19.3.1
   
   # Encryption
   encrypt: ^5.0.3
   crypto: ^3.0.3
   
+  cloud_functions: ^5.6.2
+  
   # Audio/Video Calling - Using stable version
   agora_rtc_engine: ^6.5.2
-  cloud_functions: ^5.6.2
 
 dev_dependencies:
   flutter_test:
@@ -87,9 +88,7 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^4.0.0
   
-  # Version constraints for web compatibility
-dependency_overrides:
-  web: ^1.0.0
+
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

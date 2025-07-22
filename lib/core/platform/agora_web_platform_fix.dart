@@ -1,6 +1,6 @@
 // ignore_for_file: avoid_web_libraries_in_flutter
 
-import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
+import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode, debugPrint;
 import 'package:raabta/utils/universal_platform_view_registry.dart';
 
 /// Web-safe wrapper for Agora platform view operations
@@ -18,7 +18,7 @@ class AgoraWebPlatformFix {
     try {
       _setupWebPlatformViews();
     } catch (e) {
-      print('AgoraWebPlatformFix: Failed to initialize: $e');
+      if (kDebugMode) debugPrint('AgoraWebPlatformFix: Failed to initialize: $e');
     }
   }
 
@@ -32,10 +32,10 @@ class AgoraWebPlatformFix {
       // Use our universal platform view registry with safe registration
       final success = UniversalPlatformViewRegistry.tryRegisterViewFactory(viewType, factory);
       if (!success) {
-        print('AgoraWebPlatformFix: Safe registration failed for $viewType, but continuing...');
+        if (kDebugMode) debugPrint('AgoraWebPlatformFix: Safe registration failed for $viewType, but continuing...');
       }
     } catch (e) {
-      print('AgoraWebPlatformFix: Failed to register view factory $viewType: $e');
+      if (kDebugMode) debugPrint('AgoraWebPlatformFix: Failed to register view factory $viewType: $e');
       // Continue execution even if registration fails
     }
   }
@@ -59,9 +59,9 @@ class AgoraWebPlatformFix {
     
     try {
       // Web-specific styling would be handled by the web implementation
-      print('AgoraWebPlatformFix: Video container styles initialized');
+      if (kDebugMode) debugPrint('AgoraWebPlatformFix: Video container styles initialized');
     } catch (e) {
-      print('AgoraWebPlatformFix: Failed to setup video container styles: $e');
+      if (kDebugMode) debugPrint('AgoraWebPlatformFix: Failed to setup video container styles: $e');
     }
   }
 
@@ -117,7 +117,7 @@ class AgoraWebCompatibility {
     // Note: We no longer register agora_rtc_engine view types since we use
     // pure JS interop with Agora Web SDK for Web builds
     if (kDebugMode) {
-      print('AgoraWebCompatibility: Using pure JS interop, no agora_rtc_engine view types needed');
+      debugPrint('AgoraWebCompatibility: Using pure JS interop, no agora_rtc_engine view types needed');
     }
   }
 }

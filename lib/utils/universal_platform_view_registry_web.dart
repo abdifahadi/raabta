@@ -2,6 +2,7 @@
 
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:ui_web' as ui_web;
+import 'package:flutter/foundation.dart' show kDebugMode, debugPrint;
 
 /// Web implementation for platform view registry
 /// This implementation provides safe access to platformViewRegistry on web platforms
@@ -11,15 +12,15 @@ void registerViewFactory(String viewType, dynamic factoryFunction) {
     ui_web.platformViewRegistry.registerViewFactory(viewType, factoryFunction);
   } catch (e) {
     // Graceful degradation: log error and continue
-    print('UniversalPlatformViewRegistry: Failed to register view factory $viewType: $e');
+    if (kDebugMode) debugPrint('UniversalPlatformViewRegistry: Failed to register view factory $viewType: $e');
     
     // For debugging: check if this is a common issue
     try {
-      if (ui_web.platformViewRegistry == null) {
-        print('UniversalPlatformViewRegistry: platformViewRegistry is null');
+      if (ui_web.platformViewRegistry.toString() == 'null') {
+        if (kDebugMode) debugPrint('UniversalPlatformViewRegistry: platformViewRegistry is null');
       }
     } catch (checkError) {
-      print('UniversalPlatformViewRegistry: platformViewRegistry access error: $checkError');
+      if (kDebugMode) debugPrint('UniversalPlatformViewRegistry: platformViewRegistry access error: $checkError');
     }
     
     // Continue execution even if registration fails to prevent app crash
@@ -30,7 +31,7 @@ void registerViewFactory(String viewType, dynamic factoryFunction) {
 bool get isAvailable {
   try {
     // Test if platformViewRegistry is accessible
-    return ui_web.platformViewRegistry != null;
+    return ui_web.platformViewRegistry.toString() != 'null';
   } catch (e) {
     // If we can't access it, consider it unavailable
     return false;

@@ -63,7 +63,7 @@ class RtcEngineContext {
   final dynamic channelProfile;
   final dynamic logConfig;
   
-  RtcEngineContext({
+  const RtcEngineContext({
     required this.appId,
     this.channelProfile,
     this.logConfig,
@@ -74,7 +74,7 @@ class LogConfig {
   final dynamic level;
   final String filePath;
   
-  LogConfig({
+  const LogConfig({
     required this.level,
     required this.filePath,
   });
@@ -151,10 +151,10 @@ class VideoViewController {
   });
   
   VideoViewController.remote({
-    required RtcEngine rtcEngine,
-    required dynamic canvas,
+    required this.rtcEngine,
+    required this.canvas,
     required dynamic connection,
-  }) : rtcEngine = rtcEngine, canvas = canvas;
+  });
 }
 
 class VideoCanvas {
