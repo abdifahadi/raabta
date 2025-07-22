@@ -1,7 +1,7 @@
 // ignore_for_file: avoid_web_libraries_in_flutter
 
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:raabta/agora_web_stub_fix.dart' as web_stub;
+import 'package:raabta/utils/universal_platform_view_registry.dart';
 
 /// Web-safe wrapper for Agora platform view operations
 class AgoraWebPlatformFix {
@@ -29,13 +29,17 @@ class AgoraWebPlatformFix {
     try {
       _viewFactories[viewType] = factory;
       
-      // Use our cross-platform safe registerViewFactory
-      web_stub.registerViewFactory(viewType, factory);
+      // Use our universal platform view registry
+      UniversalPlatformViewRegistry.registerViewFactory(viewType, factory);
     } catch (e) {
       print('AgoraWebPlatformFix: Failed to register view factory $viewType: $e');
       // Continue execution even if registration fails
     }
   }
+
+  /// Check if platform view registry is available
+  static bool get isPlatformViewRegistryAvailable => 
+      UniversalPlatformViewRegistry.isAvailable;
 
 
 

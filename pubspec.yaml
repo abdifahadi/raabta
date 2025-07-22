@@ -128,3 +128,7 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+dependency_overrides:
+  agora_rtc_engine:
+    path: ./agora_rtc_engine_override
