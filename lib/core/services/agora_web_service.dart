@@ -1,12 +1,12 @@
 import 'dart:async';
+import 'dart:html' as html;
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 import '../../features/call/domain/models/call_model.dart';
 import 'agora_service_interface.dart';
 import 'agora_token_service.dart';
 
-/// Simple Web implementation of Agora service
-/// This avoids problematic JS interop for now and provides basic functionality
+/// Enhanced Web implementation of Agora service with real media permissions and video
 class AgoraWebService implements AgoraServiceInterface {
   static final AgoraWebService _instance = AgoraWebService._internal();
   factory AgoraWebService() => _instance;
@@ -21,6 +21,10 @@ class AgoraWebService implements AgoraServiceInterface {
   bool _isAudioEnabled = true;
   bool _isSpeakerEnabled = false;
   
+  // Media streams
+  html.MediaStream? _localStream;
+  final Map<int, html.MediaStream> _remoteStreams = {};
+  
   // Token service
   final AgoraTokenService _tokenService = AgoraTokenService();
   
@@ -33,6 +37,10 @@ class AgoraWebService implements AgoraServiceInterface {
 
   // User management
   final Set<int> _remoteUsers = <int>{};
+  
+  // Permission state
+  bool _hasMediaPermissions = false;
+  String? _permissionError;
   
   // Getters
   @override
@@ -67,7 +75,14 @@ class AgoraWebService implements AgoraServiceInterface {
     }
 
     try {
-      if (kDebugMode) debugPrint('AgoraWebService: Web service initialized');
+      if (kDebugMode) debugPrint('AgoraWebService: Initializing web service...');
+      
+      // Check if getUserMedia is available
+      if (html.window.navigator.mediaDevices == null) {
+        throw Exception('Media devices not supported in this browser');
+      }
+      
+      if (kDebugMode) debugPrint('AgoraWebService: Web service initialized successfully');
     } catch (e) {
       if (kDebugMode) debugPrint('AgoraWebService: Failed to initialize web service: $e');
       rethrow;
@@ -79,11 +94,49 @@ class AgoraWebService implements AgoraServiceInterface {
     if (!kIsWeb) return false;
 
     try {
-      // For now, return true on web (would normally check media permissions)
-      if (kDebugMode) debugPrint('AgoraWebService: Permissions check passed');
-      return true;
+      if (kDebugMode) debugPrint('AgoraWebService: Checking media permissions...');
+      
+      // Request appropriate permissions based on call type
+      final constraints = {
+        'audio': true,
+        'video': callType == CallType.video,
+      };
+      
+      try {
+        _localStream = await html.window.navigator.mediaDevices!.getUserMedia(constraints);
+        _hasMediaPermissions = true;
+        _permissionError = null;
+        
+        if (kDebugMode) debugPrint('AgoraWebService: Media permissions granted');
+        
+        // Emit permission granted event
+        _callEventController.add({
+          'type': 'permissions_granted',
+          'hasVideo': callType == CallType.video,
+          'hasAudio': true,
+        });
+        
+        return true;
+      } catch (e) {
+        _hasMediaPermissions = false;
+        _permissionError = e.toString();
+        
+        if (kDebugMode) debugPrint('AgoraWebService: Media permission denied: $e');
+        
+        // Emit permission denied event
+        _callEventController.add({
+          'type': 'permissions_denied',
+          'error': e.toString(),
+        });
+        
+        return false;
+      }
     } catch (e) {
       if (kDebugMode) debugPrint('AgoraWebService: Permission check failed: $e');
+      _callEventController.add({
+        'type': 'permission_error',
+        'error': e.toString(),
+      });
       return false;
     }
   }
@@ -100,6 +153,12 @@ class AgoraWebService implements AgoraServiceInterface {
 
     try {
       if (kDebugMode) debugPrint('AgoraWebService: Joining call: $channelName');
+
+      // Check permissions first
+      final hasPermissions = await checkPermissions(callType);
+      if (!hasPermissions) {
+        throw Exception('Media permissions not granted: $_permissionError');
+      }
 
       // Get token for the call
       final tokenResponse = await _tokenService.generateToken(
@@ -129,19 +188,19 @@ class AgoraWebService implements AgoraServiceInterface {
       _currentCallController.add(callModel);
       
       _callEventController.add({
-        'type': 'call_joined',
+        'type': 'joinChannelSuccess',
         'channelName': channelName,
         'uid': _currentUid,
       });
       
-      // Simulate a remote user joining after 2 seconds for testing
-      Timer(const Duration(seconds: 2), () {
+      // Simulate a remote user joining after 3 seconds for testing
+      Timer(const Duration(seconds: 3), () {
         if (_isInCall) {
           const remoteUid = 12345;
           _remoteUsers.add(remoteUid);
           _callEventController.add({
-            'type': 'user_joined',
-            'uid': remoteUid,
+            'type': 'userJoined',
+            'remoteUid': remoteUid,
           });
         }
       });
@@ -149,6 +208,10 @@ class AgoraWebService implements AgoraServiceInterface {
       if (kDebugMode) debugPrint('AgoraWebService: Successfully joined call: $channelName');
     } catch (e) {
       if (kDebugMode) debugPrint('AgoraWebService: Failed to join call: $e');
+      _callEventController.add({
+        'type': 'error',
+        'message': 'Failed to join call: $e',
+      });
       rethrow;
     }
   }
@@ -160,16 +223,30 @@ class AgoraWebService implements AgoraServiceInterface {
     try {
       if (kDebugMode) debugPrint('AgoraWebService: Leaving call');
       
+      // Stop local media stream
+      if (_localStream != null) {
+        _localStream!.getTracks().forEach((track) {
+          track.stop();
+        });
+        _localStream = null;
+      }
+      
+      // Clear remote streams
+      _remoteStreams.clear();
+      
       // Reset state
       _currentChannelName = null;
       _currentUid = null;
       _isInCall = false;
       _remoteUsers.clear();
+      _hasMediaPermissions = false;
+      _permissionError = null;
       
       _currentCallController.add(null);
       
       _callEventController.add({
-        'type': 'call_left',
+        'type': 'userLeft',
+        'reason': 'User left call',
       });
       
       if (kDebugMode) debugPrint('AgoraWebService: Successfully left call');
@@ -180,10 +257,16 @@ class AgoraWebService implements AgoraServiceInterface {
 
   @override
   Future<void> toggleMute() async {
-    if (!kIsWeb) return;
+    if (!kIsWeb || _localStream == null) return;
 
     try {
       _isAudioEnabled = !_isAudioEnabled;
+      
+      // Toggle audio tracks
+      final audioTracks = _localStream!.getAudioTracks();
+      for (final track in audioTracks) {
+        track.enabled = _isAudioEnabled;
+      }
       
       _callEventController.add({
         'type': 'audio_toggled',
@@ -198,10 +281,16 @@ class AgoraWebService implements AgoraServiceInterface {
 
   @override
   Future<void> toggleVideo() async {
-    if (!kIsWeb) return;
+    if (!kIsWeb || _localStream == null) return;
 
     try {
       _isVideoEnabled = !_isVideoEnabled;
+      
+      // Toggle video tracks
+      final videoTracks = _localStream!.getVideoTracks();
+      for (final track in videoTracks) {
+        track.enabled = _isVideoEnabled;
+      }
       
       _callEventController.add({
         'type': 'video_toggled',
@@ -219,11 +308,13 @@ class AgoraWebService implements AgoraServiceInterface {
     if (!kIsWeb) return;
 
     try {
+      // On web, we would need to get a new stream with different video constraints
+      // For now, just emit an event
       _callEventController.add({
         'type': 'camera_switched',
       });
       
-      if (kDebugMode) debugPrint('AgoraWebService: Camera switched');
+      if (kDebugMode) debugPrint('AgoraWebService: Camera switch requested (web limitation)');
     } catch (e) {
       if (kDebugMode) debugPrint('AgoraWebService: Failed to switch camera: $e');
     }
@@ -244,37 +335,54 @@ class AgoraWebService implements AgoraServiceInterface {
 
   @override
   Widget createLocalVideoView() {
+    if (!_hasMediaPermissions || _localStream == null) {
+      return Container(
+        color: Colors.grey[900],
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                _permissionError != null ? Icons.error : Icons.videocam_off,
+                color: _permissionError != null ? Colors.red : Colors.white54,
+                size: 48,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                _permissionError != null ? 'Permission Denied' : 'Camera Off',
+                style: TextStyle(
+                  color: _permissionError != null ? Colors.red : Colors.white54,
+                ),
+              ),
+              if (_permissionError != null) ...[
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    'Please allow camera and microphone access',
+                    style: TextStyle(
+                      color: Colors.red[300],
+                      fontSize: 12,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
+    }
+
     return Container(
       color: Colors.grey[900],
       child: _isVideoEnabled
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.videocam,
-                    color: Colors.white54,
-                    size: 48,
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Local Video (Web)',
-                    style: TextStyle(color: Colors.white54),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: const Text(
-                      'Connected',
-                      style: TextStyle(color: Colors.green, fontSize: 12),
-                    ),
-                  ),
-                ],
-              ),
+          ? HtmlElementView(
+              key: ValueKey('local-video-${_currentUid}'),
+              viewType: 'local-video-view',
+              onPlatformViewCreated: (id) {
+                _setupLocalVideoElement();
+              },
             )
           : const Center(
               child: Column(
@@ -296,44 +404,85 @@ class AgoraWebService implements AgoraServiceInterface {
     );
   }
 
+  void _setupLocalVideoElement() {
+    if (_localStream != null) {
+      final videoElement = html.VideoElement()
+        ..srcObject = _localStream
+        ..autoplay = true
+        ..muted = true // Mute local video to prevent feedback
+        ..style.width = '100%'
+        ..style.height = '100%'
+        ..style.objectFit = 'cover';
+      
+      // Register the video element
+      // Note: This is a simplified approach. In a real implementation,
+      // you'd use proper platform view registration
+      html.document.getElementById('local-video-container')?.append(videoElement);
+    }
+  }
+
   @override
   Widget createRemoteVideoView(int uid) {
     final isUserConnected = _remoteUsers.contains(uid);
     
-    return Container(
-      color: Colors.grey[800],
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              isUserConnected ? Icons.person : Icons.person_outline,
-              color: isUserConnected ? Colors.white54 : Colors.white24,
-              size: 48,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'User $uid',
-              style: TextStyle(
-                color: isUserConnected ? Colors.white54 : Colors.white24,
+    if (!isUserConnected) {
+      return Container(
+        color: Colors.grey[800],
+        child: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.person_outline,
+                color: Colors.white24,
+                size: 48,
               ),
-            ),
-            if (isUserConnected) ...[
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Text(
-                  'Connected (Web)',
-                  style: TextStyle(color: Colors.blue, fontSize: 12),
-                ),
+              SizedBox(height: 12),
+              Text(
+                'Waiting for user...',
+                style: TextStyle(color: Colors.white24),
               ),
             ],
-          ],
+          ),
         ),
+      );
+    }
+
+    return Container(
+      color: Colors.grey[800],
+      child: Stack(
+        children: [
+          // Remote video would go here
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.person,
+                  color: Colors.white54,
+                  size: 48,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'User $uid',
+                  style: const TextStyle(color: Colors.white54),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Text(
+                    'Connected',
+                    style: TextStyle(color: Colors.blue, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -342,7 +491,12 @@ class AgoraWebService implements AgoraServiceInterface {
   void dispose() {
     leaveCall();
     _remoteUsers.clear();
-    _callEventController.close();
-    _currentCallController.close();
+    _remoteStreams.clear();
+    if (!_callEventController.isClosed) {
+      _callEventController.close();
+    }
+    if (!_currentCallController.isClosed) {
+      _currentCallController.close();
+    }
   }
 }
