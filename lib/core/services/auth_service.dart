@@ -55,7 +55,7 @@ class FirebaseAuthService implements AuthProvider {
   }
 
   // Initialize Google Sign In with basic configuration
-  final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   @override
   User? get currentUser {
@@ -142,13 +142,10 @@ class FirebaseAuthService implements AuthProvider {
         // Sign in with popup for better UX on web
         return await _auth.signInWithPopup(googleProvider);
       }
-      // For mobile platforms (using new API)
+      // For mobile platforms (using correct API)
       else {
-        // Initialize Google Sign In if needed
-        await _googleSignIn.initialize();
-        
         // Trigger the authentication flow
-        final GoogleSignInAccount? googleUser = await _googleSignIn.authenticate();
+        final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
 
         if (googleUser == null) {
           throw Exception('Google sign in aborted');
@@ -156,7 +153,7 @@ class FirebaseAuthService implements AuthProvider {
 
         // Obtain the auth details from the request
         final GoogleSignInAuthentication googleAuth =
-            googleUser.authentication;
+            await googleUser.authentication;
 
         // Create a new credential with only idToken (new API)
         final credential = GoogleAuthProvider.credential(
