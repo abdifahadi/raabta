@@ -114,17 +114,10 @@ class AgoraWebCompatibility {
 
   /// Register default Agora view types with safe handling
   static void _registerDefaultViewTypes() {
-    const defaultViewTypes = [
-      'AgoraSurfaceView',
-      'AgoraTextureView',
-      'agora_rtc_engine/AgoraSurfaceView',
-      'agora_rtc_engine/AgoraTextureView',
-    ];
-
-    for (final viewType in defaultViewTypes) {
-      AgoraWebPlatformFix.registerViewFactory(viewType, (int viewId) {
-        return AgoraWebPlatformFix.createVideoContainer(viewId, viewType: viewType);
-      });
+    // Note: We no longer register agora_rtc_engine view types since we use
+    // pure JS interop with Agora Web SDK for Web builds
+    if (kDebugMode) {
+      print('AgoraWebCompatibility: Using pure JS interop, no agora_rtc_engine view types needed');
     }
   }
 }
