@@ -19,7 +19,6 @@ class AgoraService implements AgoraServiceInterface {
   RtcEngine? _engine;
   String? _currentChannelName;
   int? _currentUid;
-  String? _currentToken; // Used for token renewal
   bool _isInCall = false;
   
   // Video settings
@@ -85,11 +84,11 @@ class AgoraService implements AgoraServiceInterface {
       _engine = createAgoraRtcEngine();
       
       // Initialize engine with proper configuration
-      await _engine!.initialize(RtcEngineContext(
+      await _engine!.initialize(const RtcEngineContext(
         appId: AgoraConfig.appId,
         channelProfile: ChannelProfileType.channelProfileCommunication,
         logConfig: LogConfig(
-          level: kDebugMode ? LogLevel.logLevelInfo : LogLevel.logLevelWarn,
+          level: LogLevel.logLevelWarn,
           filePath: '', // Use default log path
         ),
       ));
@@ -364,7 +363,6 @@ class AgoraService implements AgoraServiceInterface {
 
       _currentChannelName = channelName;
       _currentUid = tokenResponse.uid;
-      _currentToken = tokenResponse.rtcToken;
 
       // Configure engine for call type
       if (callType == CallType.video) {
@@ -419,7 +417,6 @@ class AgoraService implements AgoraServiceInterface {
       _isInCall = false;
       _currentChannelName = null;
       _currentUid = null;
-      _currentToken = null;
       
       if (kDebugMode) {
         debugPrint('❌ Failed to join call: $e');
@@ -468,7 +465,6 @@ class AgoraService implements AgoraServiceInterface {
       _isInCall = false;
       _currentChannelName = null;
       _currentUid = null;
-      _currentToken = null;
       _remoteUsers.clear();
 
       _currentCallController.add(null);
@@ -582,7 +578,6 @@ class AgoraService implements AgoraServiceInterface {
       );
 
       await _engine!.renewToken(tokenResponse.rtcToken);
-      _currentToken = tokenResponse.rtcToken;
 
       if (kDebugMode) {
         debugPrint('✅ Token renewed successfully');
@@ -648,9 +643,9 @@ class AgoraService implements AgoraServiceInterface {
                 ),
               ),
               const SizedBox(height: 4),
-              Text(
-                kIsWeb ? 'Web Local Video' : 'Local Video',
-                style: const TextStyle(
+              const Text(
+                'Local Video',
+                style: TextStyle(
                   color: Colors.white70,
                   fontSize: 12,
                 ),
@@ -726,9 +721,9 @@ class AgoraService implements AgoraServiceInterface {
                 ),
               ),
               const SizedBox(height: 4),
-              Text(
-                kIsWeb ? 'Web Remote Video' : 'Remote Video',
-                style: const TextStyle(
+              const Text(
+                'Remote Video',
+                style: TextStyle(
                   color: Colors.white70,
                   fontSize: 12,
                 ),
