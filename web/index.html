@@ -19,7 +19,11 @@
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="Raabta - Cross-platform chat application">
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- Camera and Microphone Permissions -->
+  <meta http-equiv="Permissions-Policy" content="camera=*, microphone=*, display-capture=*">
+  
   <!-- iOS meta tags & icons -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -127,6 +131,10 @@
       <div class="loading-subtext">Loading chat application...</div>
     </div>
   </div>
+
+  <!-- Video containers for Agora calls -->
+  <div id="local-video-container" style="display: none; position: absolute; z-index: -1;"></div>
+  <div id="remote-video-container" style="display: none; position: absolute; z-index: -1;"></div>
 
   <!-- This script installs service_worker.js to provide PWA functionality to
        application. For more information, see:

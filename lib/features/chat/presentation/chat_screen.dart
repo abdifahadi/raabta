@@ -7,6 +7,9 @@ import 'package:raabta/features/auth/domain/firebase_auth_repository.dart';
 import 'package:raabta/features/chat/domain/models/conversation_model.dart';
 import 'package:raabta/features/chat/domain/models/message_model.dart';
 import 'package:raabta/features/chat/domain/chat_repository.dart';
+import 'package:raabta/features/call/domain/models/call_model.dart';
+import 'package:raabta/features/call/domain/repositories/call_repository.dart';
+import 'package:raabta/features/call/presentation/screens/call_screen.dart';
 import 'package:raabta/core/services/service_locator.dart';
 import '../../../core/services/media_picker_service.dart';
 import 'widgets/message_bubble.dart';
@@ -29,6 +32,7 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final ChatRepository _chatRepository = ServiceLocator().chatRepository;
+  final CallRepository _callRepository = ServiceLocator().callRepository;
   final AuthRepository _authRepository = FirebaseAuthRepository();
   
   final TextEditingController _messageController = TextEditingController();
@@ -188,6 +192,59 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  Future<void> _initiateCall(CallType callType) async {
+    if (_currentUserId == null) return;
+
+    try {
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      // Create the call
+      final call = await _callRepository.initiateCall(
+        callerId: _currentUserId!,
+        receiverId: widget.otherUser.uid,
+        callType: callType,
+        callerName: _authRepository.currentUser?.displayName ?? 'You',
+        callerPhotoUrl: _authRepository.currentUser?.photoURL ?? '',
+        receiverName: widget.otherUser.name,
+        receiverPhotoUrl: widget.otherUser.photoUrl ?? '',
+      );
+
+      // Dismiss loading dialog
+      if (mounted) Navigator.of(context).pop();
+
+      // Navigate to call screen
+      if (mounted) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => CallScreen(
+              call: call,
+              isIncoming: false,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      // Dismiss loading dialog if still showing
+      if (mounted) Navigator.of(context).pop();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to start call: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   void _onMessageLongPress(MessageModel message) {
     showModalBottomSheet(
       context: context,
@@ -314,6 +371,16 @@ class _ChatScreenState extends State<ChatScreen> {
         foregroundColor: Colors.white,
         elevation: 1,
         actions: [
+          IconButton(
+            onPressed: () => _initiateCall(CallType.audio),
+            icon: const Icon(Icons.call),
+            tooltip: 'Audio Call',
+          ),
+          IconButton(
+            onPressed: () => _initiateCall(CallType.video),
+            icon: const Icon(Icons.videocam),
+            tooltip: 'Video Call',
+          ),
           IconButton(
             onPressed: _openChatSettings,
             icon: const Icon(Icons.more_vert),
