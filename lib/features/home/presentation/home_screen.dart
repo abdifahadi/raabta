@@ -5,6 +5,7 @@ import 'package:raabta/features/auth/domain/user_profile_repository.dart';
 import 'package:raabta/features/auth/domain/models/user_profile_model.dart';
 import 'package:raabta/features/auth/presentation/sign_in_screen.dart';
 import 'package:raabta/features/chat/presentation/chat_conversations_screen.dart';
+import 'package:raabta/features/chat/presentation/user_list_screen.dart';
 import 'package:raabta/core/services/service_locator.dart';
 import 'package:intl/intl.dart';
 
@@ -75,6 +76,28 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.deepPurple,
         foregroundColor: Colors.white,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.call),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const UserListScreen(showCallButtonsOnly: true),
+                ),
+              );
+            },
+            tooltip: 'Voice Call',
+          ),
+          IconButton(
+            icon: const Icon(Icons.videocam),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const UserListScreen(showCallButtonsOnly: true, isVideoCall: true),
+                ),
+              );
+            },
+            tooltip: 'Video Call',
+          ),
           IconButton(
             icon: const Icon(Icons.chat),
             onPressed: () {

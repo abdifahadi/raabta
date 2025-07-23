@@ -151,6 +151,32 @@ class _ConversationsScreenState extends State<ConversationsScreen> with SingleTi
             },
           ),
           ListTile(
+            leading: const Icon(Icons.call),
+            title: const Text('Voice Call'),
+            subtitle: const Text('Start a voice call with someone'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const UserListScreen(showCallButtonsOnly: true),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.videocam),
+            title: const Text('Video Call'),
+            subtitle: const Text('Start a video call with someone'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const UserListScreen(showCallButtonsOnly: true, isVideoCall: true),
+                ),
+              );
+            },
+          ),
+          ListTile(
             leading: const Icon(Icons.group_add),
             title: const Text('New Group'),
             onTap: () {
