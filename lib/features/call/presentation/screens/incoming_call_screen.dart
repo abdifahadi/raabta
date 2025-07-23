@@ -106,16 +106,12 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
     _stopRingtone();
     try {
       final callService = ServiceLocator().callService;
-      await callService.declineCall(widget.call);
+      // Use the proper timeout method to distinguish from user decline
+      await callService.timeoutCall(widget.call);
       
       if (mounted) {
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Call timed out'),
-            backgroundColor: Colors.orange,
-          ),
-        );
+        // CallManager will handle showing the "Call Missed" feedback
       }
     } catch (e) {
       if (mounted) {

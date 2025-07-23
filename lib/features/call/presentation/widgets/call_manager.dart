@@ -80,7 +80,6 @@ class _CallManagerState extends State<CallManager> {
       if (callService != null) {
         _currentCallSubscription = callService.currentCallStream.listen((call) {
           if (mounted) {
-            
             // If call ended, dismiss any call screens
             if (call == null) {
               _dismissCallScreens();
@@ -138,22 +137,92 @@ class _CallManagerState extends State<CallManager> {
         // Handle call status changes
         switch (updatedCall.status) {
           case CallStatus.accepted:
-            // Call was accepted, navigate to call screen
+            // Call was accepted, dismiss incoming screen and navigate to call screen
             _dismissIncomingCallScreen();
             _navigateToCallScreen(updatedCall);
             break;
           case CallStatus.declined:
+            // Call was declined, dismiss incoming screen and show feedback
+            _dismissIncomingCallScreen();
+            _showCallDeclinedFeedback();
+            break;
           case CallStatus.ended:
           case CallStatus.cancelled:
-          case CallStatus.missed:
-            // Call ended, dismiss incoming call screen
+            // Call ended or cancelled, dismiss screens
             _dismissIncomingCallScreen();
+            break;
+          case CallStatus.missed:
+            // Call was missed (timeout), dismiss screens and show feedback
+            _dismissIncomingCallScreen();
+            _showCallMissedFeedback();
+            break;
+          case CallStatus.failed:
+            // Call failed, dismiss screens and show error
+            _dismissIncomingCallScreen();
+            _showCallFailedFeedback();
             break;
           default:
             break;
         }
       }
     });
+  }
+
+  void _showCallDeclinedFeedback() {
+    if (!mounted) return;
+    
+    // Show "Call Declined" message
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.call_end, color: Colors.white),
+            SizedBox(width: 8),
+            Text('Call Declined'),
+          ],
+        ),
+        backgroundColor: Colors.red,
+        duration: Duration(seconds: 3),
+      ),
+    );
+  }
+
+  void _showCallMissedFeedback() {
+    if (!mounted) return;
+    
+    // Show "Call Missed" message
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.phone_missed, color: Colors.white),
+            SizedBox(width: 8),
+            Text('Call Missed'),
+          ],
+        ),
+        backgroundColor: Colors.orange,
+        duration: Duration(seconds: 3),
+      ),
+    );
+  }
+
+  void _showCallFailedFeedback() {
+    if (!mounted) return;
+    
+    // Show "Call Failed" message
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.error_outline, color: Colors.white),
+            SizedBox(width: 8),
+            Text('Call Failed'),
+          ],
+        ),
+        backgroundColor: Colors.red,
+        duration: Duration(seconds: 3),
+      ),
+    );
   }
 
   void _dismissCallScreens() {
@@ -174,6 +243,8 @@ class _CallManagerState extends State<CallManager> {
   }
 
   void _navigateToCallScreen(CallModel call) {
+    if (!mounted) return;
+    
     Navigator.of(context).pushNamed(
       '/call',
       arguments: call,

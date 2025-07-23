@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../domain/models/call_model.dart';
@@ -21,6 +22,7 @@ class _CallDialerScreenState extends State<CallDialerScreen>
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
   bool _isInitiatingCall = false;
+  StreamSubscription? _callStatusSubscription;
 
   @override
   void initState() {
@@ -46,6 +48,7 @@ class _CallDialerScreenState extends State<CallDialerScreen>
   @override
   void dispose() {
     _pulseController.dispose();
+    _callStatusSubscription?.cancel();
     super.dispose();
   }
 
@@ -311,6 +314,7 @@ class _CallDialerScreenState extends State<CallDialerScreen>
 
     try {
       final callService = ServiceLocator().callService;
+      final callRepository = ServiceLocator().callRepository;
       final authService = ServiceLocator().authProvider;
       final userProfileRepository = ServiceLocator().userProfileRepository;
 
@@ -335,57 +339,122 @@ class _CallDialerScreenState extends State<CallDialerScreen>
         receiverPhotoUrl: widget.targetUser.photoUrl ?? '',
       );
 
-      // Navigate to call screen
-      if (mounted) {
-        Navigator.of(context).pushReplacementNamed(
-          '/call',
-          arguments: call,
-        );
-      }
+      // Listen to call status changes instead of immediately navigating
+      final statusSubscription = callRepository.getCallStream(call.callId).listen((updatedCall) {
+        if (updatedCall != null && mounted) {
+          switch (updatedCall.status) {
+            case CallStatus.accepted:
+              // Call accepted, navigate to call screen
+              Navigator.of(context).pushReplacementNamed(
+                '/call',
+                arguments: updatedCall,
+              );
+              break;
+            case CallStatus.declined:
+              // Call declined, show message and go back
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Call declined'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+              break;
+            case CallStatus.missed:
+              // Call missed (timeout), show message and go back
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('No answer'),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+              break;
+            case CallStatus.failed:
+              // Call failed, show error and go back
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Call failed'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+              break;
+            default:
+              break;
+          }
+        }
+      });
+
+      // Store subscription for cleanup
+      _callStatusSubscription?.cancel();
+      _callStatusSubscription = statusSubscription;
+
+      // Show calling UI instead of immediately navigating
+      _showCallingDialog(call);
+
     } catch (e) {
       setState(() {
         _isInitiatingCall = false;
       });
 
       if (mounted) {
-        String errorMessage = 'Failed to start call';
-        
-        if (e.toString().contains('permissions')) {
-          errorMessage = 'Please grant microphone and camera permissions to make calls';
-        } else if (e.toString().contains('network')) {
-          errorMessage = 'Network error. Please check your connection';
-        } else if (e.toString().contains('already in a call')) {
-          errorMessage = 'You are already in a call';
-        }
-
-        _showErrorDialog(errorMessage);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to start call: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }
 
-  void _showErrorDialog(String message) {
+  void _showCallingDialog(CallModel call) {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF2C2C2C),
-        title: const Text(
-          'Call Failed',
-          style: TextStyle(color: Colors.white),
-        ),
-        content: Text(
-          message,
-          style: const TextStyle(color: Colors.white70),
+        backgroundColor: const Color(0xFF1A1A1A),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(color: Colors.green),
+            const SizedBox(height: 16),
+            Text(
+              'Calling ${widget.targetUser.displayName}...',
+              style: const TextStyle(color: Colors.white),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              call.callType == CallType.video ? 'Video Call' : 'Audio Call',
+              style: const TextStyle(color: Colors.white70, fontSize: 14),
+            ),
+          ],
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text(
-              'OK',
-              style: TextStyle(color: Colors.blue),
-            ),
+            onPressed: () async {
+              // Cancel the call
+              try {
+                final callService = ServiceLocator().callService;
+                await callService.cancelCall(call);
+                Navigator.of(context).pop(); // Close dialog
+                Navigator.of(context).pop(); // Go back to previous screen
+              } catch (e) {
+                Navigator.of(context).pop(); // Close dialog anyway
+                Navigator.of(context).pop(); // Go back to previous screen
+              }
+            },
+            child: const Text('Cancel', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
-    );
+    ).then((_) {
+      // Reset state when dialog is dismissed
+      setState(() {
+        _isInitiatingCall = false;
+      });
+      _callStatusSubscription?.cancel();
+    });
   }
 }
