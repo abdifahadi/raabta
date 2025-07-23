@@ -1,7 +1,8 @@
-import "dart:html";
+import "dart:html" show VideoElement;
 import "dart:ui" as ui;
 import "package:flutter/foundation.dart";
 
+@pragma('dart2js:tryInline')
 void registerWebView() {
   if (kIsWeb) {
     final localVideo = VideoElement()

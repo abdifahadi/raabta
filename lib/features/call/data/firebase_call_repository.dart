@@ -136,6 +136,40 @@ class FirebaseCallRepository implements CallRepository {
   }
 
   @override
+  Stream<CallModel?> getCallStream(String userId) {
+    // Listen to active calls for the user (either as caller or receiver)
+    return _firestore
+        .collection(_callsCollection)
+        .where('status', whereIn: [
+          CallStatus.initiating.name,
+          CallStatus.ringing.name,
+          CallStatus.connecting.name,
+          CallStatus.accepted.name,
+          CallStatus.connected.name,
+        ])
+        .snapshots()
+        .map((snapshot) {
+      // Find the most recent active call involving this user
+      CallModel? activeCall;
+      DateTime? latestTime;
+
+      for (final doc in snapshot.docs) {
+        final call = CallModel.fromFirestore(doc.data());
+        
+        // Check if this call involves the user
+        if (call.callerId == userId || call.receiverId == userId) {
+          if (latestTime == null || call.createdAt.isAfter(latestTime)) {
+            activeCall = call;
+            latestTime = call.createdAt;
+          }
+        }
+      }
+
+      return activeCall;
+    });
+  }
+
+  @override
   Stream<List<CallModel>> listenToIncomingCalls(String userId) {
     return _firestore
         .collection(_callsCollection)
@@ -225,6 +259,7 @@ class FirebaseCallRepository implements CallRepository {
           .where('status', whereIn: [
             CallStatus.initiating.name,
             CallStatus.connecting.name,
+            CallStatus.accepted.name,
             CallStatus.connected.name,
           ])
           .limit(1)
@@ -241,6 +276,7 @@ class FirebaseCallRepository implements CallRepository {
           .where('status', whereIn: [
             CallStatus.ringing.name,
             CallStatus.connecting.name,
+            CallStatus.accepted.name,
             CallStatus.connected.name,
           ])
           .limit(1)

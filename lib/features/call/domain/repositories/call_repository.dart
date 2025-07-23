@@ -26,6 +26,9 @@ abstract class CallRepository {
   /// Listen to call changes
   Stream<CallModel?> listenToCall(String callId);
 
+  /// Get call stream for a user
+  Stream<CallModel?> getCallStream(String userId);
+
   /// Listen to incoming calls for a user
   Stream<List<CallModel>> listenToIncomingCalls(String userId);
 
