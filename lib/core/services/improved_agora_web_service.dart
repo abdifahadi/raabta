@@ -43,8 +43,7 @@ class ImprovedAgoraWebService implements AgoraServiceInterface {
   // User management
   final Set<int> _remoteUsers = <int>{};
   
-  // Permission state
-  bool _hasMediaPermissions = false;
+  // Permission state - removed unused _hasMediaPermissions variable
   String? _permissionError;
   
   // Platform view registration tracker
@@ -90,7 +89,7 @@ class ImprovedAgoraWebService implements AgoraServiceInterface {
         throw Exception('Media devices not supported in this browser');
       }
 
-      // Check if required WebRTC APIs are available
+      // Check if required WebRTC APIs are available - Fixed window access
       if (html.window['RTCPeerConnection'] == null) {
         throw Exception('WebRTC not supported in this browser');
       }
@@ -118,12 +117,14 @@ class ImprovedAgoraWebService implements AgoraServiceInterface {
             final video = html.VideoElement()
               ..autoplay = true
               ..muted = true  // Local video should be muted to prevent echo
-              ..playsInline = true
               ..style.width = '100%'
               ..style.height = '100%'
               ..style.objectFit = 'cover'
               ..style.backgroundColor = '#000'
               ..controls = false;
+            
+            // Fix playsInline attribute setting
+            video.setAttribute('playsinline', 'true');
             
             return video;
           },
@@ -141,12 +142,14 @@ class ImprovedAgoraWebService implements AgoraServiceInterface {
             final video = html.VideoElement()
               ..autoplay = true
               ..muted = false
-              ..playsInline = true
               ..style.width = '100%'
               ..style.height = '100%'
               ..style.objectFit = 'cover'
               ..style.backgroundColor = '#000'
               ..controls = false;
+            
+            // Fix playsInline attribute setting
+            video.setAttribute('playsinline', 'true');
             
             return video;
           },
@@ -183,8 +186,8 @@ class ImprovedAgoraWebService implements AgoraServiceInterface {
       };
       
       try {
+        // Enhanced permission request with proper error handling
         _localStream = await html.window.navigator.mediaDevices!.getUserMedia(constraints);
-        _hasMediaPermissions = true;
         _permissionError = null;
         
         if (kDebugMode) {
@@ -209,15 +212,26 @@ class ImprovedAgoraWebService implements AgoraServiceInterface {
         
         return true;
       } catch (e) {
-        _hasMediaPermissions = false;
         _permissionError = e.toString();
+        
+        // Provide user-friendly error messages for permission denials
+        String userFriendlyError;
+        if (e.toString().contains('NotAllowedError') || e.toString().contains('Permission denied')) {
+          userFriendlyError = 'Camera and microphone access denied. Please allow permissions in your browser settings and refresh the page.';
+        } else if (e.toString().contains('NotFoundError')) {
+          userFriendlyError = 'No camera or microphone found. Please connect a camera/microphone and try again.';
+        } else if (e.toString().contains('NotReadableError')) {
+          userFriendlyError = 'Camera or microphone is already in use by another application.';
+        } else {
+          userFriendlyError = 'Failed to access camera/microphone. Please check your browser settings.';
+        }
         
         if (kDebugMode) debugPrint('❌ ImprovedAgoraWebService: Media permission denied: $e');
         
         // Emit permission denied event
         _callEventController.add({
           'type': 'permissions_denied',
-          'error': e.toString(),
+          'error': userFriendlyError,
         });
         
         return false;
@@ -240,13 +254,15 @@ class ImprovedAgoraWebService implements AgoraServiceInterface {
       _localVideoElement = html.VideoElement()
         ..autoplay = true
         ..muted = true
-        ..playsInline = true
         ..srcObject = _localStream
         ..style.width = '100%'
         ..style.height = '100%'
         ..style.objectFit = 'cover'
         ..style.backgroundColor = '#000'
         ..controls = false;
+
+      // Fix playsInline attribute setting
+      _localVideoElement!.setAttribute('playsinline', 'true');
 
       if (kDebugMode) debugPrint('✅ Local video element set up successfully');
     } catch (e) {
@@ -368,12 +384,14 @@ class ImprovedAgoraWebService implements AgoraServiceInterface {
       final remoteVideo = html.VideoElement()
         ..autoplay = true
         ..muted = false
-        ..playsInline = true
         ..style.width = '100%'
         ..style.height = '100%'
         ..style.objectFit = 'cover'
         ..style.backgroundColor = '#1a1a1a'
         ..controls = false;
+
+      // Fix playsInline attribute setting
+      remoteVideo.setAttribute('playsinline', 'true');
 
       // Create a simple pattern for demonstration
       final canvas = html.CanvasElement(width: 640, height: 480);
@@ -437,7 +455,6 @@ class ImprovedAgoraWebService implements AgoraServiceInterface {
       _currentUid = null;
       _isInCall = false;
       _remoteUsers.clear();
-      _hasMediaPermissions = false;
       _permissionError = null;
       
       _currentCallController.add(null);
@@ -569,9 +586,22 @@ class ImprovedAgoraWebService implements AgoraServiceInterface {
     }
   }
 
+  // Fix return type to be non-nullable Widget
   @override
-  Widget? createLocalVideoView() {
-    if (!kIsWeb || _localVideoElement == null) return null;
+  Widget createLocalVideoView() {
+    if (!kIsWeb || _localVideoElement == null) {
+      // Return a placeholder widget instead of null
+      return Container(
+        color: Colors.grey[900],
+        child: const Center(
+          child: Icon(
+            Icons.videocam_off,
+            color: Colors.white54,
+            size: 50,
+          ),
+        ),
+      );
+    }
 
     return HtmlElementView(
       viewType: 'agora-local-video-web',
@@ -581,9 +611,25 @@ class ImprovedAgoraWebService implements AgoraServiceInterface {
     );
   }
 
+  // Fix return type to be non-nullable Widget
   @override
-  Widget? createRemoteVideoView(int uid) {
-    if (!kIsWeb || !_remoteVideoElements.containsKey(uid)) return null;
+  Widget createRemoteVideoView(int uid) {
+    if (!kIsWeb || !_remoteVideoElements.containsKey(uid)) {
+      // Return a placeholder widget instead of null
+      return Container(
+        color: Colors.grey[900],
+        child: const Center(
+          child: Text(
+            'Remote Video\n(Web Preview)',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white54,
+              fontSize: 16,
+            ),
+          ),
+        ),
+      );
+    }
 
     return HtmlElementView(
       viewType: 'agora-remote-video-web',

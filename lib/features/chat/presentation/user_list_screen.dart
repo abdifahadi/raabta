@@ -9,7 +9,14 @@ import 'package:raabta/core/services/service_locator.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class UserListScreen extends StatefulWidget {
-  const UserListScreen({super.key});
+  final bool showCallButtonsOnly;
+  final bool isVideoCall;
+  
+  const UserListScreen({
+    super.key,
+    this.showCallButtonsOnly = false,
+    this.isVideoCall = false,
+  });
 
   @override
   State<UserListScreen> createState() => _UserListScreenState();
@@ -243,7 +250,9 @@ class _UserListScreenState extends State<UserListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Start Conversation'),
+        title: Text(widget.showCallButtonsOnly 
+            ? (widget.isVideoCall ? 'Start Video Call' : 'Start Voice Call')
+            : 'Start Conversation'),
         backgroundColor: Colors.deepPurple,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -432,36 +441,62 @@ class _UserListScreenState extends State<UserListScreen> {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Video call button
-            IconButton(
-              onPressed: () => _startVideoCall(user),
-              icon: const Icon(
-                Icons.videocam,
-                color: Colors.blue,
-                size: 20,
+            // Show buttons based on widget configuration
+            if (widget.showCallButtonsOnly) ...[
+              // Show only the relevant call button
+              if (widget.isVideoCall)
+                IconButton(
+                  onPressed: () => _startVideoCall(user),
+                  icon: const Icon(
+                    Icons.videocam,
+                    color: Colors.blue,
+                    size: 24,
+                  ),
+                  tooltip: 'Video Call',
+                )
+              else
+                IconButton(
+                  onPressed: () => _startAudioCall(user),
+                  icon: const Icon(
+                    Icons.call,
+                    color: Colors.green,
+                    size: 24,
+                  ),
+                  tooltip: 'Audio Call',
+                ),
+            ] else ...[
+              // Show all buttons (original behavior)
+              // Video call button
+              IconButton(
+                onPressed: () => _startVideoCall(user),
+                icon: const Icon(
+                  Icons.videocam,
+                  color: Colors.blue,
+                  size: 20,
+                ),
+                tooltip: 'Video Call',
               ),
-              tooltip: 'Video Call',
-            ),
-            // Audio call button
-            IconButton(
-              onPressed: () => _startAudioCall(user),
-              icon: const Icon(
-                Icons.call,
-                color: Colors.green,
-                size: 20,
+              // Audio call button
+              IconButton(
+                onPressed: () => _startAudioCall(user),
+                icon: const Icon(
+                  Icons.call,
+                  color: Colors.green,
+                  size: 20,
+                ),
+                tooltip: 'Audio Call',
               ),
-              tooltip: 'Audio Call',
-            ),
-            // Chat button
-            IconButton(
-              onPressed: () => _startConversation(user),
-              icon: const Icon(
-                Icons.chat_bubble_outline,
-                color: Colors.deepPurple,
-                size: 20,
+              // Chat button
+              IconButton(
+                onPressed: () => _startConversation(user),
+                icon: const Icon(
+                  Icons.chat_bubble_outline,
+                  color: Colors.deepPurple,
+                  size: 20,
+                ),
+                tooltip: 'Chat',
               ),
-              tooltip: 'Chat',
-            ),
+            ],
           ],
         ),
       ),
