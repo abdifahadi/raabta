@@ -1,7 +1,7 @@
 import '../models/call_model.dart';
 
 abstract class CallRepository {
-  /// Initialize a new call
+  /// Initiate a new call
   Future<CallModel> initiateCall({
     required String callerId,
     required String receiverId,
@@ -12,35 +12,31 @@ abstract class CallRepository {
     required String receiverPhotoUrl,
   });
 
-  /// Update call status
-  Future<void> updateCallStatus(String callId, CallStatus status, {
+  /// Update call status with additional metadata
+  Future<void> updateCallStatus(
+    String callId,
+    CallStatus status, {
     DateTime? startedAt,
     DateTime? endedAt,
     CallEndReason? endReason,
     int? duration,
   });
 
-  /// Get call by ID
+  /// Get a specific call by ID
   Future<CallModel?> getCall(String callId);
 
-  /// Listen to call changes
-  Stream<CallModel?> listenToCall(String callId);
+  /// Get active call for a user (if any)
+  Future<CallModel?> getActiveCall(String userId);
 
-  /// Get call stream for a user
-  Stream<CallModel?> getCallStream(String userId);
+  /// Watch call changes in real-time
+  Stream<CallModel?> watchCall(String callId);
 
-  /// Listen to incoming calls for a user
-  Stream<List<CallModel>> listenToIncomingCalls(String userId);
+  /// Watch for incoming calls for a user
+  Stream<CallModel?> watchIncomingCalls(String userId);
 
   /// Get call history for a user
   Future<List<CallModel>> getCallHistory(String userId, {int limit = 50});
 
-  /// Delete call record
+  /// Delete a call record
   Future<void> deleteCall(String callId);
-
-  /// Check if user is in an active call
-  Future<CallModel?> getActiveCall(String userId);
-
-  /// End call
-  Future<void> endCall(String callId, CallEndReason reason);
 }

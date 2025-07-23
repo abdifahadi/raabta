@@ -3,14 +3,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 enum CallType { audio, video }
 
 enum CallStatus { 
-  initiating,    // Call is being initiated
+  calling,       // Call is being initiated/outgoing call
   ringing,       // Call is ringing on receiver's end
-  connecting,    // Call is connecting (Agora channel joining)
-  accepted,      // Call was accepted by receiver
-  connected,     // Call is active
-  ended,         // Call has ended
-  declined,      // Call was declined
-  missed,        // Call was missed
+  accepted,      // Call was accepted by receiver  
+  connected,     // Call is active/in progress
+  ended,         // Call has ended normally
+  declined,      // Call was declined by receiver
+  missed,        // Call was missed (timeout)
   failed,        // Call failed due to technical issues
   cancelled      // Call was cancelled by caller
 }
@@ -54,20 +53,19 @@ class CallModel {
     required this.status,
     required this.channelName,
     required this.createdAt,
-    required this.callerName,
-    required this.callerPhotoUrl,
-    required this.receiverName,
-    required this.receiverPhotoUrl,
     this.startedAt,
     this.endedAt,
     this.endReason,
     this.duration,
     this.metadata,
+    required this.callerName,
+    required this.callerPhotoUrl,
+    required this.receiverName,
+    required this.receiverPhotoUrl,
   });
 
-  // Create a new call
+  /// Factory constructor to create a new call
   factory CallModel.create({
-    required String callId,
     required String callerId,
     required String receiverId,
     required CallType callType,
@@ -78,11 +76,11 @@ class CallModel {
     required String receiverPhotoUrl,
   }) {
     return CallModel(
-      callId: callId,
+      callId: DateTime.now().millisecondsSinceEpoch.toString(),
       callerId: callerId,
       receiverId: receiverId,
       callType: callType,
-      status: CallStatus.initiating,
+      status: CallStatus.calling,
       channelName: channelName,
       createdAt: DateTime.now(),
       callerName: callerName,
@@ -92,7 +90,7 @@ class CallModel {
     );
   }
 
-  // Copy with method for state updates
+  // Copy with method for immutable updates
   CallModel copyWith({
     String? callId,
     String? callerId,
@@ -131,7 +129,75 @@ class CallModel {
     );
   }
 
-  // Convert to Firestore document
+  // Convert to Map (general purpose)
+  Map<String, dynamic> toMap() {
+    return {
+      'callId': callId,
+      'callerId': callerId,
+      'receiverId': receiverId,
+      'callType': callType.name,
+      'status': status.name,
+      'channelName': channelName,
+      'createdAt': createdAt.millisecondsSinceEpoch,
+      'startedAt': startedAt?.millisecondsSinceEpoch,
+      'endedAt': endedAt?.millisecondsSinceEpoch,
+      'endReason': endReason?.name,
+      'duration': duration,
+      'metadata': metadata,
+      'callerName': callerName,
+      'callerPhotoUrl': callerPhotoUrl,
+      'receiverName': receiverName,
+      'receiverPhotoUrl': receiverPhotoUrl,
+    };
+  }
+
+  // Create from Map (general purpose)
+  factory CallModel.fromMap(Map<String, dynamic> data, [String? docId]) {
+    return CallModel(
+      callId: docId ?? data['callId'] as String,
+      callerId: data['callerId'] as String,
+      receiverId: data['receiverId'] as String,
+      callType: CallType.values.firstWhere(
+        (e) => e.name == data['callType'],
+        orElse: () => CallType.audio,
+      ),
+      status: CallStatus.values.firstWhere(
+        (e) => e.name == data['status'],
+        orElse: () => CallStatus.ended,
+      ),
+      channelName: data['channelName'] as String,
+      createdAt: _parseDateTime(data['createdAt']),
+      startedAt: data['startedAt'] != null ? _parseDateTime(data['startedAt']) : null,
+      endedAt: data['endedAt'] != null ? _parseDateTime(data['endedAt']) : null,
+      endReason: data['endReason'] != null 
+          ? CallEndReason.values.firstWhere(
+              (e) => e.name == data['endReason'],
+              orElse: () => CallEndReason.unknown,
+            )
+          : null,
+      duration: data['duration'] as int?,
+      metadata: data['metadata'] as Map<String, dynamic>?,
+      callerName: data['callerName'] as String,
+      callerPhotoUrl: data['callerPhotoUrl'] as String,
+      receiverName: data['receiverName'] as String,
+      receiverPhotoUrl: data['receiverPhotoUrl'] as String,
+    );
+  }
+
+  // Helper method to parse DateTime from various formats
+  static DateTime _parseDateTime(dynamic value) {
+    if (value is Timestamp) {
+      return value.toDate();
+    } else if (value is int) {
+      return DateTime.fromMillisecondsSinceEpoch(value);
+    } else if (value is String) {
+      return DateTime.parse(value);
+    } else {
+      return DateTime.now();
+    }
+  }
+
+  // Convert to Firestore document (legacy support)
   Map<String, dynamic> toFirestore() {
     return {
       'callId': callId,
@@ -153,7 +219,7 @@ class CallModel {
     };
   }
 
-  // Create from Firestore document
+  // Create from Firestore document (legacy support)
   factory CallModel.fromFirestore(Map<String, dynamic> data) {
     return CallModel(
       callId: data['callId'] as String,
@@ -198,7 +264,7 @@ class CallModel {
                      status == CallStatus.failed ||
                      status == CallStatus.cancelled;
   bool get isIncoming => status == CallStatus.ringing;
-  bool get isOutgoing => status == CallStatus.initiating || status == CallStatus.connecting;
+  bool get isOutgoing => status == CallStatus.calling;
 
   // Get formatted duration
   String get formattedDuration {
