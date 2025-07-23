@@ -1,21 +1,12 @@
-import "dart:html" show VideoElement;
-import "dart:ui" as ui;
 import "package:flutter/foundation.dart";
 
-@pragma('dart2js:tryInline')
-void registerWebView() {
-  if (kIsWeb) {
-    final localVideo = VideoElement()
-      ..autoplay = true
-      ..muted = true
-      ..style.border = "none"
-      ..id = "local-video"
-      ..style.width = "100%"
-      ..style.height = "100%";
+// Conditional import: use stub for non-web, web implementation for web
+import 'web_view_stub.dart' if (dart.library.html) 'web_view_web.dart';
 
-    ui.platformViewRegistry.registerViewFactory(
-      "local-video-view",
-      (int viewId) => localVideo,
-    );
+@pragma('dart2js:tryInline')
+void registerWebViewSafe() {
+  // Only call registerWebView on web platforms to avoid runtime issues
+  if (kIsWeb) {
+    registerWebView();
   }
 }
