@@ -1,5 +1,6 @@
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../config/agora_config.dart';
 
 class AgoraTokenService {
@@ -7,12 +8,15 @@ class AgoraTokenService {
   factory AgoraTokenService() => _instance;
   AgoraTokenService._internal();
 
-  final FirebaseFunctions _functions = FirebaseFunctions.instance;
+  // Supabase Edge Function URL
+  static const String _supabaseUrl = 'https://qrtutnrcynfceshsngph.supabase.co';
+  static const String _functionPath = '/functions/v1/generate-agora-token';
+  static const String _anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFydHV0bnJjeW5mY2VzaHNuZ3BoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNDA4MDMsImV4cCI6MjA2ODgxNjgwM30.TsnPqlCaTLKAVL32ygDv_sR71AEtLw1pJGHezmBeDBA';
   
   // Development mode flag - in production, always use secure tokens
   static const bool _allowInsecureMode = kDebugMode;
 
-  /// Generate Agora token using Firebase Cloud Function with fallback support
+  /// Generate Agora token using Supabase Edge Function with fallback support
   Future<AgoraTokenResponse> generateToken({
     required String channelName,
     int? uid,
@@ -28,24 +32,47 @@ class AgoraTokenService {
       final finalUid = uid ?? _generateRandomUid();
 
       try {
-        // First, try to generate secure token via Firebase Cloud Function
-        final callable = _functions.httpsCallable('generateAgoraToken');
+        // Generate secure token via Supabase Edge Function
+        final url = Uri.parse('$_supabaseUrl$_functionPath');
         
-        final result = await callable.call({
-          'channelName': channelName,
-          'uid': finalUid,
-          'role': role,
-          'expirationTime': expirationTime ?? AgoraConfig.tokenExpirationTime,
-        });
+        final response = await http.post(
+          url,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $_anonKey',
+            'apikey': _anonKey,
+          },
+          body: json.encode({
+            'channelName': channelName,
+            'uid': finalUid,
+            'role': role,
+            'expirationTime': expirationTime ?? 3600, // Default 1 hour as requested
+          }),
+        );
 
-        if (kDebugMode) {
-          debugPrint('✅ Secure Agora token generated successfully via Cloud Function');
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          
+          if (kDebugMode) {
+            debugPrint('✅ Secure Agora token generated successfully via Supabase Edge Function');
+            debugPrint('📋 Token expires at: ${DateTime.fromMillisecondsSinceEpoch(data['expirationTime'] * 1000)}');
+          }
+
+          return AgoraTokenResponse.fromMap(data);
+        } else {
+          final errorBody = response.body;
+          try {
+            final error = json.decode(errorBody);
+            final errorMessage = error['error'] ?? 'Unknown error';
+            throw Exception('Supabase function error: $errorMessage (${response.statusCode})');
+          } catch (jsonError) {
+            // If response body is not valid JSON
+            throw Exception('Supabase function error: $errorBody (${response.statusCode})');
+          }
         }
-
-        return AgoraTokenResponse.fromMap(result.data);
-      } catch (cloudFunctionError) {
+      } catch (supabaseError) {
         if (kDebugMode) {
-          debugPrint('⚠️ Cloud Function token generation failed: $cloudFunctionError');
+          debugPrint('⚠️ Supabase Edge Function token generation failed: $supabaseError');
         }
         
         // Fallback for development/testing - use null token (insecure mode)
@@ -59,7 +86,7 @@ class AgoraTokenService {
             uid: finalUid,
             channelName: channelName,
             appId: AgoraConfig.appId,
-            expirationTime: DateTime.now().millisecondsSinceEpoch ~/ 1000 + AgoraConfig.tokenExpirationTime,
+            expirationTime: DateTime.now().millisecondsSinceEpoch ~/ 1000 + (expirationTime ?? 3600),
           );
         } else {
           // In production, rethrow the error
