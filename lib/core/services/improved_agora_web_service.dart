@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:html' as html;
+import 'dart:js_util' as js_util;
 import 'dart:ui_web' as ui_web;
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
@@ -90,7 +91,7 @@ class ImprovedAgoraWebService implements AgoraServiceInterface {
       }
 
       // Check if required WebRTC APIs are available - Fixed window access
-      if (html.window['RTCPeerConnection'] == null) {
+      if (js_util.getProperty(html.window, 'RTCPeerConnection') == null) {
         throw Exception('WebRTC not supported in this browser');
       }
       
