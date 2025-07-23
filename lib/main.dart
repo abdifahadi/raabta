@@ -12,6 +12,9 @@ import 'core/utils/web_view_register.dart';
 
 import 'core/services/notification_handler.dart';
 import 'features/auth/presentation/auth_wrapper.dart';
+import 'features/call/domain/models/call_model.dart';
+import 'features/call/presentation/screens/call_screen.dart';
+import 'features/call/presentation/screens/incoming_call_screen.dart';
 
 /// Background message handler for Firebase Cloud Messaging
 @pragma('vm:entry-point')
@@ -375,6 +378,24 @@ class MyApp extends StatelessWidget {
       home: const SafeArea(
         child: AuthWrapper(),
       ),
+      routes: {
+        '/call': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          if (args != null && args is CallModel) {
+            return CallScreen(call: args);
+          }
+          // If no arguments or wrong type, return to home
+          return const SafeArea(child: AuthWrapper());
+        },
+        '/incoming-call': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          if (args != null && args is CallModel) {
+            return IncomingCallScreen(call: args);
+          }
+          // If no arguments or wrong type, return to home
+          return const SafeArea(child: AuthWrapper());
+        },
+      },
       // Enhanced error builder for better error handling
       builder: (context, widget) {
         // Handle widget errors gracefully

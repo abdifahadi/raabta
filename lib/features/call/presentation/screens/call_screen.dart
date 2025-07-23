@@ -4,6 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:raabta/features/call/domain/models/call_model.dart';
 import '../../../../core/services/call_service.dart';
+import '../../../../core/services/call_manager.dart';
+import '../../../../core/services/ringtone_service.dart';
+import '../../../../core/services/service_locator.dart';
 
 class CallScreen extends StatefulWidget {
   final CallModel call;
@@ -21,6 +24,8 @@ class CallScreen extends StatefulWidget {
 
 class _CallScreenState extends State<CallScreen> {
   final CallService _callService = CallService();
+  final CallManager _callManager = ServiceLocator().callManager;
+  final RingtoneService _ringtoneService = ServiceLocator().ringtoneService;
   bool _isConnecting = false;
   bool _localControlsVisible = true;
   Timer? _controlsTimer;
@@ -167,11 +172,22 @@ class _CallScreenState extends State<CallScreen> {
 
   Future<void> _cleanupCall() async {
     try {
+      // Stop ringtone if playing
+      await _ringtoneService.forceStopRingtone();
+      
+      // End call via call manager for proper state cleanup
+      await _callManager.endCall();
+      
+      // Also end via call service as fallback
       await _callService.endCall();
     } catch (e) {
       if (kDebugMode) {
         debugPrint('Error during cleanup: $e');
       }
+      // Force cleanup even on error
+      try {
+        await _ringtoneService.forceStopRingtone();
+      } catch (_) {}
     }
   }
 

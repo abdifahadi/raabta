@@ -1,17 +1,14 @@
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../config/agora_config.dart';
+import 'supabase_service.dart';
 
 class AgoraTokenService {
   static final AgoraTokenService _instance = AgoraTokenService._internal();
   factory AgoraTokenService() => _instance;
   AgoraTokenService._internal();
 
-  // Supabase Edge Function URL
-  static const String _supabaseUrl = 'https://qrtutnrcynfceshsngph.supabase.co';
-  static const String _functionPath = '/functions/v1/generate-agora-token';
-  static const String _anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFydHV0bnJjeW5mY2VzaHNuZ3BoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNDA4MDMsImV4cCI6MjA2ODgxNjgwM30.TsnPqlCaTLKAVL32ygDv_sR71AEtLw1pJGHezmBeDBA';
+  final SupabaseService _supabaseService = SupabaseService();
   
   // Development mode flag - in production, always use secure tokens
   static const bool _allowInsecureMode = kDebugMode;
@@ -32,26 +29,24 @@ class AgoraTokenService {
       final finalUid = uid ?? _generateRandomUid();
 
       try {
+        // Ensure Supabase is initialized
+        if (!_supabaseService.isInitialized) {
+          await _supabaseService.initialize();
+        }
+
         // Generate secure token via Supabase Edge Function
-        final url = Uri.parse('$_supabaseUrl$_functionPath');
-        
-        final response = await http.post(
-          url,
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $_anonKey',
-            'apikey': _anonKey,
-          },
-          body: json.encode({
+        final response = await _supabaseService.invokeFunction(
+          'generate-agora-token',
+          body: {
             'channelName': channelName,
             'uid': finalUid,
             'role': role,
             'expirationTime': expirationTime ?? 3600, // Default 1 hour as requested
-          }),
+          },
         );
 
-        if (response.statusCode == 200) {
-          final data = json.decode(response.body);
+        if (response.status == 200 && response.data != null) {
+          final data = response.data as Map<String, dynamic>;
           
           if (kDebugMode) {
             debugPrint('✅ Secure Agora token generated successfully via Supabase Edge Function');
@@ -60,15 +55,8 @@ class AgoraTokenService {
 
           return AgoraTokenResponse.fromMap(data);
         } else {
-          final errorBody = response.body;
-          try {
-            final error = json.decode(errorBody);
-            final errorMessage = error['error'] ?? 'Unknown error';
-            throw Exception('Supabase function error: $errorMessage (${response.statusCode})');
-          } catch (jsonError) {
-            // If response body is not valid JSON
-            throw Exception('Supabase function error: $errorBody (${response.statusCode})');
-          }
+          final errorMessage = response.data?['error'] ?? 'Unknown error';
+          throw Exception('Supabase function error: $errorMessage (${response.status})');
         }
       } catch (supabaseError) {
         if (kDebugMode) {

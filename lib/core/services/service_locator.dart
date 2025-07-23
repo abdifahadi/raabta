@@ -20,6 +20,8 @@ import 'package:raabta/features/call/data/firebase_call_repository.dart';
 import 'call_service.dart';
 import 'agora_token_service.dart';
 import 'ringtone_service.dart';
+import 'supabase_service.dart';
+import 'call_manager.dart';
 
 import 'package:flutter/foundation.dart';
 
@@ -74,6 +76,12 @@ class ServiceLocator {
 
   /// Ringtone service instance
   RingtoneService? _ringtoneService;
+
+  /// Supabase service instance
+  SupabaseService? _supabaseService;
+
+  /// Call manager instance
+  CallManager? _callManager;
 
   /// Track initialization state
   bool _isInitialized = false;
@@ -189,6 +197,20 @@ class ServiceLocator {
 
       // Initialize ringtone service
       _ringtoneService = RingtoneService();
+
+      // Initialize Supabase service
+      _supabaseService = SupabaseService();
+      try {
+        await _supabaseService!.initialize();
+      } catch (e) {
+        if (kDebugMode) {
+          log('⚠️ Supabase service initialization failed: $e');
+        }
+        // Continue without Supabase for now, but log the error
+      }
+
+      // Initialize call manager
+      _callManager = CallManager();
 
       _isInitialized = true;
       
@@ -317,6 +339,22 @@ class ServiceLocator {
     return _ringtoneService!;
   }
 
+  /// Get Supabase service
+  SupabaseService get supabaseService {
+    if (_supabaseService == null) {
+      throw StateError('ServiceLocator not initialized. Call initialize() first.');
+    }
+    return _supabaseService!;
+  }
+
+  /// Get call manager
+  CallManager get callManager {
+    if (_callManager == null) {
+      throw StateError('ServiceLocator not initialized. Call initialize() first.');
+    }
+    return _callManager!;
+  }
+
   /// Safe getters that return null if not initialized
   AuthProvider? get authProviderOrNull => _authProvider;
   UserRepository? get userRepositoryOrNull => _userRepository;
@@ -328,4 +366,6 @@ class ServiceLocator {
   CallService? get callServiceOrNull => _callService;
   RingtoneService? get ringtoneServiceOrNull => _ringtoneService;
   AgoraTokenService? get agoraTokenServiceOrNull => _agoraTokenService;
+  SupabaseService? get supabaseServiceOrNull => _supabaseService;
+  CallManager? get callManagerOrNull => _callManager;
 }

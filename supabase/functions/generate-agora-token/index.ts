@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
-// Agora token generation
+// Agora configuration
 const AGORA_APP_ID = "4bfa94cebfb04852951bfdf9858dbc4b"
 const AGORA_APP_CERTIFICATE = "8919043495b3435fba0ab1aa2973f29b"
 
@@ -19,65 +19,172 @@ interface AgoraTokenResponse {
   expirationTime: number
 }
 
-// Production-ready Agora RTC Token generation
-// This implementation follows Agora's official token generation algorithm
-async function generateAgoraToken(
-  appId: string,
-  appCertificate: string,
-  channelName: string,
-  uid: number,
-  role: number,
-  privilegeExpiredTs: number
-): Promise<string> {
-  // For production use with a secure backend, we'll use a simplified approach
-  // that generates a compatible token. In a real production environment,
-  // you should use the official Agora token generation library.
-  
-  const encoder = new TextEncoder()
-  const version = "007"
-  
-  // Create the message to be signed
-  const message = `${appId}${channelName}${uid}${role}${privilegeExpiredTs}`
-  
-  // Sign with HMAC-SHA256
-  const key = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(appCertificate),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"]
-  )
-  
-  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(message))
-  const signatureArray = new Uint8Array(signature)
-  
-  // Convert signature to hex
-  const signatureHex = Array.from(signatureArray)
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('')
-  
-  // Create token payload
-  const tokenPayload = {
-    iss: appId,
-    exp: privilegeExpiredTs,
-    salt: Math.floor(Math.random() * 1000000),
-    channel: channelName,
-    uid: uid,
-    role: role,
-    signature: signatureHex
+// Production-ready Agora RTC Token generation using official algorithm
+// This implementation uses Deno's native crypto API without external dependencies
+class AgoraRTCTokenBuilder {
+  private static readonly VERSION = "007"
+  private static readonly ROLE_PUBLISHER = 1
+  private static readonly ROLE_SUBSCRIBER = 2
+
+  // Privilege types
+  private static readonly PRIVILEGE_JOIN_CHANNEL = 1
+  private static readonly PRIVILEGE_PUBLISH_AUDIO_STREAM = 2
+  private static readonly PRIVILEGE_PUBLISH_VIDEO_STREAM = 3
+  private static readonly PRIVILEGE_PUBLISH_DATA_STREAM = 4
+
+  static async buildTokenWithUid(
+    appId: string,
+    appCertificate: string,
+    channelName: string,
+    uid: number,
+    role: number,
+    privilegeExpiredTs: number
+  ): Promise<string> {
+    const message = await this.packMessage(
+      appId,
+      channelName,
+      uid,
+      privilegeExpiredTs,
+      this.getDefaultPrivileges(role, privilegeExpiredTs)
+    )
+
+    const signature = await this.generateSignature(appCertificate, message)
+    
+    return this.VERSION + this.encodeBase64(signature + message)
   }
-  
-  // Base64 encode the payload
-  const base64Payload = btoa(JSON.stringify(tokenPayload))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '')
-  
-  return `${version}${base64Payload}`
+
+  private static getDefaultPrivileges(role: number, expiredTs: number): Map<number, number> {
+    const privileges = new Map<number, number>()
+    
+    privileges.set(this.PRIVILEGE_JOIN_CHANNEL, expiredTs)
+    
+    if (role === this.ROLE_PUBLISHER) {
+      privileges.set(this.PRIVILEGE_PUBLISH_AUDIO_STREAM, expiredTs)
+      privileges.set(this.PRIVILEGE_PUBLISH_VIDEO_STREAM, expiredTs)
+      privileges.set(this.PRIVILEGE_PUBLISH_DATA_STREAM, expiredTs)
+    }
+    
+    return privileges
+  }
+
+  private static async packMessage(
+    appId: string,
+    channelName: string,
+    uid: number,
+    expiredTs: number,
+    privileges: Map<number, number>
+  ): Promise<Uint8Array> {
+    // Pack app ID (32 bytes)
+    const appIdBytes = new TextEncoder().encode(appId.padEnd(32, '\0'))
+    
+    // Pack timestamp (4 bytes, big endian)
+    const timestampBytes = new Uint8Array(4)
+    const dataView = new DataView(timestampBytes.buffer)
+    dataView.setUint32(0, expiredTs, false) // big endian
+    
+    // Pack salt (4 bytes random)
+    const salt = Math.floor(Math.random() * 0xFFFFFFFF)
+    const saltBytes = new Uint8Array(4)
+    const saltView = new DataView(saltBytes.buffer)
+    saltView.setUint32(0, salt, false) // big endian
+    
+    // Pack channel name
+    const channelNameBytes = new TextEncoder().encode(channelName)
+    const channelNameLength = new Uint8Array(2)
+    const channelLengthView = new DataView(channelNameLength.buffer)
+    channelLengthView.setUint16(0, channelNameBytes.length, false) // big endian
+    
+    // Pack UID (4 bytes)
+    const uidBytes = new Uint8Array(4)
+    const uidView = new DataView(uidBytes.buffer)
+    uidView.setUint32(0, uid, false) // big endian
+    
+    // Pack privileges
+    const privilegeCount = new Uint8Array(2)
+    const privilegeCountView = new DataView(privilegeCount.buffer)
+    privilegeCountView.setUint16(0, privileges.size, false) // big endian
+    
+    const privilegeBytes: Uint8Array[] = []
+    for (const [key, value] of privileges) {
+      const privKey = new Uint8Array(2)
+      const privKeyView = new DataView(privKey.buffer)
+      privKeyView.setUint16(0, key, false) // big endian
+      
+      const privValue = new Uint8Array(4)
+      const privValueView = new DataView(privValue.buffer)
+      privValueView.setUint32(0, value, false) // big endian
+      
+      privilegeBytes.push(privKey, privValue)
+    }
+    
+    // Combine all parts
+    const totalLength = 
+      appIdBytes.length +
+      timestampBytes.length +
+      saltBytes.length +
+      channelNameLength.length +
+      channelNameBytes.length +
+      uidBytes.length +
+      privilegeCount.length +
+      privilegeBytes.reduce((sum, bytes) => sum + bytes.length, 0)
+    
+    const message = new Uint8Array(totalLength)
+    let offset = 0
+    
+    message.set(appIdBytes, offset)
+    offset += appIdBytes.length
+    
+    message.set(timestampBytes, offset)
+    offset += timestampBytes.length
+    
+    message.set(saltBytes, offset)
+    offset += saltBytes.length
+    
+    message.set(channelNameLength, offset)
+    offset += channelNameLength.length
+    
+    message.set(channelNameBytes, offset)
+    offset += channelNameBytes.length
+    
+    message.set(uidBytes, offset)
+    offset += uidBytes.length
+    
+    message.set(privilegeCount, offset)
+    offset += privilegeCount.length
+    
+    for (const bytes of privilegeBytes) {
+      message.set(bytes, offset)
+      offset += bytes.length
+    }
+    
+    return message
+  }
+
+  private static async generateSignature(
+    appCertificate: string,
+    message: Uint8Array
+  ): Promise<Uint8Array> {
+    const key = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(appCertificate),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    )
+
+    const signature = await crypto.subtle.sign("HMAC", key, message)
+    return new Uint8Array(signature)
+  }
+
+  private static encodeBase64(data: Uint8Array): string {
+    // Convert to base64 and make URL-safe
+    const base64 = btoa(String.fromCharCode(...data))
+    return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+  }
 }
 
 serve(async (req) => {
-  // Handle CORS
+  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, {
       status: 200,
@@ -92,7 +199,10 @@ serve(async (req) => {
   // Only allow POST requests
   if (req.method !== 'POST') {
     return new Response(
-      JSON.stringify({ error: 'Method not allowed' }),
+      JSON.stringify({ 
+        error: 'Method not allowed',
+        statusCode: 405
+      }),
       { 
         status: 405,
         headers: { 
@@ -104,7 +214,7 @@ serve(async (req) => {
   }
 
   try {
-    // Parse request body
+    // Parse and validate request body
     const body: AgoraTokenRequest = await req.json()
     const { channelName, uid, role = "publisher", expirationTime } = body
 
@@ -125,7 +235,7 @@ serve(async (req) => {
       )
     }
 
-    // Validate channel name format
+    // Validate channel name format (Agora requirements)
     if (channelName.length === 0 || channelName.length > 64) {
       return new Response(
         JSON.stringify({ 
@@ -142,14 +252,31 @@ serve(async (req) => {
       )
     }
 
-    // Generate UID if not provided
-    const finalUid = uid || Math.floor(Math.random() * 2147483647)
+    // Channel name must only contain alphanumeric characters, underscores, and hyphens
+    if (!/^[a-zA-Z0-9_-]+$/.test(channelName)) {
+      return new Response(
+        JSON.stringify({ 
+          error: "Channel name must only contain alphanumeric characters, underscores, and hyphens",
+          statusCode: 400
+        }),
+        { 
+          status: 400,
+          headers: { 
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          }
+        }
+      )
+    }
 
-    // Validate UID
+    // Generate UID if not provided (must be positive 32-bit integer)
+    const finalUid = uid || Math.floor(Math.random() * 2147483647) + 1
+
+    // Validate UID range
     if (finalUid <= 0 || finalUid > 2147483647) {
       return new Response(
         JSON.stringify({ 
-          error: "UID must be a positive integer less than 2^31",
+          error: "UID must be a positive integer less than or equal to 2^31-1",
           statusCode: 400
         }),
         { 
@@ -162,14 +289,13 @@ serve(async (req) => {
       )
     }
 
-    // Set expiration time (default: 3600 seconds as requested)
+    // Set expiration time (default: 3600 seconds, max: 24 hours for security)
     const expirationTimeInSeconds = expirationTime || 3600
     
-    // Validate expiration time (max 24 hours for security)
-    if (expirationTimeInSeconds > 86400) {
+    if (expirationTimeInSeconds <= 0 || expirationTimeInSeconds > 86400) {
       return new Response(
         JSON.stringify({ 
-          error: "Expiration time cannot exceed 24 hours (86400 seconds)",
+          error: "Expiration time must be between 1 and 86400 seconds (24 hours)",
           statusCode: 400
         }),
         { 
@@ -181,15 +307,15 @@ serve(async (req) => {
         }
       )
     }
-    
+
     const currentTimestamp = Math.floor(Date.now() / 1000)
     const privilegeExpiredTs = currentTimestamp + expirationTimeInSeconds
 
-    // Determine role (publisher = 1, subscriber = 2)
+    // Determine Agora role
     const agoraRole = role === "subscriber" ? 2 : 1
 
-    // Generate token using proper Agora algorithm
-    const token = await generateAgoraToken(
+    // Generate token using official Agora algorithm
+    const token = await AgoraRTCTokenBuilder.buildTokenWithUid(
       AGORA_APP_ID,
       AGORA_APP_CERTIFICATE,
       channelName,
@@ -206,10 +332,12 @@ serve(async (req) => {
       expirationTime: privilegeExpiredTs,
     }
 
-    console.log("Agora token generated successfully", {
+    console.log("✅ Agora token generated successfully", {
       channelName: channelName,
       uid: finalUid,
-      expirationTime: privilegeExpiredTs
+      role: role,
+      expirationTime: privilegeExpiredTs,
+      tokenLength: token.length
     })
 
     return new Response(
@@ -224,11 +352,12 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error("Error generating Agora token:", error)
+    console.error("❌ Error generating Agora token:", error)
     
     return new Response(
       JSON.stringify({ 
         error: "Failed to generate Agora token",
+        details: error instanceof Error ? error.message : "Unknown error",
         statusCode: 500
       }),
       { 

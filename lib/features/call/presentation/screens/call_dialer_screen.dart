@@ -313,10 +313,24 @@ class _CallDialerScreenState extends State<CallDialerScreen>
     });
 
     try {
-      final callService = ServiceLocator().callService;
+      final callManager = ServiceLocator().callManager;
       final callRepository = ServiceLocator().callRepository;
       final authService = ServiceLocator().authProvider;
       final userProfileRepository = ServiceLocator().userProfileRepository;
+
+      // Check if we can start a new call
+      if (!callManager.canStartNewCall) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Already in a call or call in progress'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        setState(() {
+          _isInitiatingCall = false;
+        });
+        return;
+      }
 
       // Get current user profile
       final currentUser = authService.currentUser;
@@ -329,8 +343,8 @@ class _CallDialerScreenState extends State<CallDialerScreen>
         throw StateError('Current user profile not found');
       }
 
-      // Start the call
-      final call = await callService.startCall(
+      // Start the call using CallManager
+      final call = await callManager.startCall(
         receiverId: widget.targetUser.uid,
         callType: callType,
         callerName: currentUserProfile.displayName,

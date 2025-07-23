@@ -103,7 +103,14 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
   }
 
   void _timeoutCall() async {
-    _stopRingtone();
+    // Force stop ringtone immediately
+    try {
+      final ringtoneService = ServiceLocator().ringtoneService;
+      await ringtoneService.forceStopRingtone();
+    } catch (e) {
+      debugPrint('Error stopping ringtone on timeout: $e');
+    }
+    
     try {
       final callService = ServiceLocator().callService;
       // Use the proper timeout method to distinguish from user decline
@@ -327,11 +334,18 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
 
   void _answerCall() async {
     _timeoutTimer?.cancel();
-    _stopRingtone();
+    
+    // Force stop ringtone immediately
+    try {
+      final ringtoneService = ServiceLocator().ringtoneService;
+      await ringtoneService.forceStopRingtone();
+    } catch (e) {
+      debugPrint('Error stopping ringtone: $e');
+    }
     
     try {
-      final callService = ServiceLocator().callService;
-      await callService.answerCall(widget.call);
+      final callManager = ServiceLocator().callManager;
+      await callManager.answerCall(widget.call);
       
       // Navigate to call screen
       if (mounted) {
@@ -355,11 +369,18 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
 
   void _declineCall() async {
     _timeoutTimer?.cancel();
-    _stopRingtone();
+    
+    // Force stop ringtone immediately
+    try {
+      final ringtoneService = ServiceLocator().ringtoneService;
+      await ringtoneService.forceStopRingtone();
+    } catch (e) {
+      debugPrint('Error stopping ringtone: $e');
+    }
     
     try {
-      final callService = ServiceLocator().callService;
-      await callService.declineCall(widget.call);
+      final callManager = ServiceLocator().callManager;
+      await callManager.declineCall(widget.call);
       
       if (mounted) {
         Navigator.of(context).pop();
