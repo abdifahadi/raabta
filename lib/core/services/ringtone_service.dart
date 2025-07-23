@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:html' as html;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
@@ -11,16 +12,31 @@ class RingtoneService {
   
   bool _isPlaying = false;
   Timer? _timeoutTimer;
+  Timer? _stopDelayTimer;
+  
+  // Web audio context for playing ringtones
+  html.AudioContext? _audioContext;
+  html.AudioBufferSourceNode? _sourceNode;
+  html.GainNode? _gainNode;
 
   /// Start playing the ringtone
   Future<void> startRingtone() async {
-    if (_isPlaying) return;
+    if (_isPlaying) {
+      if (kDebugMode) {
+        debugPrint('⚠️ Ringtone already playing, skipping');
+      }
+      return;
+    }
     
     try {
       _isPlaying = true;
       
+      // Cancel any pending stop operations
+      _stopDelayTimer?.cancel();
+      _stopDelayTimer = null;
+      
       if (kIsWeb) {
-        // For web, we'll use a simple beep sound or HTML5 audio
+        // For web, use Web Audio API for better control
         await _playWebRingtone();
       } else {
         // For mobile platforms, use platform channel
@@ -28,7 +44,7 @@ class RingtoneService {
       }
       
       if (kDebugMode) {
-        debugPrint('📱 Ringtone started');
+        debugPrint('📱 Ringtone started successfully');
       }
     } catch (e) {
       if (kDebugMode) {
@@ -40,25 +56,31 @@ class RingtoneService {
 
   /// Stop playing the ringtone
   Future<void> stopRingtone() async {
+    if (!_isPlaying) {
+      if (kDebugMode) {
+        debugPrint('⚠️ Ringtone not playing, skipping stop');
+      }
+      return;
+    }
+    
     try {
-      // Always cancel timer and reset state
+      // Cancel any timers immediately
       _timeoutTimer?.cancel();
       _timeoutTimer = null;
+      _stopDelayTimer?.cancel();
+      _stopDelayTimer = null;
       
-      // Only attempt to stop if we think it's playing
-      if (_isPlaying) {
-        if (kIsWeb) {
-          await _stopWebRingtone();
-        } else {
-          await _channel.invokeMethod('stopRingtone');
-        }
+      if (kIsWeb) {
+        await _stopWebRingtone();
+      } else {
+        await _channel.invokeMethod('stopRingtone');
       }
       
       // Always reset playing state
       _isPlaying = false;
       
       if (kDebugMode) {
-        debugPrint('📱 Ringtone stopped (forced cleanup)');
+        debugPrint('📱 Ringtone stopped successfully');
       }
     } catch (e) {
       if (kDebugMode) {
@@ -68,32 +90,54 @@ class RingtoneService {
       _isPlaying = false;
       _timeoutTimer?.cancel();
       _timeoutTimer = null;
+      _stopDelayTimer?.cancel();
+      _stopDelayTimer = null;
     }
   }
 
-  /// Force stop ringtone (emergency stop)
+  /// Force stop ringtone immediately (emergency stop for call events)
   Future<void> forceStopRingtone() async {
     if (kDebugMode) {
-      debugPrint('🚨 Force stopping ringtone');
+      debugPrint('🚨 Force stopping ringtone immediately');
     }
     
-    // Cancel timer immediately
+    // Cancel all timers immediately
     _timeoutTimer?.cancel();
     _timeoutTimer = null;
+    _stopDelayTimer?.cancel();
+    _stopDelayTimer = null;
     
-    // Reset state
+    // Force reset state immediately to prevent any further playing
+    final wasPlaying = _isPlaying;
     _isPlaying = false;
+    
+    if (!wasPlaying) {
+      if (kDebugMode) {
+        debugPrint('🔇 Ringtone was not playing, force stop complete');
+      }
+      return;
+    }
     
     try {
       // Try to stop on all platforms
       if (kIsWeb) {
-        await _stopWebRingtone();
+        await _stopWebRingtone(force: true);
       } else {
         await _channel.invokeMethod('stopRingtone');
+        // For mobile, also try to invoke a force stop method if available
+        try {
+          await _channel.invokeMethod('forceStopRingtone');
+        } catch (e) {
+          // Ignore if method doesn't exist
+        }
+      }
+      
+      if (kDebugMode) {
+        debugPrint('✅ Ringtone force stopped successfully');
       }
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('⚠️ Error during force stop: $e');
+        debugPrint('⚠️ Error during force stop: $e (state already reset)');
       }
       // Continue - state is already reset
     }
@@ -104,6 +148,22 @@ class RingtoneService {
     await startRingtone();
     
     _timeoutTimer = Timer(timeout, () {
+      if (kDebugMode) {
+        debugPrint('⏰ Ringtone timeout reached, stopping...');
+      }
+      forceStopRingtone();
+    });
+  }
+
+  /// Stop ringtone with delay (for graceful transitions)
+  Future<void> stopWithDelay({Duration delay = const Duration(milliseconds: 500)}) async {
+    if (!_isPlaying) return;
+    
+    if (kDebugMode) {
+      debugPrint('⏳ Stopping ringtone with ${delay.inMilliseconds}ms delay');
+    }
+    
+    _stopDelayTimer = Timer(delay, () {
       stopRingtone();
     });
   }
@@ -111,47 +171,147 @@ class RingtoneService {
   /// Check if ringtone is currently playing
   bool get isPlaying => _isPlaying;
 
+  /// Web Audio API implementation for better control
   Future<void> _playWebRingtone() async {
-    // For web, create a more sophisticated audio implementation
-    if (kIsWeb) {
-      try {
-        // Create Web Audio API context and generate a ringtone-like sound
-        await _createWebAudioContext();
-        if (kDebugMode) {
-          debugPrint('🔊 Web ringtone started');
-        }
-      } catch (e) {
-        if (kDebugMode) {
-          debugPrint('❌ Web ringtone error: $e');
-        }
+    if (!kIsWeb) return;
+    
+    try {
+      // Create audio context if not exists
+      _audioContext ??= html.AudioContext();
+      
+      if (_audioContext!.state == 'suspended') {
+        await _audioContext!.resume();
       }
-    }
-  }
-
-  Future<void> _stopWebRingtone() async {
-    if (kIsWeb) {
-      await _stopWebAudioContext();
+      
+      // Create gain node for volume control
+      _gainNode = _audioContext!.createGain();
+      _gainNode!.connectNode(_audioContext!.destination!);
+      _gainNode!.gain!.value = 0.5; // 50% volume
+      
+      // Generate a ringtone-like sound using oscillators
+      await _generateRingtoneSound();
+      
       if (kDebugMode) {
-        debugPrint('🔇 Web ringtone stopped');
+        debugPrint('🔊 Web ringtone started with Web Audio API');
       }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ Web Audio API ringtone error: $e');
+      }
+      // Fallback to simpler audio element approach
+      await _playWebRingtoneFallback();
     }
   }
 
-  Future<void> _createWebAudioContext() async {
-    // This would create a Web Audio API context and generate ringtone sounds
-    // For now, we'll use a simple implementation that could be enhanced
-    // with actual Web Audio API calls through js interop
-    await Future.delayed(const Duration(milliseconds: 100));
+  /// Generate ringtone sound using Web Audio API oscillators
+  Future<void> _generateRingtoneSound() async {
+    if (_audioContext == null || _gainNode == null) return;
+    
+    // Create a repeating ringtone pattern
+    Timer.periodic(const Duration(milliseconds: 1000), (timer) {
+      if (!_isPlaying) {
+        timer.cancel();
+        return;
+      }
+      
+      try {
+        // Create oscillator for the ringtone tone
+        final oscillator = _audioContext!.createOscillator();
+        oscillator.frequency!.value = 800; // 800 Hz tone
+        oscillator.type = 'sine';
+        
+        // Create envelope for the tone
+        final now = _audioContext!.currentTime!;
+        _gainNode!.gain!.setValueAtTime(0, now);
+        _gainNode!.gain!.linearRampToValueAtTime(0.3, now + 0.1);
+        _gainNode!.gain!.linearRampToValueAtTime(0, now + 0.3);
+        
+        oscillator.connectNode(_gainNode!);
+        oscillator.start(now);
+        oscillator.stop(now + 0.3);
+        
+        // Second tone after a brief pause
+        Timer(const Duration(milliseconds: 400), () {
+          if (!_isPlaying) return;
+          
+          try {
+            final oscillator2 = _audioContext!.createOscillator();
+            oscillator2.frequency!.value = 1000; // 1000 Hz tone
+            oscillator2.type = 'sine';
+            
+            final now2 = _audioContext!.currentTime!;
+            _gainNode!.gain!.setValueAtTime(0, now2);
+            _gainNode!.gain!.linearRampToValueAtTime(0.3, now2 + 0.1);
+            _gainNode!.gain!.linearRampToValueAtTime(0, now2 + 0.3);
+            
+            oscillator2.connectNode(_gainNode!);
+            oscillator2.start(now2);
+            oscillator2.stop(now2 + 0.3);
+          } catch (e) {
+            if (kDebugMode) debugPrint('Error creating second tone: $e');
+          }
+        });
+      } catch (e) {
+        if (kDebugMode) debugPrint('Error creating ringtone oscillator: $e');
+      }
+    });
   }
 
-  Future<void> _stopWebAudioContext() async {
-    // Stop the Web Audio API context
-    await Future.delayed(const Duration(milliseconds: 50));
+  /// Fallback ringtone implementation for web
+  Future<void> _playWebRingtoneFallback() async {
+    // Simple beep pattern as fallback
+    Timer.periodic(const Duration(milliseconds: 1500), (timer) {
+      if (!_isPlaying) {
+        timer.cancel();
+        return;
+      }
+      
+      // This would ideally play an audio file or generate a beep
+      if (kDebugMode) {
+        debugPrint('🔔 Ringtone beep (fallback)');
+      }
+    });
+  }
+
+  Future<void> _stopWebRingtone({bool force = false}) async {
+    if (!kIsWeb) return;
+    
+    try {
+      // Stop any playing source nodes
+      _sourceNode?.stop();
+      _sourceNode = null;
+      
+      // Reset gain to prevent clicks
+      if (_gainNode != null) {
+        _gainNode!.gain!.value = 0;
+        _gainNode = null;
+      }
+      
+      // Suspend audio context to free resources
+      if (_audioContext != null && _audioContext!.state != 'closed') {
+        if (force) {
+          // Force close the context for immediate stop
+          await _audioContext!.close();
+          _audioContext = null;
+        } else {
+          await _audioContext!.suspend();
+        }
+      }
+      
+      if (kDebugMode) {
+        debugPrint('🔇 Web ringtone stopped${force ? ' (forced)' : ''}');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ Error stopping web ringtone: $e');
+      }
+    }
   }
 
   /// Dispose resources
   void dispose() {
-    stopRingtone();
-    _timeoutTimer?.cancel();
+    forceStopRingtone();
+    _audioContext?.close();
+    _audioContext = null;
   }
 }

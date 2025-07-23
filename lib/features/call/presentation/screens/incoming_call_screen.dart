@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../domain/models/call_model.dart';
 import '../../../../core/services/service_locator.dart';
+import 'package:flutter/foundation.dart';
 
 class IncomingCallScreen extends StatefulWidget {
   final CallModel call;
@@ -23,6 +24,9 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
   late Animation<double> _pulseAnimation;
   late Animation<Offset> _slideAnimation;
   Timer? _timeoutTimer;
+  StreamSubscription? _callStatusSubscription;
+  bool _isAnswering = false;
+  bool _isDeclining = false;
 
   @override
   void initState() {
@@ -59,12 +63,15 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
     _pulseController.repeat(reverse: true);
     _slideController.forward();
     
-    // Start ringtone
-    _startRingtone();
+    // Start ringtone with timeout
+    _startRingtoneWithTimeout();
     
-    // Set timeout for auto-decline
+    // Listen for call status changes
+    _setupCallStatusListener();
+    
+    // Set timeout for auto-decline (only if not answered by then)
     _timeoutTimer = Timer(const Duration(seconds: 30), () {
-      if (mounted) {
+      if (mounted && !_isAnswering && !_isDeclining) {
         _timeoutCall();
       }
     });
@@ -75,41 +82,72 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
     _pulseController.dispose();
     _slideController.dispose();
     _timeoutTimer?.cancel();
-    _stopRingtone();
+    _callStatusSubscription?.cancel();
+    _forceStopRingtone();
     super.dispose();
   }
 
-  void _startRingtone() async {
+  void _setupCallStatusListener() {
     try {
-      final ringtoneService = ServiceLocator().ringtoneServiceOrNull;
-      if (ringtoneService != null) {
-        await ringtoneService.startRingtone();
-      }
+      final callManager = ServiceLocator().callManager;
+      _callStatusSubscription = callManager.currentCallStream.listen((call) {
+        if (!mounted) return;
+        
+        if (call == null || call.callId != widget.call.callId) {
+          // Call ended or changed, close this screen
+          if (mounted && !_isAnswering && !_isDeclining) {
+            Navigator.of(context).pop();
+          }
+          return;
+        }
+        
+        // Handle call status changes
+        if (call.status == CallStatus.cancelled || 
+            call.status == CallStatus.ended ||
+            call.status == CallStatus.missed) {
+          if (mounted && !_isAnswering && !_isDeclining) {
+            Navigator.of(context).pop();
+          }
+        }
+      });
     } catch (e) {
-      // Ringtone failed, continue without it
-      debugPrint('Failed to start ringtone: $e');
+      if (kDebugMode) debugPrint('Error setting up call status listener: $e');
     }
   }
 
-  void _stopRingtone() async {
+  void _startRingtoneWithTimeout() async {
     try {
       final ringtoneService = ServiceLocator().ringtoneServiceOrNull;
       if (ringtoneService != null) {
-        await ringtoneService.stopRingtone();
+        // Play ringtone with automatic timeout
+        await ringtoneService.playWithTimeout(timeout: const Duration(seconds: 30));
       }
     } catch (e) {
-      debugPrint('Failed to stop ringtone: $e');
+      // Ringtone failed, continue without it
+      if (kDebugMode) debugPrint('Failed to start ringtone: $e');
+    }
+  }
+
+  void _forceStopRingtone() async {
+    try {
+      final ringtoneService = ServiceLocator().ringtoneServiceOrNull;
+      if (ringtoneService != null) {
+        await ringtoneService.forceStopRingtone();
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('Failed to stop ringtone: $e');
     }
   }
 
   void _timeoutCall() async {
+    if (_isAnswering || _isDeclining) return;
+    
+    setState(() {
+      _isDeclining = true;
+    });
+    
     // Force stop ringtone immediately
-    try {
-      final ringtoneService = ServiceLocator().ringtoneService;
-      await ringtoneService.forceStopRingtone();
-    } catch (e) {
-      debugPrint('Error stopping ringtone on timeout: $e');
-    }
+    await _forceStopRingtone();
     
     try {
       final callService = ServiceLocator().callService;
@@ -274,18 +312,20 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                     children: [
                       // Decline button
                       _buildActionButton(
-                        onTap: _declineCall,
+                        onTap: _isDeclining || _isAnswering ? null : _declineCall,
                         icon: Icons.call_end,
-                        color: Colors.red,
+                        color: _isDeclining ? Colors.grey : Colors.red,
                         size: 70,
+                        isLoading: _isDeclining,
                       ),
                       
                       // Answer button
                       _buildActionButton(
-                        onTap: _answerCall,
+                        onTap: _isAnswering || _isDeclining ? null : _answerCall,
                         icon: Icons.call,
-                        color: Colors.green,
+                        color: _isAnswering ? Colors.grey : Colors.green,
                         size: 70,
+                        isLoading: _isAnswering,
                       ),
                     ],
                   ),
@@ -302,10 +342,11 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
   }
 
   Widget _buildActionButton({
-    required VoidCallback onTap,
+    required VoidCallback? onTap,
     required IconData icon,
     required Color color,
     required double size,
+    bool isLoading = false,
   }) {
     return GestureDetector(
       onTap: onTap,
@@ -315,46 +356,62 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
         decoration: BoxDecoration(
           color: color,
           shape: BoxShape.circle,
-          boxShadow: [
+          boxShadow: onTap != null ? [
             BoxShadow(
               color: color.withOpacity(0.4),
               blurRadius: 15,
               spreadRadius: 3,
             ),
-          ],
+          ] : null,
         ),
-        child: Icon(
-          icon,
-          color: Colors.white,
-          size: size * 0.4,
+        child: Center(
+          child: isLoading
+              ? SizedBox(
+                  width: size * 0.3,
+                  height: size * 0.3,
+                  child: const CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 3,
+                  ),
+                )
+              : Icon(
+                  icon,
+                  color: Colors.white,
+                  size: size * 0.4,
+                ),
         ),
       ),
     );
   }
 
   void _answerCall() async {
+    if (_isAnswering || _isDeclining) return;
+    
+    setState(() {
+      _isAnswering = true;
+    });
+    
     _timeoutTimer?.cancel();
     
-    // Force stop ringtone immediately
-    try {
-      final ringtoneService = ServiceLocator().ringtoneService;
-      await ringtoneService.forceStopRingtone();
-    } catch (e) {
-      debugPrint('Error stopping ringtone: $e');
-    }
+    // Force stop ringtone immediately when answer is pressed
+    await _forceStopRingtone();
     
     try {
       final callManager = ServiceLocator().callManager;
       await callManager.answerCall(widget.call);
       
-      // Navigate to call screen
+      // Navigate to call screen immediately
       if (mounted) {
         Navigator.of(context).pushReplacementNamed(
           '/call',
-          arguments: widget.call,
+          arguments: widget.call.copyWith(status: CallStatus.accepted),
         );
       }
     } catch (e) {
+      setState(() {
+        _isAnswering = false;
+      });
+      
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -368,15 +425,16 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
   }
 
   void _declineCall() async {
+    if (_isDeclining || _isAnswering) return;
+    
+    setState(() {
+      _isDeclining = true;
+    });
+    
     _timeoutTimer?.cancel();
     
-    // Force stop ringtone immediately
-    try {
-      final ringtoneService = ServiceLocator().ringtoneService;
-      await ringtoneService.forceStopRingtone();
-    } catch (e) {
-      debugPrint('Error stopping ringtone: $e');
-    }
+    // Force stop ringtone immediately when decline is pressed
+    await _forceStopRingtone();
     
     try {
       final callManager = ServiceLocator().callManager;
@@ -386,6 +444,10 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
         Navigator.of(context).pop();
       }
     } catch (e) {
+      setState(() {
+        _isDeclining = false;
+      });
+      
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
