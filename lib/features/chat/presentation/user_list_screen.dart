@@ -4,7 +4,7 @@ import 'package:raabta/features/auth/domain/auth_repository.dart';
 import 'package:raabta/features/auth/domain/firebase_auth_repository.dart';
 import 'package:raabta/features/chat/domain/chat_repository.dart';
 import 'package:raabta/features/chat/presentation/chat_screen.dart';
-import 'package:raabta/features/call/presentation/screens/call_dialer_screen.dart';
+import 'package:raabta/features/call/domain/models/call_model.dart';
 import 'package:raabta/core/services/service_locator.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -98,21 +98,98 @@ class _UserListScreenState extends State<UserListScreen> {
   }
 
   void _startVideoCall(UserProfileModel user) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => CallDialerScreen(
-          targetUser: user,
-        ),
-      ),
-    );
+    _initiateCall(user, CallType.video);
   }
 
   void _startAudioCall(UserProfileModel user) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => CallDialerScreen(
-          targetUser: user,
+    _initiateCall(user, CallType.audio);
+  }
+
+  Future<void> _initiateCall(UserProfileModel user, CallType callType) async {
+    try {
+      final callManager = ServiceLocator().callManager;
+      final currentUser = _authRepository.currentUser;
+      
+      if (currentUser == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Not authenticated'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // Check if we can start a new call
+      if (!callManager.canStartNewCall) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Already in a call or call in progress'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      // Start the call directly using CallManager
+      final call = await callManager.startCall(
+        receiverId: user.uid,
+        callType: callType,
+        callerName: currentUser.displayName ?? 'You',
+        callerPhotoUrl: currentUser.photoURL ?? '',
+        receiverName: user.name,
+        receiverPhotoUrl: user.photoUrl ?? '',
+      );
+
+      // Navigate to call screen or show calling dialog
+      _showCallingDialog(call, user);
+      
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to start call: ${e.toString()}'),
+          backgroundColor: Colors.red,
         ),
+      );
+    }
+  }
+
+  void _showCallingDialog(CallModel call, UserProfileModel user) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(color: Colors.green),
+            const SizedBox(height: 16),
+            Text(
+              'Calling ${user.name}...',
+              style: const TextStyle(color: Colors.white),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              call.callType == CallType.video ? 'Video Call' : 'Audio Call',
+              style: const TextStyle(color: Colors.white70, fontSize: 14),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              try {
+                final callManager = ServiceLocator().callManager;
+                await callManager.cancelCall(call);
+                Navigator.of(context).pop();
+              } catch (e) {
+                Navigator.of(context).pop();
+              }
+            },
+            child: const Text('Cancel', style: TextStyle(color: Colors.red)),
+          ),
+        ],
       ),
     );
   }

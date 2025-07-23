@@ -40,26 +40,62 @@ class RingtoneService {
 
   /// Stop playing the ringtone
   Future<void> stopRingtone() async {
-    if (!_isPlaying) return;
-    
     try {
-      _isPlaying = false;
+      // Always cancel timer and reset state
       _timeoutTimer?.cancel();
       _timeoutTimer = null;
       
-      if (kIsWeb) {
-        await _stopWebRingtone();
-      } else {
-        await _channel.invokeMethod('stopRingtone');
+      // Only attempt to stop if we think it's playing
+      if (_isPlaying) {
+        if (kIsWeb) {
+          await _stopWebRingtone();
+        } else {
+          await _channel.invokeMethod('stopRingtone');
+        }
       }
       
+      // Always reset playing state
+      _isPlaying = false;
+      
       if (kDebugMode) {
-        debugPrint('📱 Ringtone stopped');
+        debugPrint('📱 Ringtone stopped (forced cleanup)');
       }
     } catch (e) {
       if (kDebugMode) {
         debugPrint('❌ Error stopping ringtone: $e');
       }
+      // Force reset state even on error
+      _isPlaying = false;
+      _timeoutTimer?.cancel();
+      _timeoutTimer = null;
+    }
+  }
+
+  /// Force stop ringtone (emergency stop)
+  Future<void> forceStopRingtone() async {
+    if (kDebugMode) {
+      debugPrint('🚨 Force stopping ringtone');
+    }
+    
+    // Cancel timer immediately
+    _timeoutTimer?.cancel();
+    _timeoutTimer = null;
+    
+    // Reset state
+    _isPlaying = false;
+    
+    try {
+      // Try to stop on all platforms
+      if (kIsWeb) {
+        await _stopWebRingtone();
+      } else {
+        await _channel.invokeMethod('stopRingtone');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('⚠️ Error during force stop: $e');
+      }
+      // Continue - state is already reset
     }
   }
 

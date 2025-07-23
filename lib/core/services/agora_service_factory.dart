@@ -1,10 +1,10 @@
 export 'agora_service.dart'
-    if (dart.library.html) 'agora_web_service.dart';
+    if (dart.library.html) 'improved_agora_web_service.dart';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'agora_service_interface.dart';
 import 'agora_service.dart';
-import 'agora_web_service.dart';
+import 'improved_agora_web_service.dart';
 
 class AgoraServiceFactory {
   static AgoraServiceInterface? _instance;
@@ -16,8 +16,8 @@ class AgoraServiceFactory {
     }
     
     if (kIsWeb) {
-      // Use pure Web implementation that avoids agora_rtc_engine
-      _instance = AgoraWebService();
+      // Use enhanced web implementation with proper permissions and video rendering
+      _instance = ImprovedAgoraWebService();
     } else {
       // Use native implementation with agora_rtc_engine
       _instance = AgoraService();

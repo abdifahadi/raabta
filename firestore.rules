@@ -24,6 +24,13 @@ service cloud.firestore {
         request.auth.uid == resource.data.callerId ||
         request.auth.uid == resource.data.receiverId
       );
+      // Allow create if user is the caller (for initiating calls)
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.callerId;
+      // Allow update if user is caller or receiver (for status updates)
+      allow update: if request.auth != null && (
+        request.auth.uid == resource.data.callerId ||
+        request.auth.uid == resource.data.receiverId
+      );
     }
 
     // Default deny

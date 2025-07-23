@@ -200,10 +200,21 @@ class _ChatScreenState extends State<ChatScreen> {
     if (_currentUserId == null) return;
 
     try {
-      final callService = ServiceLocator().callService;
+      final callManager = ServiceLocator().callManager;
 
-      // Create the call using CallService for proper status handling
-      final call = await callService.startCall(
+      // Check if we can start a new call
+      if (!callManager.canStartNewCall) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Already in a call or call in progress'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      // Create the call using CallManager for proper status handling
+      final call = await callManager.startCall(
         receiverId: widget.otherUser.uid,
         callType: callType,
         callerName: _authRepository.currentUser?.displayName ?? 'You',
@@ -308,8 +319,8 @@ class _ChatScreenState extends State<ChatScreen> {
             onPressed: () async {
               // Cancel the call
               try {
-                final callService = ServiceLocator().callService;
-                await callService.cancelCall(call);
+                final callManager = ServiceLocator().callManager;
+                await callManager.cancelCall(call);
                 Navigator.of(context).pop(); // Close dialog
               } catch (e) {
                 Navigator.of(context).pop(); // Close dialog anyway
