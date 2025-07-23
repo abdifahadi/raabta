@@ -21,6 +21,8 @@ import 'call_service.dart';
 import 'agora_token_service.dart';
 import 'ringtone_service.dart';
 import 'supabase_service.dart';
+import 'supabase_agora_token_service.dart';
+import 'production_call_service.dart';
 import 'call_manager.dart';
 
 import 'package:flutter/foundation.dart';
@@ -71,8 +73,14 @@ class ServiceLocator {
   /// Call service instance
   CallService? _callService;
 
-  /// Agora token service instance
+  /// Agora token service instance (legacy)
   AgoraTokenService? _agoraTokenService;
+
+  /// Supabase Agora token service instance (production)
+  SupabaseAgoraTokenService? _supabaseAgoraTokenService;
+
+  /// Production call service instance (primary)
+  ProductionCallService? _productionCallService;
 
   /// Ringtone service instance
   RingtoneService? _ringtoneService;
@@ -192,8 +200,15 @@ class ServiceLocator {
       _callService = CallService();
       await _callService!.initialize();
 
-      // Initialize Agora token service
+      // Initialize Agora token service (legacy)
       _agoraTokenService = AgoraTokenService();
+
+      // Initialize Supabase Agora token service (production)
+      _supabaseAgoraTokenService = SupabaseAgoraTokenService();
+
+      // Initialize production call service (primary)
+      _productionCallService = ProductionCallService();
+      await _productionCallService!.initialize();
 
       // Initialize ringtone service
       _ringtoneService = RingtoneService();
@@ -323,12 +338,28 @@ class ServiceLocator {
     return _callService!;
   }
 
-  /// Get Agora token service
+  /// Get Agora token service (legacy)
   AgoraTokenService get agoraTokenService {
     if (_agoraTokenService == null) {
       throw StateError('ServiceLocator not initialized. Call initialize() first.');
     }
     return _agoraTokenService!;
+  }
+
+  /// Get Supabase Agora token service (production)
+  SupabaseAgoraTokenService get supabaseAgoraTokenService {
+    if (_supabaseAgoraTokenService == null) {
+      throw StateError('ServiceLocator not initialized. Call initialize() first.');
+    }
+    return _supabaseAgoraTokenService!;
+  }
+
+  /// Get production call service (primary)
+  ProductionCallService get productionCallService {
+    if (_productionCallService == null) {
+      throw StateError('ServiceLocator not initialized. Call initialize() first.');
+    }
+    return _productionCallService!;
   }
 
   /// Get ringtone service
@@ -366,6 +397,8 @@ class ServiceLocator {
   CallService? get callServiceOrNull => _callService;
   RingtoneService? get ringtoneServiceOrNull => _ringtoneService;
   AgoraTokenService? get agoraTokenServiceOrNull => _agoraTokenService;
+  SupabaseAgoraTokenService? get supabaseAgoraTokenServiceOrNull => _supabaseAgoraTokenService;
+  ProductionCallService? get productionCallServiceOrNull => _productionCallService;
   SupabaseService? get supabaseServiceOrNull => _supabaseService;
   CallManager? get callManagerOrNull => _callManager;
 }
