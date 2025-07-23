@@ -8,8 +8,8 @@ class AgoraConfig {
   // Default channel name prefix
   static const String channelPrefix = 'raabta_call_';
   
-  // Token expiration time (24 hours in seconds)
-  static const int tokenExpirationTime = 24 * 3600;
+  // Token expiration time (1 hour in seconds as per Supabase implementation)
+  static const int tokenExpirationTime = 3600;
   
   // Default call timeout (30 seconds)
   static const int callTimeout = 30;
