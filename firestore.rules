@@ -113,7 +113,32 @@ service cloud.firestore {
       }
     }
     
-    // Call sessions collection - for video/audio calls
+    // Calls collection - for video/audio calls
+    match /calls/{callId} {
+      // Only participants can read call data
+      allow read: if request.auth != null && 
+        (resource == null ||
+         request.auth.uid == resource.data.callerId || 
+         request.auth.uid == resource.data.receiverId);
+      
+      // Only caller can create calls
+      allow create: if request.auth != null && 
+        request.auth.uid == request.resource.data.callerId;
+        
+      // Both participants can update call (accept, decline, end, etc.)
+      allow update: if request.auth != null && 
+        (resource == null ||
+         request.auth.uid == resource.data.callerId || 
+         request.auth.uid == resource.data.receiverId);
+      
+      // Both participants can delete call
+      allow delete: if request.auth != null && 
+        (resource == null ||
+         request.auth.uid == resource.data.callerId || 
+         request.auth.uid == resource.data.receiverId);
+    }
+    
+    // Call sessions collection - for video/audio calls (legacy support)
     match /callSessions/{sessionId} {
       // Only participants can read call session data
       allow read: if request.auth != null && 
