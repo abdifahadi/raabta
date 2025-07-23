@@ -28,8 +28,8 @@ void main() async {
   // Ensure Flutter binding is initialized first
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Register web view for Flutter web video calls
-  registerWebView();
+  // Register web view for Flutter web video calls (safe cross-platform)
+  registerWebViewSafe();
   
   // Add error handling and logging
   try {
