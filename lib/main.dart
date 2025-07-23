@@ -8,6 +8,7 @@ import 'core/config/firebase_options.dart';
 import 'core/services/service_locator.dart';
 import 'core/services/logging_service.dart';
 import 'core/platform/agora_web_platform_fix.dart';
+import 'core/utils/web_view_register.dart';
 
 import 'core/services/notification_handler.dart';
 import 'features/auth/presentation/auth_wrapper.dart';
@@ -26,6 +27,9 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 void main() async {
   // Ensure Flutter binding is initialized first
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Register web view for Flutter web video calls
+  registerWebView();
   
   // Add error handling and logging
   try {

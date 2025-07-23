@@ -19,6 +19,7 @@ import 'package:raabta/features/call/domain/repositories/call_repository.dart';
 import 'package:raabta/features/call/data/firebase_call_repository.dart';
 import 'call_service.dart';
 import 'agora_token_service.dart';
+import 'ringtone_service.dart';
 
 import 'package:flutter/foundation.dart';
 
@@ -70,6 +71,9 @@ class ServiceLocator {
 
   /// Agora token service instance
   AgoraTokenService? _agoraTokenService;
+
+  /// Ringtone service instance
+  RingtoneService? _ringtoneService;
 
   /// Track initialization state
   bool _isInitialized = false;
@@ -182,6 +186,9 @@ class ServiceLocator {
 
       // Initialize Agora token service
       _agoraTokenService = AgoraTokenService();
+
+      // Initialize ringtone service
+      _ringtoneService = RingtoneService();
 
       _isInitialized = true;
       
@@ -302,6 +309,14 @@ class ServiceLocator {
     return _agoraTokenService!;
   }
 
+  /// Get ringtone service
+  RingtoneService get ringtoneService {
+    if (_ringtoneService == null) {
+      throw StateError('ServiceLocator not initialized. Call initialize() first.');
+    }
+    return _ringtoneService!;
+  }
+
   /// Safe getters that return null if not initialized
   AuthProvider? get authProviderOrNull => _authProvider;
   UserRepository? get userRepositoryOrNull => _userRepository;
@@ -311,5 +326,6 @@ class ServiceLocator {
   EncryptionKeyManager? get encryptionKeyManagerOrNull => _encryptionKeyManager;
   CallRepository? get callRepositoryOrNull => _callRepository;
   CallService? get callServiceOrNull => _callService;
+  RingtoneService? get ringtoneServiceOrNull => _ringtoneService;
   AgoraTokenService? get agoraTokenServiceOrNull => _agoraTokenService;
 }

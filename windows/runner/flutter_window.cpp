@@ -1,6 +1,8 @@
 #include "flutter_window.h"
 
 #include <optional>
+#include <windows.h>
+#include <mmsystem.h>
 
 #include "flutter/generated_plugin_registrant.h"
 
@@ -26,6 +28,30 @@ bool FlutterWindow::OnCreate() {
   }
   RegisterPlugins(flutter_controller_->engine());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
+
+  // Setup ringtone service method channel
+  auto channel = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+      flutter_controller_->engine()->messenger(), "ringtone_service",
+      &flutter::StandardMethodCodec::GetInstance());
+
+  channel->SetMethodCallHandler(
+      [](const flutter::MethodCall<flutter::EncodableValue>& call,
+         std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
+        if (call.method_name().compare("startRingtone") == 0) {
+          // Play Windows system sound for ringtone
+          PlaySound(TEXT("SystemDefault"), NULL, SND_ALIAS | SND_ASYNC | SND_LOOP);
+          result->Success(flutter::EncodableValue());
+        } else if (call.method_name().compare("stopRingtone") == 0) {
+          // Stop playing sound
+          PlaySound(NULL, NULL, 0);
+          result->Success(flutter::EncodableValue());
+        } else {
+          result->NotImplemented();
+        }
+      });
+  
+  // Store the channel to prevent it from being destroyed
+  ringtone_channel_ = std::move(channel);
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
     this->Show();

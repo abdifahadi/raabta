@@ -21,6 +21,7 @@ class CallManager extends StatefulWidget {
 class _CallManagerState extends State<CallManager> {
   StreamSubscription? _incomingCallsSubscription;
   StreamSubscription? _currentCallSubscription;
+  StreamSubscription? _callStatusSubscription;
   CallModel? _currentIncomingCall;
   
   // Navigation key for overlay navigation
@@ -36,6 +37,7 @@ class _CallManagerState extends State<CallManager> {
   void dispose() {
     _incomingCallsSubscription?.cancel();
     _currentCallSubscription?.cancel();
+    _callStatusSubscription?.cancel();
     super.dispose();
   }
 
@@ -64,10 +66,12 @@ class _CallManagerState extends State<CallManager> {
         if (calls.isNotEmpty && mounted) {
           final incomingCall = calls.first;
           
-          // Only show if it's a new incoming call
-          if (_currentIncomingCall?.callId != incomingCall.callId) {
+          // Only show if it's a new incoming call and still ringing
+          if (_currentIncomingCall?.callId != incomingCall.callId && 
+              incomingCall.status == CallStatus.ringing) {
             _currentIncomingCall = incomingCall;
             _showIncomingCallScreen(incomingCall);
+            _listenToCallStatus(incomingCall);
           }
         }
       });
@@ -121,9 +125,59 @@ class _CallManagerState extends State<CallManager> {
     });
   }
 
+  void _listenToCallStatus(CallModel call) {
+    _callStatusSubscription?.cancel();
+    
+    final callRepository = ServiceLocator().callRepositoryOrNull;
+    if (callRepository == null) return;
+    
+    _callStatusSubscription = callRepository
+        .getCallStream(call.callId)
+        .listen((updatedCall) {
+      if (updatedCall != null && mounted) {
+        // Handle call status changes
+        switch (updatedCall.status) {
+          case CallStatus.accepted:
+            // Call was accepted, navigate to call screen
+            _dismissIncomingCallScreen();
+            _navigateToCallScreen(updatedCall);
+            break;
+          case CallStatus.declined:
+          case CallStatus.ended:
+          case CallStatus.cancelled:
+          case CallStatus.missed:
+            // Call ended, dismiss incoming call screen
+            _dismissIncomingCallScreen();
+            break;
+          default:
+            break;
+        }
+      }
+    });
+  }
+
   void _dismissCallScreens() {
-    // This would be used to dismiss call-related screens when call ends
-    // The actual implementation depends on your navigation structure
+    // Dismiss any call-related screens when call ends
+    _dismissIncomingCallScreen();
+  }
+
+  void _dismissIncomingCallScreen() {
+    if (_currentIncomingCall != null) {
+      _currentIncomingCall = null;
+      _callStatusSubscription?.cancel();
+      
+      // Pop the incoming call screen if it's showing
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+    }
+  }
+
+  void _navigateToCallScreen(CallModel call) {
+    Navigator.of(context).pushNamed(
+      '/call',
+      arguments: call,
+    );
   }
 
   @override

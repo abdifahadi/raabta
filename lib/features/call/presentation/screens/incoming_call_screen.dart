@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../domain/models/call_model.dart';
@@ -21,6 +22,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
   late AnimationController _slideController;
   late Animation<double> _pulseAnimation;
   late Animation<Offset> _slideAnimation;
+  Timer? _timeoutTimer;
 
   @override
   void initState() {
@@ -56,13 +58,70 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
     // Start animations
     _pulseController.repeat(reverse: true);
     _slideController.forward();
+    
+    // Start ringtone
+    _startRingtone();
+    
+    // Set timeout for auto-decline
+    _timeoutTimer = Timer(const Duration(seconds: 30), () {
+      if (mounted) {
+        _timeoutCall();
+      }
+    });
   }
 
   @override
   void dispose() {
     _pulseController.dispose();
     _slideController.dispose();
+    _timeoutTimer?.cancel();
+    _stopRingtone();
     super.dispose();
+  }
+
+  void _startRingtone() async {
+    try {
+      final ringtoneService = ServiceLocator().ringtoneServiceOrNull;
+      if (ringtoneService != null) {
+        await ringtoneService.startRingtone();
+      }
+    } catch (e) {
+      // Ringtone failed, continue without it
+      debugPrint('Failed to start ringtone: $e');
+    }
+  }
+
+  void _stopRingtone() async {
+    try {
+      final ringtoneService = ServiceLocator().ringtoneServiceOrNull;
+      if (ringtoneService != null) {
+        await ringtoneService.stopRingtone();
+      }
+    } catch (e) {
+      debugPrint('Failed to stop ringtone: $e');
+    }
+  }
+
+  void _timeoutCall() async {
+    _stopRingtone();
+    try {
+      final callService = ServiceLocator().callService;
+      await callService.declineCall(widget.call);
+      
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Call timed out'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    }
   }
 
   @override
@@ -271,6 +330,9 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
   }
 
   void _answerCall() async {
+    _timeoutTimer?.cancel();
+    _stopRingtone();
+    
     try {
       final callService = ServiceLocator().callService;
       await callService.answerCall(widget.call);
@@ -296,6 +358,9 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
   }
 
   void _declineCall() async {
+    _timeoutTimer?.cancel();
+    _stopRingtone();
+    
     try {
       final callService = ServiceLocator().callService;
       await callService.declineCall(widget.call);
