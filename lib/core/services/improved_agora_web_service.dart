@@ -9,22 +9,6 @@ import '../../features/call/domain/models/call_model.dart';
 import 'agora_service_interface.dart';
 import 'supabase_agora_token_service.dart';
 
-// Safe platform view registration
-void _registerPlatformView(String viewType, Function(int) factory) {
-  if (kIsWeb) {
-    try {
-      // Use safe js interop instead of dart:ui_web directly
-      js.context.callMethod('eval', ['''
-        if (window.flutterCanvasKit && window.flutterCanvasKit.registerViewFactory) {
-          window.flutterCanvasKit.registerViewFactory('$viewType', $factory);
-        }
-      ''']);
-    } catch (e) {
-      if (kDebugMode) debugPrint('⚠️ Platform view registration failed: $e');
-    }
-  }
-}
-
 /// Production-ready Web implementation of Agora service with proper video rendering
 class ImprovedAgoraWebService implements AgoraServiceInterface {
   static final ImprovedAgoraWebService _instance = ImprovedAgoraWebService._internal();
@@ -63,9 +47,6 @@ class ImprovedAgoraWebService implements AgoraServiceInterface {
   
   // Permission state
   String? _permissionError;
-  
-  // Platform view registration tracker
-  final Set<String> _registeredViews = <String>{};
   
   // Getters
   @override
@@ -107,8 +88,8 @@ class ImprovedAgoraWebService implements AgoraServiceInterface {
         throw Exception('Media devices not supported in this browser');
       }
 
-      // Check if required WebRTC APIs are available - Fixed using js.context instead of js_util
-      final hasWebRTC = js.context.hasProperty('RTCPeerConnection');
+      // Check if required WebRTC APIs are available - Fixed using js_util instead of js.context
+      final hasWebRTC = js_util.hasProperty(html.window, 'RTCPeerConnection');
       if (!hasWebRTC) {
         throw Exception('WebRTC not supported in this browser');
       }

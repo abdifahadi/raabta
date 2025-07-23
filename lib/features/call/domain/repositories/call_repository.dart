@@ -39,4 +39,10 @@ abstract class CallRepository {
 
   /// Delete a call record
   Future<void> deleteCall(String callId);
+
+  /// Stream call updates (alias for watchCall)
+  Stream<CallModel?> getCallStream(String callId) => watchCall(callId);
+  
+  /// Listen to incoming calls (alias for watchIncomingCalls)
+  Stream<CallModel?> listenToIncomingCalls(String userId) => watchIncomingCalls(userId);
 }

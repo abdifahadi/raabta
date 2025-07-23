@@ -2,6 +2,46 @@ import 'dart:async';
 import 'dart:html' as html;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:js/js.dart' as js;
+
+// Web Audio API JS interop declarations
+@js.JS('AudioContext')
+class AudioContext {
+  external AudioContext();
+  external String get state;
+  external num get currentTime;
+  external GainNode createGain();
+  external OscillatorNode createOscillator();
+  external AudioDestinationNode get destination;
+  external Future<void> resume();
+  external Future<void> suspend();
+  external Future<void> close();
+}
+
+@js.JS('GainNode')
+class GainNode {
+  external AudioParam get gain;
+  external void connect(dynamic destination);
+}
+
+@js.JS('OscillatorNode') 
+class OscillatorNode {
+  external AudioParam get frequency;
+  external set type(String type);
+  external void connect(dynamic destination);
+  external void start(num when);
+  external void stop(num when);
+}
+
+@js.JS('AudioParam')
+class AudioParam {
+  external set value(num value);
+  external void setValueAtTime(num value, num startTime);
+  external void linearRampToValueAtTime(num value, num endTime);
+}
+
+@js.JS('AudioDestinationNode')
+class AudioDestinationNode {}
 
 class RingtoneService {
   static final RingtoneService _instance = RingtoneService._internal();
@@ -15,9 +55,9 @@ class RingtoneService {
   Timer? _stopDelayTimer;
   
   // Web audio context for playing ringtones
-  html.AudioContext? _audioContext;
-  html.AudioBufferSourceNode? _sourceNode;
-  html.GainNode? _gainNode;
+  AudioContext? _audioContext;
+  OscillatorNode? _sourceNode;
+  GainNode? _gainNode;
 
   /// Start playing the ringtone
   Future<void> startRingtone() async {
@@ -171,13 +211,18 @@ class RingtoneService {
   /// Check if ringtone is currently playing
   bool get isPlaying => _isPlaying;
 
+  /// Stop method (alias for stopRingtone for compatibility)
+  Future<void> stop() async {
+    await stopRingtone();
+  }
+
   /// Web Audio API implementation for better control
   Future<void> _playWebRingtone() async {
     if (!kIsWeb) return;
     
     try {
       // Create audio context if not exists
-      _audioContext ??= html.AudioContext();
+      _audioContext ??= AudioContext();
       
       if (_audioContext!.state == 'suspended') {
         await _audioContext!.resume();
@@ -185,8 +230,8 @@ class RingtoneService {
       
       // Create gain node for volume control
       _gainNode = _audioContext!.createGain();
-      _gainNode!.connectNode(_audioContext!.destination!);
-      _gainNode!.gain!.value = 0.5; // 50% volume
+      _gainNode!.connect(_audioContext!.destination);
+      _gainNode!.gain.value = 0.5; // 50% volume
       
       // Generate a ringtone-like sound using oscillators
       await _generateRingtoneSound();
@@ -217,16 +262,16 @@ class RingtoneService {
       try {
         // Create oscillator for the ringtone tone
         final oscillator = _audioContext!.createOscillator();
-        oscillator.frequency!.value = 800; // 800 Hz tone
+        oscillator.frequency.value = 800; // 800 Hz tone
         oscillator.type = 'sine';
         
         // Create envelope for the tone
-        final now = _audioContext!.currentTime!;
-        _gainNode!.gain!.setValueAtTime(0, now);
-        _gainNode!.gain!.linearRampToValueAtTime(0.3, now + 0.1);
-        _gainNode!.gain!.linearRampToValueAtTime(0, now + 0.3);
+        final now = _audioContext!.currentTime;
+        _gainNode!.gain.setValueAtTime(0, now);
+        _gainNode!.gain.linearRampToValueAtTime(0.3, now + 0.1);
+        _gainNode!.gain.linearRampToValueAtTime(0, now + 0.3);
         
-        oscillator.connectNode(_gainNode!);
+        oscillator.connect(_gainNode!);
         oscillator.start(now);
         oscillator.stop(now + 0.3);
         
@@ -236,15 +281,15 @@ class RingtoneService {
           
           try {
             final oscillator2 = _audioContext!.createOscillator();
-            oscillator2.frequency!.value = 1000; // 1000 Hz tone
+            oscillator2.frequency.value = 1000; // 1000 Hz tone
             oscillator2.type = 'sine';
             
-            final now2 = _audioContext!.currentTime!;
-            _gainNode!.gain!.setValueAtTime(0, now2);
-            _gainNode!.gain!.linearRampToValueAtTime(0.3, now2 + 0.1);
-            _gainNode!.gain!.linearRampToValueAtTime(0, now2 + 0.3);
+            final now2 = _audioContext!.currentTime;
+            _gainNode!.gain.setValueAtTime(0, now2);
+            _gainNode!.gain.linearRampToValueAtTime(0.3, now2 + 0.1);
+            _gainNode!.gain.linearRampToValueAtTime(0, now2 + 0.3);
             
-            oscillator2.connectNode(_gainNode!);
+            oscillator2.connect(_gainNode!);
             oscillator2.start(now2);
             oscillator2.stop(now2 + 0.3);
           } catch (e) {
@@ -278,12 +323,12 @@ class RingtoneService {
     
     try {
       // Stop any playing source nodes
-      _sourceNode?.stop();
+      _sourceNode?.stop(_audioContext?.currentTime ?? 0);
       _sourceNode = null;
       
       // Reset gain to prevent clicks
       if (_gainNode != null) {
-        _gainNode!.gain!.value = 0;
+        _gainNode!.gain.value = 0;
         _gainNode = null;
       }
       
