@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -56,6 +57,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _messageController.dispose();
     _scrollController.dispose();
     _textFocusNode.dispose();
+    _callStatusSubscription?.cancel();
     super.dispose();
   }
 
@@ -192,22 +194,16 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  StreamSubscription? _callStatusSubscription;
+
   Future<void> _initiateCall(CallType callType) async {
     if (_currentUserId == null) return;
 
     try {
-      // Show loading dialog
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+      final callService = ServiceLocator().callService;
 
-      // Create the call
-      final call = await _callRepository.initiateCall(
-        callerId: _currentUserId!,
+      // Create the call using CallService for proper status handling
+      final call = await callService.startCall(
         receiverId: widget.otherUser.uid,
         callType: callType,
         callerName: _authRepository.currentUser?.displayName ?? 'You',
@@ -216,24 +212,64 @@ class _ChatScreenState extends State<ChatScreen> {
         receiverPhotoUrl: widget.otherUser.photoUrl ?? '',
       );
 
-      // Dismiss loading dialog
-      if (mounted) Navigator.of(context).pop();
+      // Listen to call status changes
+      _callStatusSubscription?.cancel();
+      _callStatusSubscription = _callRepository.getCallStream(call.callId).listen((updatedCall) {
+        if (updatedCall != null && mounted) {
+          switch (updatedCall.status) {
+            case CallStatus.accepted:
+              // Call accepted, navigate to call screen
+              Navigator.of(context).pop(); // Close calling dialog
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => CallScreen(
+                    call: updatedCall,
+                    isIncoming: false,
+                  ),
+                ),
+              );
+              break;
+            case CallStatus.declined:
+              // Call declined, show message
+              Navigator.of(context).pop(); // Close calling dialog
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Call declined'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+              break;
+            case CallStatus.missed:
+              // Call missed (timeout), show message
+              Navigator.of(context).pop(); // Close calling dialog
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('No answer'),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+              break;
+            case CallStatus.failed:
+              // Call failed, show error
+              Navigator.of(context).pop(); // Close calling dialog
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Call failed'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+              break;
+            default:
+              break;
+          }
+        }
+      });
 
-      // Navigate to call screen
-      if (mounted) {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => CallScreen(
-              call: call,
-              isIncoming: false,
-            ),
-          ),
-        );
-      }
+      // Show calling dialog
+      _showCallingDialog(call);
+
     } catch (e) {
-      // Dismiss loading dialog if still showing
-      if (mounted) Navigator.of(context).pop();
-      
+      // Show error
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -243,6 +279,49 @@ class _ChatScreenState extends State<ChatScreen> {
         );
       }
     }
+  }
+
+  void _showCallingDialog(CallModel call) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(color: Colors.green),
+            const SizedBox(height: 16),
+            Text(
+              'Calling ${widget.otherUser.name}...',
+              style: const TextStyle(color: Colors.white),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              call.callType == CallType.video ? 'Video Call' : 'Audio Call',
+              style: const TextStyle(color: Colors.white70, fontSize: 14),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              // Cancel the call
+              try {
+                final callService = ServiceLocator().callService;
+                await callService.cancelCall(call);
+                Navigator.of(context).pop(); // Close dialog
+              } catch (e) {
+                Navigator.of(context).pop(); // Close dialog anyway
+              }
+            },
+            child: const Text('Cancel', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    ).then((_) {
+      _callStatusSubscription?.cancel();
+    });
   }
 
   void _onMessageLongPress(MessageModel message) {
