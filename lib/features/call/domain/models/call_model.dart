@@ -6,6 +6,7 @@ enum CallStatus {
   initiating,    // Call is being initiated
   ringing,       // Call is ringing on receiver's end
   connecting,    // Call is connecting (Agora channel joining)
+  accepted,      // Call was accepted by receiver
   connected,     // Call is active
   ended,         // Call has ended
   declined,      // Call was declined
@@ -190,7 +191,7 @@ class CallModel {
   }
 
   // Helper methods
-  bool get isActive => status == CallStatus.connected;
+  bool get isActive => status == CallStatus.accepted || status == CallStatus.connected;
   bool get isEnded => status == CallStatus.ended || 
                      status == CallStatus.declined || 
                      status == CallStatus.missed ||
