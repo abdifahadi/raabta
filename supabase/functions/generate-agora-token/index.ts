@@ -20,7 +20,7 @@ interface AgoraTokenResponse {
 }
 
 // Production-ready Agora RTC Token generation using official algorithm
-// This implementation uses Deno's native crypto API without external dependencies
+// This implementation uses Deno's native Web Crypto API without external dependencies
 class AgoraRTCTokenBuilder {
   private static readonly VERSION = "007"
   private static readonly ROLE_PUBLISHER = 1
@@ -40,6 +40,14 @@ class AgoraRTCTokenBuilder {
     role: number,
     privilegeExpiredTs: number
   ): Promise<string> {
+    console.log("🔨 Building token with parameters:", {
+      appId: appId.substring(0, 8) + "...",
+      channelName,
+      uid,
+      role,
+      privilegeExpiredTs
+    })
+
     const message = await this.packMessage(
       appId,
       channelName,
@@ -48,9 +56,19 @@ class AgoraRTCTokenBuilder {
       this.getDefaultPrivileges(role, privilegeExpiredTs)
     )
 
+    console.log("📦 Message packed, length:", message.length)
+
     const signature = await this.generateSignature(appCertificate, message)
+    console.log("🔏 Signature generated, length:", signature.length)
     
-    return this.VERSION + this.encodeBase64(signature + message)
+    const combinedData = new Uint8Array(signature.length + message.length)
+    combinedData.set(signature, 0)
+    combinedData.set(message, signature.length)
+    
+    const token = this.VERSION + this.encodeBase64(combinedData)
+    console.log("🎫 Token generated, length:", token.length)
+    
+    return token
   }
 
   private static getDefaultPrivileges(role: number, expiredTs: number): Map<number, number> {
@@ -74,13 +92,17 @@ class AgoraRTCTokenBuilder {
     expiredTs: number,
     privileges: Map<number, number>
   ): Promise<Uint8Array> {
-    // Pack app ID (32 bytes)
-    const appIdBytes = new TextEncoder().encode(appId.padEnd(32, '\0'))
+    const encoder = new TextEncoder()
+    
+    // Pack app ID (32 bytes, padded with null bytes)
+    const appIdBytes = new Uint8Array(32)
+    const appIdEncoded = encoder.encode(appId)
+    appIdBytes.set(appIdEncoded.slice(0, Math.min(32, appIdEncoded.length)))
     
     // Pack timestamp (4 bytes, big endian)
     const timestampBytes = new Uint8Array(4)
-    const dataView = new DataView(timestampBytes.buffer)
-    dataView.setUint32(0, expiredTs, false) // big endian
+    const timestampView = new DataView(timestampBytes.buffer)
+    timestampView.setUint32(0, expiredTs, false) // big endian
     
     // Pack salt (4 bytes random)
     const salt = Math.floor(Math.random() * 0xFFFFFFFF)
@@ -88,8 +110,8 @@ class AgoraRTCTokenBuilder {
     const saltView = new DataView(saltBytes.buffer)
     saltView.setUint32(0, salt, false) // big endian
     
-    // Pack channel name
-    const channelNameBytes = new TextEncoder().encode(channelName)
+    // Pack channel name length and data
+    const channelNameBytes = encoder.encode(channelName)
     const channelNameLength = new Uint8Array(2)
     const channelLengthView = new DataView(channelNameLength.buffer)
     channelLengthView.setUint16(0, channelNameBytes.length, false) // big endian
@@ -99,11 +121,12 @@ class AgoraRTCTokenBuilder {
     const uidView = new DataView(uidBytes.buffer)
     uidView.setUint32(0, uid, false) // big endian
     
-    // Pack privileges
+    // Pack privileges count
     const privilegeCount = new Uint8Array(2)
     const privilegeCountView = new DataView(privilegeCount.buffer)
     privilegeCountView.setUint16(0, privileges.size, false) // big endian
     
+    // Pack individual privileges
     const privilegeBytes: Uint8Array[] = []
     for (const [key, value] of privileges) {
       const privKey = new Uint8Array(2)
@@ -117,7 +140,7 @@ class AgoraRTCTokenBuilder {
       privilegeBytes.push(privKey, privValue)
     }
     
-    // Combine all parts
+    // Calculate total length and combine all parts
     const totalLength = 
       appIdBytes.length +
       timestampBytes.length +
@@ -164,21 +187,41 @@ class AgoraRTCTokenBuilder {
     appCertificate: string,
     message: Uint8Array
   ): Promise<Uint8Array> {
-    const key = await crypto.subtle.importKey(
-      "raw",
-      new TextEncoder().encode(appCertificate),
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["sign"]
-    )
+    try {
+      console.log("🔑 Generating HMAC signature...")
+      
+      const encoder = new TextEncoder()
+      const keyData = encoder.encode(appCertificate)
+      
+      // Import the key for HMAC-SHA256
+      const key = await crypto.subtle.importKey(
+        "raw",
+        keyData,
+        { name: "HMAC", hash: "SHA-256" },
+        false,
+        ["sign"]
+      )
 
-    const signature = await crypto.subtle.sign("HMAC", key, message)
-    return new Uint8Array(signature)
+      // Generate the signature
+      const signature = await crypto.subtle.sign("HMAC", key, message)
+      
+      console.log("✅ HMAC signature generated successfully")
+      return new Uint8Array(signature)
+    } catch (error) {
+      console.error("❌ Failed to generate HMAC signature:", error)
+      throw new Error(`Signature generation failed: ${error.message}`)
+    }
   }
 
   private static encodeBase64(data: Uint8Array): string {
-    // Convert to base64 and make URL-safe
-    const base64 = btoa(String.fromCharCode(...data))
+    // Convert to base64 using btoa and make URL-safe
+    let binaryString = ''
+    for (let i = 0; i < data.length; i++) {
+      binaryString += String.fromCharCode(data[i])
+    }
+    
+    const base64 = btoa(binaryString)
+    // Make URL-safe by replacing + with -, / with _, and removing padding
     return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
   }
 }
@@ -214,9 +257,18 @@ serve(async (req) => {
   }
 
   try {
+    console.log("🚀 Agora token generation request received")
+    
     // Parse and validate request body
     const body: AgoraTokenRequest = await req.json()
     const { channelName, uid, role = "publisher", expirationTime } = body
+
+    console.log("📋 Request parameters:", {
+      channelName,
+      uid,
+      role,
+      expirationTime
+    })
 
     // Validate required parameters
     if (!channelName || typeof channelName !== "string") {
@@ -313,6 +365,8 @@ serve(async (req) => {
 
     // Determine Agora role
     const agoraRole = role === "subscriber" ? 2 : 1
+
+    console.log("🔨 Generating token with Agora algorithm...")
 
     // Generate token using official Agora algorithm
     const token = await AgoraRTCTokenBuilder.buildTokenWithUid(

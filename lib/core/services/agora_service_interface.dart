@@ -31,6 +31,9 @@ abstract class AgoraServiceInterface {
   Future<void> toggleSpeaker();
   Future<void> switchCamera();
   
+  // Token management
+  Future<void> renewToken(String token);
+  
   // Video views
   Widget createLocalVideoView();
   Widget createRemoteVideoView(int uid);

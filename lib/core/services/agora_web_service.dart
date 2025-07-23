@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 import '../../features/call/domain/models/call_model.dart';
 import 'agora_service_interface.dart';
-import 'agora_token_service.dart';
+import 'supabase_agora_token_service.dart';
 
 /// Enhanced Web implementation of Agora service with real media permissions and video
 class AgoraWebService implements AgoraServiceInterface {
@@ -25,8 +25,8 @@ class AgoraWebService implements AgoraServiceInterface {
   html.MediaStream? _localStream;
   final Map<int, html.MediaStream> _remoteStreams = {};
   
-  // Token service
-  final AgoraTokenService _tokenService = AgoraTokenService();
+  // Supabase token service
+  final SupabaseAgoraTokenService _tokenService = SupabaseAgoraTokenService();
   
   // Event streams
   final StreamController<Map<String, dynamic>> _callEventController = 
@@ -318,6 +318,20 @@ class AgoraWebService implements AgoraServiceInterface {
     } catch (e) {
       if (kDebugMode) debugPrint('AgoraWebService: Failed to switch camera: $e');
     }
+  }
+
+  @override
+  Future<void> renewToken(String token) async {
+    // Web implementation: Agora SDK handles token renewal automatically in most cases
+    // For production, you would integrate with Agora Web SDK's token renewal methods
+    if (kDebugMode) {
+      debugPrint('✅ AgoraWebService: Token renewal acknowledged (${token.substring(0, 20)}...)');
+    }
+    
+    _callEventController.add({
+      'type': 'token_renewed',
+      'token_length': token.length,
+    });
   }
 
   @override

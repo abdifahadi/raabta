@@ -7,7 +7,7 @@ import 'agora_rtc_engine_stub.dart'
 import 'package:permission_handler/permission_handler.dart';
 import '../../features/call/domain/models/call_model.dart';
 import '../config/agora_config.dart';
-import 'agora_token_service.dart';
+import 'supabase_agora_token_service.dart';
 
 import 'agora_service_interface.dart';
 
@@ -27,8 +27,8 @@ class AgoraService implements AgoraServiceInterface {
   bool _isSpeakerEnabled = false;
   bool _isFrontCamera = true;
   
-  // Token service
-  final AgoraTokenService _tokenService = AgoraTokenService();
+  // Supabase token service
+  final SupabaseAgoraTokenService _tokenService = SupabaseAgoraTokenService();
   
   // Event streams
   final StreamController<Map<String, dynamic>> _callEventController = 
@@ -567,7 +567,28 @@ class AgoraService implements AgoraServiceInterface {
     }
   }
 
-  /// Renew token when it's about to expire
+  /// Renew token (public interface)
+  @override
+  Future<void> renewToken(String token) async {
+    try {
+      if (_engine == null) {
+        throw Exception('Agora engine not initialized');
+      }
+
+      await _engine!.renewToken(token);
+
+      if (kDebugMode) {
+        debugPrint('✅ Token renewed successfully');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ Failed to renew token: $e');
+      }
+      throw Exception('Failed to renew token: $e');
+    }
+  }
+
+  /// Renew token when it's about to expire (internal)
   Future<void> _renewToken() async {
     try {
       if (_currentChannelName == null) return;
