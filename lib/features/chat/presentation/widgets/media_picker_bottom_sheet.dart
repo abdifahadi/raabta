@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:file_picker/file_picker.dart';
 import '../../../../core/services/media_picker_service.dart';
 
 class MediaPickerBottomSheet extends StatelessWidget {
@@ -228,7 +227,6 @@ class MediaPickerBottomSheet extends StatelessWidget {
       final mediaService = MediaPickerService();
       final pickedFile = await mediaService.pickFile(
         allowedExtensions: ['pdf', 'doc', 'docx', 'txt', 'rtf'],
-        type: FileType.custom,
       );
       
       if (pickedFile != null && context.mounted) {
@@ -247,7 +245,6 @@ class MediaPickerBottomSheet extends StatelessWidget {
       final mediaService = MediaPickerService();
       final pickedFile = await mediaService.pickFile(
         allowedExtensions: ['mp3', 'wav', 'aac', 'm4a', 'ogg'],
-        type: FileType.custom,
       );
       
       if (pickedFile != null && context.mounted) {
@@ -264,9 +261,7 @@ class MediaPickerBottomSheet extends StatelessWidget {
   Future<void> _pickAnyFile(BuildContext context) async {
     try {
       final mediaService = MediaPickerService();
-      final pickedFile = await mediaService.pickFile(
-        type: FileType.any,
-      );
+      final pickedFile = await mediaService.pickFile();
       
       if (pickedFile != null && context.mounted) {
         Navigator.of(context).pop();

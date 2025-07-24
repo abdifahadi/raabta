@@ -2,46 +2,76 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:js/js.dart' as js;
+import 'package:web/web.dart' as web;
 
-// Web Audio API JS interop declarations
-@js.JS('AudioContext')
-class AudioContext {
-  external AudioContext();
-  external String get state;
-  external num get currentTime;
-  external GainNode createGain();
-  external OscillatorNode createOscillator();
-  external AudioDestinationNode get destination;
-  external Future<void> resume();
-  external Future<void> suspend();
-  external Future<void> close();
+// Web Audio API JS interop declarations with Custom prefix to avoid conflicts
+class CustomAudioContext {
+  final web.AudioContext _context;
+  
+  CustomAudioContext() : _context = web.AudioContext();
+  
+  String get state => _context.state;
+  double get currentTime => _context.currentTime.toDouble();
+  
+  CustomGainNode createGain() => CustomGainNode(_context.createGain());
+  CustomOscillatorNode createOscillator() => CustomOscillatorNode(_context.createOscillator());
+  CustomAudioDestinationNode get destination => CustomAudioDestinationNode(_context.destination);
+  
+  Future<void> resume() async => _context.resume();
+  Future<void> suspend() async => _context.suspend();
+  Future<void> close() async => _context.close();
 }
 
-@js.JS('GainNode')
-class GainNode {
-  external AudioParam get gain;
-  external void connect(dynamic destination);
+class CustomGainNode {
+  final web.GainNode _node;
+  
+  CustomGainNode(this._node);
+  
+  CustomAudioParam get gain => CustomAudioParam(_node.gain);
+  void connect(dynamic destination) {
+    if (destination is CustomGainNode) {
+      _node.connect(destination._node);
+    } else if (destination is CustomAudioDestinationNode) {
+      _node.connect(destination._node);
+    }
+  }
 }
 
-@js.JS('OscillatorNode') 
-class OscillatorNode {
-  external AudioParam get frequency;
-  external set type(String type);
-  external void connect(dynamic destination);
-  external void start(num when);
-  external void stop(num when);
+class CustomOscillatorNode {
+  final web.OscillatorNode _node;
+  
+  CustomOscillatorNode(this._node);
+  
+  CustomAudioParam get frequency => CustomAudioParam(_node.frequency);
+  set type(String type) => _node.type = type;
+  
+  void connect(dynamic destination) {
+    if (destination is CustomGainNode) {
+      _node.connect(destination._node);
+    } else if (destination is CustomAudioDestinationNode) {
+      _node.connect(destination._node);
+    }
+  }
+  
+  void start(double when) => _node.start(when);
+  void stop(double when) => _node.stop(when);
 }
 
-@js.JS('AudioParam')
-class AudioParam {
-  external set value(num value);
-  external void setValueAtTime(num value, num startTime);
-  external void linearRampToValueAtTime(num value, num endTime);
+class CustomAudioParam {
+  final web.AudioParam _param;
+  
+  CustomAudioParam(this._param);
+  
+  set value(double value) => _param.value = value;
+  void setValueAtTime(double value, double startTime) => _param.setValueAtTime(value, startTime);
+  void linearRampToValueAtTime(double value, double endTime) => _param.linearRampToValueAtTime(value, endTime);
 }
 
-@js.JS('AudioDestinationNode')
-class AudioDestinationNode {}
+class CustomAudioDestinationNode {
+  final web.AudioDestinationNode _node;
+  
+  CustomAudioDestinationNode(this._node);
+}
 
 class RingtoneService {
   static final RingtoneService _instance = RingtoneService._internal();
@@ -55,9 +85,9 @@ class RingtoneService {
   Timer? _stopDelayTimer;
   
   // Web audio context for playing ringtones
-  AudioContext? _audioContext;
-  OscillatorNode? _sourceNode;
-  GainNode? _gainNode;
+  CustomAudioContext? _audioContext;
+  CustomOscillatorNode? _sourceNode;
+  CustomGainNode? _gainNode;
 
   /// Start playing the ringtone
   Future<void> startRingtone() async {
@@ -222,7 +252,7 @@ class RingtoneService {
     
     try {
       // Create audio context if not exists
-      _audioContext ??= AudioContext();
+      _audioContext ??= CustomAudioContext();
       
       if (_audioContext!.state == 'suspended') {
         await _audioContext!.resume();
