@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart' show kDebugMode, debugPrint;
 
 // Conditional imports for platform-specific implementations
 import 'universal_platform_view_registry_stub.dart'
-    if (dart.library.html) 'universal_platform_view_registry_web.dart'
+    if (dart.library.js_util) 'universal_platform_view_registry_web.dart'
     as platform_registry;
 
 /// Universal platform view registry that works across all platforms

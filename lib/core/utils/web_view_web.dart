@@ -1,5 +1,6 @@
 import "dart:html" show DivElement;
-import "dart:ui_web" as ui_web;
+import 'dart:ui' as ui;
+import '../../utils/universal_platform_view_registry.dart';
 
 @pragma('dart2js:tryInline')
 void registerWebView() {
@@ -9,7 +10,8 @@ void registerWebView() {
     ..style.width = "100%"
     ..style.height = "100%";
 
-  ui_web.platformViewRegistry.registerViewFactory(
+  // Use the universal platform view registry for safe registration
+  UniversalPlatformViewRegistry.registerViewFactory(
     "local-video-view",
     (int viewId) => localVideo,
   );

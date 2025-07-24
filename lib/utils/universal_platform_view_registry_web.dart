@@ -1,6 +1,7 @@
 // lib/utils/universal_platform_view_registry_web.dart
 // Web implementation for platform view registration
 
+import 'dart:ui' as ui;
 import 'dart:html' as html;
 import 'package:flutter/foundation.dart' show kDebugMode, debugPrint;
 
@@ -17,10 +18,8 @@ void registerViewFactory(String viewType, dynamic factoryFunction) {
   }
 
   try {
-    // For web, we need to register the platform view factory
-    // This is where the actual registration would happen
-    // The factoryFunction should create the appropriate HTML element
-    
+    // Use the proper Flutter web platform view registry
+    ui.platformViewRegistry.registerViewFactory(viewType, factoryFunction);
     _registeredViewTypes.add(viewType);
     
     if (kDebugMode) {
