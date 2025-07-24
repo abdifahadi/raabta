@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../../features/call/domain/models/call_model.dart';
 import 'agora_service_interface.dart';
@@ -96,10 +97,10 @@ class AgoraWebService implements AgoraServiceInterface {
         ),
       );
       
-      // Web-specific audio settings
+      // Web-specific audio settings - fix the profile parameter issue
       await _engine!.setAudioProfile(
-        AudioProfileType.audioProfileDefault,
-        AudioScenarioType.audioScenarioGameStreaming,
+        profile: AudioProfileType.audioProfileDefault,
+        scenario: AudioScenarioType.audioScenarioGameStreaming,
       );
       
       // Set up event handler
@@ -109,6 +110,61 @@ class AgoraWebService implements AgoraServiceInterface {
     } catch (e) {
       if (kDebugMode) debugPrint('❌ AgoraWebService: Failed to initialize: $e');
       throw Exception('Failed to initialize Agora RTC Engine for web: $e');
+    }
+  }
+
+  @override
+  Future<bool> checkPermissions(CallType callType) async {
+    try {
+      if (kIsWeb) {
+        // On web, permissions are handled by the browser
+        // We can attempt to check if media devices are available
+        if (kDebugMode) debugPrint('AgoraWebService: Checking permissions for ${callType.name} call on web');
+        
+        // For web, we'll assume permissions are granted
+        // The browser will prompt the user when needed
+        return true;
+      } else {
+        // For other platforms (though this is primarily a web service), check actual permissions
+        try {
+          List<Permission> permissions = [Permission.microphone];
+          if (callType == CallType.video) {
+            permissions.add(Permission.camera);
+          }
+          
+          Map<Permission, PermissionStatus> statuses = await permissions.request();
+          
+          bool allGranted = statuses.values.every((status) => status == PermissionStatus.granted);
+          
+          if (kDebugMode) debugPrint('AgoraWebService: Permissions check result: $allGranted');
+          return allGranted;
+        } catch (e) {
+          // If permission_handler fails on web or other platforms, assume granted
+          if (kDebugMode) debugPrint('⚠️ AgoraWebService: Permission check not supported, assuming granted: $e');
+          return true;
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('❌ AgoraWebService: Failed to check permissions: $e');
+      return false;
+    }
+  }
+
+  @override
+  Future<void> renewToken(String token) async {
+    try {
+      if (_engine == null) {
+        throw Exception('Agora engine not initialized');
+      }
+      
+      if (kDebugMode) debugPrint('AgoraWebService: Renewing token...');
+      
+      await _engine!.renewToken(token);
+      
+      if (kDebugMode) debugPrint('✅ AgoraWebService: Token renewed successfully');
+    } catch (e) {
+      if (kDebugMode) debugPrint('❌ AgoraWebService: Failed to renew token: $e');
+      rethrow;
     }
   }
 
@@ -162,40 +218,67 @@ class AgoraWebService implements AgoraServiceInterface {
   }
 
   @override
-  Future<void> joinCall(String channelName, String token, int uid) async {
+  Future<void> joinCall({
+    required String channelName,
+    required CallType callType,
+    int? uid,
+  }) async {
     try {
       if (_engine == null) {
         throw Exception('Agora engine not initialized');
       }
 
-      if (kDebugMode) debugPrint('AgoraWebService: Joining call - Channel: $channelName, UID: $uid');
+      if (kDebugMode) debugPrint('AgoraWebService: Joining ${callType.name} call - Channel: $channelName, UID: $uid');
+
+      // Check permissions first
+      bool hasPermissions = await checkPermissions(callType);
+      if (!hasPermissions) {
+        throw Exception('Required permissions not granted for ${callType.name} call');
+      }
+
+      // Get token from Supabase
+      String? token;
+      try {
+        token = await _tokenService.getToken(channelName, uid ?? 0);
+      } catch (e) {
+        if (kDebugMode) debugPrint('⚠️ AgoraWebService: Failed to get token, joining without token: $e');
+        token = null; // Allow joining without token for development
+      }
 
       // Set client role before joining
       await _engine!.setClientRole(role: ClientRoleType.clientRoleBroadcaster);
       
-      // Start preview for web
-      await _engine!.startPreview();
+      // Configure media based on call type
+      bool enableVideo = callType == CallType.video;
+      
+      if (enableVideo) {
+        await _engine!.startPreview();
+        await _engine!.enableVideo();
+      } else {
+        await _engine!.disableVideo();
+      }
 
-      // Join channel
+      // Join channel with proper named parameters
       await _engine!.joinChannel(
-        token: token,
+        token: token ?? '',
         channelId: channelName,
-        uid: uid,
-        options: const ChannelMediaOptions(
+        uid: uid ?? 0,
+        options: ChannelMediaOptions(
           channelProfile: ChannelProfileType.channelProfileCommunication,
           clientRoleType: ClientRoleType.clientRoleBroadcaster,
           autoSubscribeAudio: true,
-          autoSubscribeVideo: true,
-          publishCameraTrack: true,
+          autoSubscribeVideo: enableVideo,
+          publishCameraTrack: enableVideo,
           publishMicrophoneTrack: true,
         ),
       );
 
       _isInCall = true;
       _currentChannelName = channelName;
-      _currentUid = uid;
+      _currentUid = uid ?? 0;
+      _isVideoEnabled = enableVideo;
 
-      if (kDebugMode) debugPrint('✅ AgoraWebService: Successfully joined call');
+      if (kDebugMode) debugPrint('✅ AgoraWebService: Successfully joined ${callType.name} call');
     } catch (e) {
       if (kDebugMode) debugPrint('❌ AgoraWebService: Failed to join call - $e');
       rethrow;
@@ -225,7 +308,7 @@ class AgoraWebService implements AgoraServiceInterface {
   }
 
   @override
-  Future<void> toggleMicrophone() async {
+  Future<void> toggleMute() async {
     try {
       if (_engine == null) return;
 
@@ -245,7 +328,7 @@ class AgoraWebService implements AgoraServiceInterface {
   }
 
   @override
-  Future<void> toggleCamera() async {
+  Future<void> toggleVideo() async {
     try {
       if (_engine == null) return;
 
