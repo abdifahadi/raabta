@@ -8,6 +8,7 @@ import 'core/config/firebase_options.dart';
 import 'core/services/service_locator.dart';
 import 'core/services/logging_service.dart';
 import 'core/platform/agora_web_platform_fix.dart';
+import 'core/platform/agora_platform_view_fix.dart';
 import 'core/utils/web_view_register.dart';
 
 import 'core/services/notification_handler.dart';
@@ -95,6 +96,23 @@ void main() async {
           }
           // Continue - this is not critical for app startup
         }
+      }
+
+      // Initialize modern Agora platform view fix for all platforms
+      if (kDebugMode) {
+        log('🎥 Initializing modern Agora platform view fix...');
+      }
+      try {
+        AgoraPlatformViewFix.initialize();
+        if (kDebugMode) {
+          log('✅ Agora platform view fix initialized successfully');
+          log('🔧 Platform view registry available: ${AgoraPlatformViewFix.isInitialized}');
+        }
+      } catch (platformViewError) {
+        if (kDebugMode) {
+          log('⚠️ Agora platform view fix initialization failed: $platformViewError');
+        }
+        // Continue - app should work even if platform views fail
       }
     } catch (firebaseError, firebaseStackTrace) {
       if (kDebugMode) {
