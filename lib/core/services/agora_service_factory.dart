@@ -1,27 +1,19 @@
-export 'agora_service.dart'
-    if (dart.library.html) 'improved_agora_web_service.dart';
-
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'agora_service_interface.dart';
-import 'agora_service.dart';
-import 'improved_agora_web_service.dart';
+import 'agora_uikit_service.dart';
 
 class AgoraServiceFactory {
   static AgoraServiceInterface? _instance;
   
   /// Get the appropriate AgoraService implementation based on platform
+  /// Now uses AgoraUIKit for all platforms including web
   static AgoraServiceInterface getInstance() {
     if (_instance != null) {
       return _instance!;
     }
     
-    if (kIsWeb) {
-      // Use enhanced web implementation with proper permissions and video rendering
-      _instance = ImprovedAgoraWebService();
-    } else {
-      // Use native implementation with agora_rtc_engine
-      _instance = AgoraService();
-    }
+    // Use AgoraUIKit service for all platforms (Web, Android, iOS, Windows, macOS, Linux)
+    _instance = AgoraUIKitService();
     
     return _instance!;
   }
@@ -33,7 +25,8 @@ class AgoraServiceFactory {
   }
   
   /// Check if current platform supports Agora natively
-  static bool get isNativeSupported => !kIsWeb;
+  /// Now all platforms are supported through UIKit
+  static bool get isNativeSupported => true;
   
   /// Check if current platform is web
   static bool get isWebPlatform => kIsWeb;
