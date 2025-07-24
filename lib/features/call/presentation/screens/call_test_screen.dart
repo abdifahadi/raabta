@@ -45,6 +45,7 @@ class _CallTestScreenState extends State<CallTestScreen> {
   void _initializeServices() {
     setState(() {
       _testStatus = 'Initializing services...';
+      _testResults.clear();
     });
 
     try {
@@ -56,21 +57,61 @@ class _CallTestScreenState extends State<CallTestScreen> {
         setState(() {
           _servicesInitialized = true;
           _testStatus = 'Services initialized successfully ✅';
-          _testResults.add('✅ ServiceLocator initialized');
-          _testResults.add('✅ CallManager available: ${_callManager != null}');
-          _testResults.add('✅ RingtoneService available: ${_ringtoneService != null}');
-          _testResults.add('✅ ProductionCallService available: ${_productionCallService != null}');
+          _testResults.add('✅ ServiceLocator: Initialized');
+          _testResults.add('✅ CallManager: ${_callManager != null ? 'Available' : 'Not Available'}');
+          _testResults.add('✅ RingtoneService: ${_ringtoneService != null ? 'Available' : 'Not Available'}');
+          _testResults.add('✅ ProductionCallService: ${_productionCallService != null ? 'Available' : 'Not Available'}');
+          
+          // Additional service checks
+          try {
+            final agoraTokenService = ServiceLocator().supabaseAgoraTokenServiceOrNull;
+            _testResults.add('✅ SupabaseAgoraTokenService: ${agoraTokenService != null ? 'Available' : 'Not Available'}');
+          } catch (e) {
+            _testResults.add('⚠️ SupabaseAgoraTokenService: Error - $e');
+          }
+          
+          try {
+            final callRepository = ServiceLocator().callRepositoryOrNull;
+            _testResults.add('✅ CallRepository: ${callRepository != null ? 'Available' : 'Not Available'}');
+          } catch (e) {
+            _testResults.add('⚠️ CallRepository: Error - $e');
+          }
+          
+          try {
+            final authProvider = ServiceLocator().authProviderOrNull;
+            _testResults.add('✅ AuthProvider: ${authProvider != null ? 'Available' : 'Not Available'}');
+          } catch (e) {
+            _testResults.add('⚠️ AuthProvider: Error - $e');
+          }
+          
+          // Test simulation status
+          _testResults.add('✅ Simulation Status: Ready for comprehensive testing');
         });
       } else {
         setState(() {
           _testStatus = 'ServiceLocator not initialized ❌';
-          _testResults.add('❌ ServiceLocator not initialized');
+          _testResults.add('❌ ServiceLocator: Not initialized');
+          _testResults.add('⚠️ Services may not be available for testing');
+          
+          // Check if we're in initialization process
+          if (ServiceLocator().isInitializing) {
+            _testResults.add('🔄 ServiceLocator is currently initializing...');
+            _testStatus = 'ServiceLocator initializing... Please wait ⏳';
+            
+            // Try again after a delay
+            Future.delayed(const Duration(seconds: 2), () {
+              if (mounted) {
+                _initializeServices();
+              }
+            });
+          }
         });
       }
     } catch (e) {
       setState(() {
         _testStatus = 'Service initialization failed: $e';
         _testResults.add('❌ Service initialization error: $e');
+        _testResults.add('🔧 Suggestion: Restart the app or check service dependencies');
       });
     }
   }

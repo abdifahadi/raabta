@@ -61,7 +61,6 @@ class ProductionCallService {
 
       // Initialize services
       await _agoraService.initialize();
-      _ringtoneService = ServiceLocator().ringtoneService;
 
       // Setup event forwarding
       _agoraService.callEventStream.listen(_forwardAgoraEvents);
@@ -70,6 +69,37 @@ class ProductionCallService {
 
       if (kDebugMode) {
         debugPrint('✅ ProductionCallService: Initialized successfully');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ ProductionCallService: Failed to initialize: $e');
+      }
+      throw Exception('Failed to initialize ProductionCallService: $e');
+    }
+  }
+
+  /// Initialize the production call service with dependency injection
+  Future<void> initializeWithDependencies(RingtoneService ringtoneService) async {
+    if (_isInitialized) return;
+
+    try {
+      if (kDebugMode) {
+        debugPrint('🚀 ProductionCallService: Initializing with dependencies...');
+      }
+
+      // Inject the ringtone service dependency
+      _ringtoneService = ringtoneService;
+
+      // Initialize services
+      await _agoraService.initialize();
+
+      // Setup event forwarding
+      _agoraService.callEventStream.listen(_forwardAgoraEvents);
+
+      _isInitialized = true;
+
+      if (kDebugMode) {
+        debugPrint('✅ ProductionCallService: Initialized successfully with dependencies');
       }
     } catch (e) {
       if (kDebugMode) {
