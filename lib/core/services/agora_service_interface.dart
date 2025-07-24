@@ -9,6 +9,7 @@ abstract class AgoraServiceInterface {
   bool get isMuted;
   bool get isSpeakerEnabled;
   String? get currentChannelName;
+  int? get currentUid;
   Set<int> get remoteUsers;
   
   // Streams
