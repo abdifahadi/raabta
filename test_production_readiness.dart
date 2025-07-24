@@ -3,7 +3,6 @@
 /// Tests Agora calling functionality across platforms with proper error handling
 
 import 'dart:io';
-import 'dart:developer' as dev;
 
 void main() async {
   print('🚀 Starting Raabta Production Readiness Test');

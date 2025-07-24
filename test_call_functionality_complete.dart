@@ -12,14 +12,9 @@
 /// 8. Web support with proper permissions
 
 import 'dart:async';
-import 'dart:developer';
 
 // Core services
 import 'lib/core/services/service_locator.dart';
-import 'lib/core/services/call_manager.dart';
-import 'lib/core/services/ringtone_service.dart';
-import 'lib/core/services/production_call_service.dart';
-import 'lib/core/services/supabase_agora_token_service.dart';
 
 // Models
 import 'lib/features/call/domain/models/call_model.dart';
@@ -61,10 +56,10 @@ Future<void> testServiceLocatorInitialization() async {
     final tokenService = ServiceLocator().supabaseAgoraTokenService;
     
     print('  ✅ ServiceLocator initialized successfully');
-    print('  ✅ CallManager available');
-    print('  ✅ RingtoneService available');
-    print('  ✅ ProductionCallService available');
-    print('  ✅ SupabaseAgoraTokenService available');
+    print('  ✅ CallManager available: ${callManager != null}');
+    print('  ✅ RingtoneService available: ${ringtoneService != null}');
+    print('  ✅ ProductionCallService available: ${productionCallService != null}');
+    print('  ✅ SupabaseAgoraTokenService available: ${tokenService != null}');
   } catch (e) {
     print('  ❌ ServiceLocator initialization failed: $e');
     throw Exception('Critical: ServiceLocator failed to initialize');
@@ -186,8 +181,8 @@ Future<void> testAgoraTokenGeneration() async {
     final tokenService = ServiceLocator().supabaseAgoraTokenService;
     
     print('  🔄 Testing token service availability...');
-    print('  ✅ SupabaseAgoraTokenService initialized');
-    print('  ✅ generateToken() method available');
+    print('  ✅ SupabaseAgoraTokenService initialized: ${tokenService != null}');
+    print('  ✅ generateToken() method available: ${tokenService.generateToken != null}');
     
     // Test token generation parameters
     print('  🔄 Testing token generation parameters...');

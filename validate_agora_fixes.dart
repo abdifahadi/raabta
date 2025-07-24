@@ -1,9 +1,6 @@
 // Comprehensive Agora Call System Validation Script
 // This script validates all fixes applied to the Raabta Flutter project
 
-import 'dart:developer';
-import 'package:flutter/foundation.dart';
-
 void main() async {
   print('🔧 Starting Agora Call System Validation...\n');
   

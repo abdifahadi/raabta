@@ -1,8 +1,7 @@
 // lib/utils/universal_platform_view_registry_web.dart
 // Web implementation for platform view registration
 
-import 'dart:ui' as ui;
-import 'dart:html' as html;
+import 'dart:ui_web' as ui_web;
 import 'package:flutter/foundation.dart' show kDebugMode, debugPrint;
 
 // Track registered view types to prevent duplicate registrations
@@ -18,8 +17,8 @@ void registerViewFactory(String viewType, dynamic factoryFunction) {
   }
 
   try {
-    // Use the proper Flutter web platform view registry
-    ui.platformViewRegistry.registerViewFactory(viewType, factoryFunction);
+    // Use the proper Flutter web platform view registry from dart:ui_web
+    ui_web.platformViewRegistry.registerViewFactory(viewType, factoryFunction);
     _registeredViewTypes.add(viewType);
     
     if (kDebugMode) {
@@ -34,7 +33,7 @@ void registerViewFactory(String viewType, dynamic factoryFunction) {
 }
 
 /// Check if platform view registry is available on web
-bool get isAvailable => html.window != null;
+bool get isAvailable => true;
 
 /// Check if a view type is registered
 bool isViewTypeRegistered(String viewType) {

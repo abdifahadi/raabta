@@ -1,5 +1,4 @@
 import "dart:html" show DivElement;
-import 'dart:ui' as ui;
 import '../../utils/universal_platform_view_registry.dart';
 
 @pragma('dart2js:tryInline')

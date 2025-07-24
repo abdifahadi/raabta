@@ -3,7 +3,6 @@
 // This file provides modern Flutter web compatibility for Agora video components
 
 import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
-import 'dart:async';
 
 // Conditional imports for web-safe platform view handling
 import '../../utils/universal_platform_view_registry.dart';

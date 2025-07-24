@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 
 import 'supabase_service.dart';
-import 'service_locator.dart';
 
 /// Production-ready Supabase Agora Token Service
 /// Replaces Firebase Functions with secure Supabase Edge Functions
