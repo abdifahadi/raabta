@@ -384,9 +384,9 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
         const SizedBox(height: 30),
         
         // Caller name/ID
-        Text(
+        const Text(
           'Incoming Call',
-          style: const TextStyle(
+          style: TextStyle(
             color: Colors.white,
             fontSize: 32,
             fontWeight: FontWeight.bold,

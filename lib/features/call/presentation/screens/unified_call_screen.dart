@@ -371,7 +371,7 @@ class _UnifiedCallScreenState extends State<UnifiedCallScreen> with WidgetsBindi
   }
 
   Widget _buildVideoCallInterface() {
-    return Container(
+    return SizedBox(
       width: double.infinity,
       height: double.infinity,
       child: AgoraVideoViewer(

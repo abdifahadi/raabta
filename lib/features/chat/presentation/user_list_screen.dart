@@ -188,15 +188,18 @@ class _UserListScreenState extends State<UserListScreen> {
         actions: [
           TextButton(
             onPressed: () async {
+              // Store context before async operation
+              final navigator = Navigator.of(context);
+              
               try {
                 final callManager = ServiceLocator().callManager;
                 await callManager.cancelCall(call);
                 if (mounted) {
-                  Navigator.of(context).pop();
+                  navigator.pop();
                 }
               } catch (e) {
                 if (mounted) {
-                  Navigator.of(context).pop();
+                  navigator.pop();
                 }
               }
             },

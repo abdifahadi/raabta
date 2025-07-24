@@ -317,16 +317,19 @@ class _ChatScreenState extends State<ChatScreen> {
         actions: [
           TextButton(
             onPressed: () async {
+              // Store context before async operation
+              final navigator = Navigator.of(context);
+              
               // Cancel the call
               try {
                 final callManager = ServiceLocator().callManager;
                 await callManager.cancelCall(call);
                 if (mounted) {
-                  Navigator.of(context).pop(); // Close dialog
+                  navigator.pop(); // Close dialog
                 }
               } catch (e) {
                 if (mounted) {
-                  Navigator.of(context).pop(); // Close dialog anyway
+                  navigator.pop(); // Close dialog anyway
                 }
               }
             },
