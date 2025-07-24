@@ -94,10 +94,12 @@ class ServiceLocator {
   /// Track initialization state
   bool _isInitialized = false;
   bool _isInitializing = false;
+  String? _initializationError;
 
   /// Check if services are initialized
   bool get isInitialized => _isInitialized;
   bool get isInitializing => _isInitializing;
+  String? get initializationError => _initializationError;
 
   /// Initialize services
   Future<void> initialize() async {
@@ -123,6 +125,7 @@ class ServiceLocator {
     }
 
     _isInitializing = true;
+    _initializationError = null;
 
     try {
       if (kDebugMode) {
@@ -233,6 +236,7 @@ class ServiceLocator {
         log('✅ ServiceLocator initialized successfully');
       }
     } catch (e) {
+      _initializationError = e.toString();
       if (kDebugMode) {
         log('❌ ServiceLocator initialization failed: $e');
       }

@@ -313,10 +313,19 @@ class _CallDialerScreenState extends State<CallDialerScreen>
     });
 
     try {
-      final callManager = ServiceLocator().callManager;
-      final callRepository = ServiceLocator().callRepository;
-      final authService = ServiceLocator().authProvider;
-      final userProfileRepository = ServiceLocator().userProfileRepository;
+      // Check if ServiceLocator is initialized
+      if (!ServiceLocator().isInitialized) {
+        throw Exception('Call services not initialized. Please restart the app.');
+      }
+      
+      final callManager = ServiceLocator().callManagerOrNull;
+      final callRepository = ServiceLocator().callRepositoryOrNull;
+      final authService = ServiceLocator().authProviderOrNull;
+      final userProfileRepository = ServiceLocator().userProfileRepositoryOrNull;
+      
+      if (callManager == null || callRepository == null || authService == null || userProfileRepository == null) {
+        throw Exception('Required call services are not available.');
+      }
 
       // Check if we can start a new call
       if (!callManager.canStartNewCall) {
@@ -450,8 +459,10 @@ class _CallDialerScreenState extends State<CallDialerScreen>
             onPressed: () async {
               // Cancel the call
               try {
-                final callService = ServiceLocator().callService;
-                await callService.cancelCall(call);
+                final callService = ServiceLocator().callServiceOrNull;
+                if (callService != null) {
+                  await callService.cancelCall(call);
+                }
                 if (mounted) {
                   Navigator.of(context).pop(); // Close dialog
                   Navigator.of(context).pop(); // Go back to previous screen

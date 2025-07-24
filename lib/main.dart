@@ -15,6 +15,7 @@ import 'features/auth/presentation/auth_wrapper.dart';
 import 'features/call/domain/models/call_model.dart';
 import 'features/call/presentation/screens/call_screen.dart';
 import 'features/call/presentation/screens/incoming_call_screen.dart';
+import 'features/call/presentation/screens/call_test_screen.dart';
 
 /// Background message handler for Firebase Cloud Messaging
 @pragma('vm:entry-point')
@@ -130,28 +131,29 @@ void main() async {
       }
     };
 
-    // Initialize services with setupLocator function
+    // Initialize services with setupLocator function - CRITICAL: This must happen before runApp
     bool servicesInitialized = false;
     try {
       if (kDebugMode) {
-        log('⚙️ Setting up services...');
+        log('⚙️ Setting up ServiceLocator - CRITICAL INITIALIZATION STEP...');
       }
       
-      // Use setupLocator function
+      // Use setupLocator function with proper error handling
       await setupLocator();
       servicesInitialized = true;
       
       if (kDebugMode) {
-        log('✅ Services setup completed successfully');
+        log('✅ ServiceLocator setup completed successfully');
+        log('✅ All services are now available for use');
       }
     } catch (serviceError, serviceStackTrace) {
       if (kDebugMode) {
-        log('🚨 Service setup error: $serviceError');
+        log('🚨 CRITICAL: ServiceLocator setup failed: $serviceError');
         log('🔍 Service Stack Trace: $serviceStackTrace');
       }
       
-      // Continue without fully initialized services - the app can handle this
-      LoggingService.warning('⚠️ Running in degraded mode due to service setup failure');
+      // This is critical - don't continue without initialized services
+      LoggingService.error('❌ ServiceLocator initialization failed: $serviceError');
       
       // For web, add additional fallback delay to ensure DOM is ready
       if (kIsWeb) {
@@ -159,6 +161,34 @@ void main() async {
           log('🌐 Web platform: Adding fallback delay for DOM readiness');
         }
         await Future.delayed(const Duration(milliseconds: 500));
+        
+        // Try one more time for web
+        try {
+          if (kDebugMode) {
+            log('🔄 Retrying ServiceLocator initialization for web...');
+          }
+          await setupLocator();
+          servicesInitialized = true;
+          if (kDebugMode) {
+            log('✅ ServiceLocator setup succeeded on retry');
+          }
+        } catch (retryError) {
+          if (kDebugMode) {
+            log('❌ ServiceLocator retry failed: $retryError');
+          }
+          // Continue with degraded mode
+        }
+      }
+    }
+
+    // Verify ServiceLocator is properly initialized before starting the app
+    if (servicesInitialized && ServiceLocator().isInitialized) {
+      if (kDebugMode) {
+        log('✅ ServiceLocator verification passed - all services ready');
+      }
+    } else {
+      if (kDebugMode) {
+        log('⚠️ ServiceLocator not fully initialized - app will run in degraded mode');
       }
     }
 
@@ -167,11 +197,11 @@ void main() async {
       await Future.delayed(const Duration(milliseconds: 100));
     }
 
-    // Start the app
+    // Start the app with proper service initialization status
     runApp(MyApp(servicesInitialized: servicesInitialized));
     
     if (kDebugMode) {
-      log('✅ App started successfully');
+      log('✅ App started successfully with ${servicesInitialized ? 'full' : 'degraded'} services');
     }
   } catch (e, stackTrace) {
     if (kDebugMode) {
@@ -303,21 +333,26 @@ void main() async {
 /// Setup function for service locator
 Future<void> setupLocator() async {
   try {
+    if (kDebugMode) {
+      log('🔧 Starting ServiceLocator initialization...');
+    }
+    
     // Reduced timeout for web platforms
-    const timeout = kIsWeb ? Duration(seconds: 5) : Duration(seconds: 10);
+    const timeout = kIsWeb ? Duration(seconds: 8) : Duration(seconds: 15);
     
     await ServiceLocator().initialize().timeout(
       timeout,
       onTimeout: () {
         if (kDebugMode) {
-          log('⚠️ Service initialization timeout (${timeout.inSeconds}s) - continuing with degraded mode');
+          log('⚠️ ServiceLocator initialization timeout (${timeout.inSeconds}s)');
         }
         throw TimeoutException('Service initialization timeout', timeout);
       },
     );
     
     if (kDebugMode) {
-      log('✅ ServiceLocator setup completed');
+      log('✅ ServiceLocator setup completed successfully');
+      log('✅ All dependencies are ready for use');
     }
   } catch (e) {
     if (kDebugMode) {
@@ -395,6 +430,7 @@ class MyApp extends StatelessWidget {
           // If no arguments or wrong type, return to home
           return const SafeArea(child: AuthWrapper());
         },
+        '/call-test': (context) => const SafeArea(child: CallTestScreen()),
       },
       // Enhanced error builder for better error handling
       builder: (context, widget) {

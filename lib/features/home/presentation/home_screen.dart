@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:raabta/features/auth/domain/auth_repository.dart';
 import 'package:raabta/features/auth/domain/firebase_auth_repository.dart';
 import 'package:raabta/features/auth/domain/user_profile_repository.dart';
@@ -158,7 +159,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: kDebugMode ? FloatingActionButton(
+        onPressed: () {
+          Navigator.of(context).pushNamed('/call-test');
+        },
+        backgroundColor: Colors.orange,
+        foregroundColor: Colors.white,
+        tooltip: 'Test Call System',
+        child: const Icon(Icons.bug_report),
+      ) : FloatingActionButton(
         onPressed: () {
           Navigator.of(context).push(
             MaterialPageRoute(builder: (context) => const ConversationsScreen()),
