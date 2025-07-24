@@ -7,7 +7,7 @@ import '../../../../core/services/call_manager.dart';
 import '../../../../core/services/ringtone_service.dart';
 import '../../../../core/services/production_call_service.dart';
 import '../../domain/models/call_model.dart';
-import '../../../auth/domain/user_profile_model.dart';
+import '../../../auth/domain/models/user_profile_model.dart';
 
 /// Comprehensive test screen for call functionality
 /// Tests: ServiceLocator initialization, Call setup, Audio/Video, Ringtones, Cross-platform compatibility
@@ -27,7 +27,7 @@ class _CallTestScreenState extends State<CallTestScreen> {
   // Test state
   bool _servicesInitialized = false;
   String _testStatus = 'Ready to test';
-  List<String> _testResults = [];
+  final List<String> _testResults = [];
   bool _isTesting = false;
   bool _ringtoneePlaying = false;
   
@@ -164,13 +164,14 @@ class _CallTestScreenState extends State<CallTestScreen> {
       _testUser = UserProfileModel(
         uid: 'test_user_${DateTime.now().millisecondsSinceEpoch}',
         email: 'test@raabta.com',
-        username: 'Test User',
-        fullName: 'Test User',
-        photoURL: null,
-        bio: 'Test user for call testing',
+        name: 'Test User',
+        gender: Gender.preferNotToSay,
+        activeHours: '9 AM - 5 PM',
         phoneNumber: '+1234567890',
-        isActive: true,
-        lastSeen: DateTime.now(),
+        photoUrl: null,
+        bio: 'Test user for call testing',
+        isProfileComplete: true,
+        lastSignIn: DateTime.now(),
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
@@ -180,20 +181,17 @@ class _CallTestScreenState extends State<CallTestScreen> {
         callId: 'test_call_${DateTime.now().millisecondsSinceEpoch}',
         callerId: 'current_user_id',
         callerName: 'Current User',
-        callerPhoto: null,
+        callerPhotoUrl: 'https://via.placeholder.com/150',
         receiverId: _testUser!.uid,
-        receiverName: _testUser!.fullName,
-        receiverPhoto: _testUser!.photoURL,
+        receiverName: _testUser!.name,
+        receiverPhotoUrl: _testUser!.photoUrl ?? 'https://via.placeholder.com/150',
         channelName: 'test_channel_${DateTime.now().millisecondsSinceEpoch}',
-        isVideoCall: false,
+        callType: CallType.audio,
         status: CallStatus.ringing,
         createdAt: DateTime.now(),
-        agoraAppId: 'test_app_id',
-        agoraToken: 'test_token',
-        agoraUid: 12345,
       );
       
-      _addTestResult('✅ Test user created: ${_testUser!.fullName}');
+      _addTestResult('✅ Test user created: ${_testUser!.name}');
       _addTestResult('✅ Test call created: ${_testCall!.callId}');
     } catch (e) {
       _addTestResult('❌ Call model creation failed: $e');
@@ -269,12 +267,11 @@ class _CallTestScreenState extends State<CallTestScreen> {
         _testStatus = 'Starting ${isVideo ? 'video' : 'audio'} call...';
       });
 
-      final callToStart = _testCall!.copyWith(
-        isVideoCall: isVideo,
-        status: CallStatus.ringing,
-      );
-
       // This would start a real call - commented out for safety
+      // final callToStart = _testCall!.copyWith(
+      //   callType: isVideo ? CallType.video : CallType.audio,
+      //   status: CallStatus.ringing,
+      // );
       // await _callManager!.startCall(callToStart);
       
       _addTestResult('🎬 ${isVideo ? 'Video' : 'Audio'} call test initiated');
@@ -302,17 +299,7 @@ class _CallTestScreenState extends State<CallTestScreen> {
   }
 
   /// Show success message
-  void _showSuccess(String message) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    }
-  }
+
 
   @override
   Widget build(BuildContext context) {

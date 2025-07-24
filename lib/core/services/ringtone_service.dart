@@ -246,6 +246,11 @@ class RingtoneService {
     await stopRingtone();
   }
 
+  /// Play incoming ringtone (alias for startRingtone for compatibility)
+  Future<void> playIncomingRingtone() async {
+    await startRingtone();
+  }
+
   /// Web Audio API implementation for better control
   Future<void> _playWebRingtone() async {
     if (!kIsWeb) return;

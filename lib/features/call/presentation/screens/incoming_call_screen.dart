@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../domain/models/call_model.dart';
 import '../../../../core/services/service_locator.dart';
+import '../../../../core/services/call_manager.dart';
+import '../../../../core/services/ringtone_service.dart';
 import 'package:flutter/foundation.dart';
 
 class IncomingCallScreen extends StatefulWidget {
@@ -23,7 +25,6 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
   late AnimationController _slideController;
   late Animation<double> _pulseAnimation;
   late Animation<Offset> _slideUpAnimation;
-  late Animation<Offset> _slideDownAnimation;
 
   Timer? _timeoutTimer;
   StreamSubscription? _callStatusSubscription;
@@ -91,13 +92,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
       curve: Curves.elasticOut,
     ));
 
-    _slideDownAnimation = Tween<Offset>(
-      begin: Offset.zero,
-      end: const Offset(0, -1),
-    ).animate(CurvedAnimation(
-      parent: _slideController,
-      curve: Curves.elasticOut,
-    ));
+
 
     // Start animations
     _pulseController.repeat(reverse: true);
@@ -442,10 +437,11 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
         
         // Navigate to call screen immediately
         if (mounted) {
-        Navigator.of(context).pushReplacementNamed(
-          '/call',
-          arguments: widget.call.copyWith(status: CallStatus.accepted),
-        );
+          Navigator.of(context).pushReplacementNamed(
+            '/call',
+            arguments: widget.call.copyWith(status: CallStatus.accepted),
+          );
+        }
       }
     } catch (e) {
       setState(() {
