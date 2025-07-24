@@ -24,8 +24,8 @@ class CallScreen extends StatefulWidget {
 
 class _CallScreenState extends State<CallScreen> {
   final CallService _callService = CallService();
-  final CallManager _callManager = ServiceLocator().callManager;
-  final RingtoneService _ringtoneService = ServiceLocator().ringtoneService;
+  CallManager? _callManager;
+  RingtoneService? _ringtoneService;
   bool _isConnecting = false;
   bool _localControlsVisible = true;
   Timer? _controlsTimer;
@@ -37,8 +37,45 @@ class _CallScreenState extends State<CallScreen> {
   @override
   void initState() {
     super.initState();
+    _initializeServices();
     _initializeCall();
     _setupCallEventListener();
+  }
+
+  /// Initialize services safely with fallback handling
+  void _initializeServices() {
+    try {
+      if (ServiceLocator().isInitialized) {
+        _callManager = ServiceLocator().callManagerOrNull;
+        _ringtoneService = ServiceLocator().ringtoneServiceOrNull;
+        if (kDebugMode) {
+          debugPrint('✅ Call screen services initialized successfully');
+        }
+      } else {
+        if (kDebugMode) {
+          debugPrint('⚠️ ServiceLocator not initialized - call screen will run with limited functionality');
+        }
+        _showServiceNotAvailableError();
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ Error initializing call screen services: $e');
+      }
+      _showServiceNotAvailableError();
+    }
+  }
+
+  /// Show error when services are not available
+  void _showServiceNotAvailableError() {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Call services are not available. Please restart the app.'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 5),
+        ),
+      );
+    }
   }
 
   @override
@@ -173,10 +210,10 @@ class _CallScreenState extends State<CallScreen> {
   Future<void> _cleanupCall() async {
     try {
       // Stop ringtone if playing
-      await _ringtoneService.forceStopRingtone();
+      await _ringtoneService?.forceStopRingtone();
       
       // End call via call manager for proper state cleanup
-      await _callManager.endCall();
+      await _callManager?.endCall();
       
       // Also end via call service as fallback
       await _callService.endCall();
@@ -186,7 +223,7 @@ class _CallScreenState extends State<CallScreen> {
       }
       // Force cleanup even on error
       try {
-        await _ringtoneService.forceStopRingtone();
+        await _ringtoneService?.forceStopRingtone();
       } catch (_) {}
     }
   }

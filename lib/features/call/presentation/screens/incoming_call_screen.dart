@@ -22,17 +22,49 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
   late AnimationController _pulseController;
   late AnimationController _slideController;
   late Animation<double> _pulseAnimation;
-  late Animation<Offset> _slideAnimation;
+  late Animation<Offset> _slideUpAnimation;
+  late Animation<Offset> _slideDownAnimation;
+
   Timer? _timeoutTimer;
   StreamSubscription? _callStatusSubscription;
   bool _isAnswering = false;
   bool _isDeclining = false;
 
+  CallManager? _callManager;
+  RingtoneService? _ringtoneService;
+
   @override
   void initState() {
     super.initState();
-    
-    // Set up animations
+    _initializeServices();
+    _initializeAnimations();
+    _setupCallStatusListener();
+    _startRingtoneWithTimeout();
+    _setupCallTimeout();
+  }
+
+  /// Initialize services safely with fallback handling
+  void _initializeServices() {
+    try {
+      if (ServiceLocator().isInitialized) {
+        _callManager = ServiceLocator().callManagerOrNull;
+        _ringtoneService = ServiceLocator().ringtoneServiceOrNull;
+        if (kDebugMode) {
+          debugPrint('✅ Incoming call screen services initialized successfully');
+        }
+      } else {
+        if (kDebugMode) {
+          debugPrint('⚠️ ServiceLocator not initialized - incoming call screen will run with limited functionality');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ Error initializing incoming call screen services: $e');
+      }
+    }
+  }
+
+  void _initializeAnimations() {
     _pulseController = AnimationController(
       duration: const Duration(seconds: 2),
       vsync: this,
@@ -51,9 +83,17 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
       curve: Curves.easeInOut,
     ));
 
-    _slideAnimation = Tween<Offset>(
+    _slideUpAnimation = Tween<Offset>(
       begin: const Offset(0, 1),
       end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _slideController,
+      curve: Curves.elasticOut,
+    ));
+
+    _slideDownAnimation = Tween<Offset>(
+      begin: Offset.zero,
+      end: const Offset(0, -1),
     ).animate(CurvedAnimation(
       parent: _slideController,
       curve: Curves.elasticOut,
@@ -62,19 +102,6 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
     // Start animations
     _pulseController.repeat(reverse: true);
     _slideController.forward();
-    
-    // Start ringtone with timeout
-    _startRingtoneWithTimeout();
-    
-    // Listen for call status changes
-    _setupCallStatusListener();
-    
-    // Set timeout for auto-decline (only if not answered by then)
-    _timeoutTimer = Timer(const Duration(seconds: 30), () {
-      if (mounted && !_isAnswering && !_isDeclining) {
-        _timeoutCall();
-      }
-    });
   }
 
   @override
@@ -89,27 +116,30 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
 
   void _setupCallStatusListener() {
     try {
-      final callManager = ServiceLocator().callManager;
-      _callStatusSubscription = callManager.currentCallStream.listen((call) {
-        if (!mounted) return;
-        
-        if (call == null || call.callId != widget.call.callId) {
-          // Call ended or changed, close this screen
-          if (mounted && !_isAnswering && !_isDeclining) {
-            Navigator.of(context).pop();
+      if (_callManager != null) {
+        _callStatusSubscription = _callManager!.currentCallStream.listen((call) {
+          if (!mounted) return;
+          
+          if (call == null || call.callId != widget.call.callId) {
+            // Call ended or changed, close this screen
+            if (mounted && !_isAnswering && !_isDeclining) {
+              Navigator.of(context).pop();
+            }
+            return;
           }
-          return;
-        }
-        
-        // Handle call status changes
-        if (call.status == CallStatus.cancelled || 
-            call.status == CallStatus.ended ||
-            call.status == CallStatus.missed) {
-          if (mounted && !_isAnswering && !_isDeclining) {
-            Navigator.of(context).pop();
+          
+          // Handle call status changes
+          if (call.status == CallStatus.cancelled || 
+              call.status == CallStatus.ended ||
+              call.status == CallStatus.missed) {
+            if (mounted && !_isAnswering && !_isDeclining) {
+              Navigator.of(context).pop();
+            }
           }
-        }
-      });
+        });
+      } else {
+        if (kDebugMode) debugPrint('⚠️ CallManager not available for status listener');
+      }
     } catch (e) {
       if (kDebugMode) debugPrint('Error setting up call status listener: $e');
     }
@@ -117,10 +147,11 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
 
   void _startRingtoneWithTimeout() async {
     try {
-      final ringtoneService = ServiceLocator().ringtoneServiceOrNull;
-      if (ringtoneService != null) {
+      if (_ringtoneService != null) {
         // Play ringtone with automatic timeout
-        await ringtoneService.playWithTimeout(timeout: const Duration(seconds: 30));
+        await _ringtoneService!.playWithTimeout(timeout: const Duration(seconds: 30));
+      } else {
+        if (kDebugMode) debugPrint('⚠️ RingtoneService not available');
       }
     } catch (e) {
       // Ringtone failed, continue without it
@@ -130,13 +161,20 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
 
   Future<void> _forceStopRingtone() async {
     try {
-      final ringtoneService = ServiceLocator().ringtoneServiceOrNull;
-      if (ringtoneService != null) {
-        await ringtoneService.forceStopRingtone();
+      if (_ringtoneService != null) {
+        await _ringtoneService!.forceStopRingtone();
       }
     } catch (e) {
       if (kDebugMode) debugPrint('Failed to stop ringtone: $e');
     }
+  }
+
+  void _setupCallTimeout() {
+    _timeoutTimer = Timer(const Duration(seconds: 30), () {
+      if (mounted && !_isAnswering && !_isDeclining) {
+        _timeoutCall();
+      }
+    });
   }
 
   void _timeoutCall() async {
@@ -150,9 +188,11 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
     await _forceStopRingtone();
     
     try {
-      final callService = ServiceLocator().callService;
-      // Use the proper timeout method to distinguish from user decline
-      await callService.timeoutCall(widget.call);
+      final callService = ServiceLocator().callServiceOrNull;
+      if (callService != null) {
+        // Use the proper timeout method to distinguish from user decline
+        await callService.timeoutCall(widget.call);
+      }
       
       if (mounted) {
         Navigator.of(context).pop();
@@ -185,7 +225,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
         ),
         child: SafeArea(
           child: SlideTransition(
-            position: _slideAnimation,
+            position: _slideUpAnimation,
             child: Column(
               children: [
                 // Header
@@ -397,11 +437,11 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
     await _forceStopRingtone();
     
     try {
-      final callManager = ServiceLocator().callManager;
-      await callManager.answerCall(widget.call);
-      
-      // Navigate to call screen immediately
-      if (mounted) {
+      if (_callManager != null) {
+        await _callManager!.answerCall(widget.call);
+        
+        // Navigate to call screen immediately
+        if (mounted) {
         Navigator.of(context).pushReplacementNamed(
           '/call',
           arguments: widget.call.copyWith(status: CallStatus.accepted),
@@ -437,8 +477,9 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
     await _forceStopRingtone();
     
     try {
-      final callManager = ServiceLocator().callManager;
-      await callManager.declineCall(widget.call);
+      if (_callManager != null) {
+        await _callManager!.declineCall(widget.call);
+      }
       
       if (mounted) {
         Navigator.of(context).pop();
