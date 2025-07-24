@@ -22,10 +22,11 @@ enum CallEndReason {
   permissionDenied, // Mic/camera permission denied
   timeout,       // Call timed out
   cancelled,     // Call was cancelled
+  testCompleted, // Test call completed successfully
+  newCallInitiated, // A new call was initiated while another was active
+  remoteHangup,  // Remote user ended the call
+  error,         // General error occurred
   unknown,       // Unknown reason
-  newCallInitiated, // New call was initiated
-  remoteHangup,  // Remote user hung up
-  error          // Technical error occurred
 }
 
 class CallModel {
