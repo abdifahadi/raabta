@@ -381,6 +381,28 @@ class NotificationService implements NotificationServiceInterface {
     return settings.authorizationStatus == AuthorizationStatus.authorized;
   }
 
+  /// Send call notification (for compatibility)
+  Future<void> sendCallNotification(dynamic call) async {
+    try {
+      if (kDebugMode) log('📞 Sending call notification');
+      
+      // For now, we'll just show a local notification
+      // In a real implementation, this would send FCM to other user
+      await showLocalNotification(
+        title: 'Incoming Call',
+        body: 'You have an incoming call',
+        payload: NotificationPayload(
+          type: 'call',
+          data: {'callId': call.id ?? call.callId ?? 'unknown'},
+        ),
+      );
+      
+      if (kDebugMode) log('✅ Call notification sent');
+    } catch (e) {
+      if (kDebugMode) log('❌ Failed to send call notification: $e');
+    }
+  }
+
   /// Dispose resources
   void dispose() {
     _onNotificationTapController.close();

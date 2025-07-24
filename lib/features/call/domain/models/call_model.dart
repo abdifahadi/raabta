@@ -6,6 +6,7 @@ enum CallStatus {
   calling,       // Call is being initiated/outgoing call
   ringing,       // Call is ringing on receiver's end
   accepted,      // Call was accepted by receiver  
+  active,        // Call is active/in progress (alias for connected)
   connected,     // Call is active/in progress
   ended,         // Call has ended normally
   declined,      // Call was declined by receiver
@@ -260,8 +261,12 @@ class CallModel {
     );
   }
 
-  // Helper methods
-  bool get isActive => status == CallStatus.accepted || status == CallStatus.connected;
+  // Helper getters
+  String get id => callId; // Alias for callId for compatibility
+  
+  bool get isActive => status == CallStatus.accepted || 
+                      status == CallStatus.connected || 
+                      status == CallStatus.active;
   bool get isEnded => status == CallStatus.ended || 
                      status == CallStatus.declined || 
                      status == CallStatus.missed ||
