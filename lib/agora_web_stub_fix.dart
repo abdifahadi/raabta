@@ -4,7 +4,7 @@
 // that properly handles platformViewRegistry in the latest Flutter versions
 
 import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
-import 'universal_platform_view_registry.dart';
+import 'utils/universal_platform_view_registry.dart';
 
 /// Safe wrapper for Agora RTC Engine web platform view registration
 /// This class provides compatibility with the latest Flutter web approach
@@ -85,6 +85,3 @@ class LegacyPlatformViewRegistry {
 void safePlatformViewRegistryRegisterViewFactory(String viewType, dynamic factoryFunction) {
   AgoraWebStubFix.modernRegisterViewFactory(viewType, factoryFunction);
 }
-
-/// Export for easier usage in patches
-export 'universal_platform_view_registry.dart';

@@ -24,6 +24,8 @@ import 'supabase_service.dart';
 import 'supabase_agora_token_service.dart';
 import 'production_call_service.dart';
 import 'call_manager.dart';
+import 'agora_service_factory.dart';
+import 'agora_service_interface.dart';
 
 import 'package:flutter/foundation.dart';
 
@@ -78,6 +80,9 @@ class ServiceLocator {
 
   /// Supabase Agora token service instance (production)
   SupabaseAgoraTokenService? _supabaseAgoraTokenService;
+  
+  /// Agora service instance (platform-specific)
+  AgoraServiceInterface? _agoraService;
 
   /// Production call service instance (primary)
   ProductionCallService? _productionCallService;
@@ -350,6 +355,20 @@ class ServiceLocator {
         throw Exception('Critical service ProductionCallService failed to initialize: $e');
       }
 
+      // Initialize Agora service (platform-specific implementation)
+      try {
+        _agoraService = AgoraServiceFactory.getInstance();
+        await _agoraService!.initialize();
+        if (kDebugMode) {
+          log('✅ AgoraService initialized (${kIsWeb ? 'Web' : 'Native'} implementation)');
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          log('❌ AgoraService initialization failed: $e');
+        }
+        throw Exception('Critical service AgoraService failed to initialize: $e');
+      }
+
       // Initialize call manager last (depends on call service)
       try {
         _callManager = CallManager();
@@ -496,6 +515,14 @@ class ServiceLocator {
     return _supabaseAgoraTokenService!;
   }
 
+  /// Get Agora service (platform-specific)
+  AgoraServiceInterface get agoraService {
+    if (_agoraService == null) {
+      throw StateError('ServiceLocator not initialized. Call initialize() first.');
+    }
+    return _agoraService!;
+  }
+
   /// Get production call service (primary)
   ProductionCallService get productionCallService {
     if (_productionCallService == null) {
@@ -543,6 +570,7 @@ class ServiceLocator {
   RingtoneService? get ringtoneServiceOrNull => _ringtoneService;
   AgoraTokenService? get agoraTokenServiceOrNull => _agoraTokenService;
   SupabaseAgoraTokenService? get supabaseAgoraTokenServiceOrNull => _supabaseAgoraTokenService;
+  AgoraServiceInterface? get agoraServiceOrNull => _agoraService;
   ProductionCallService? get productionCallServiceOrNull => _productionCallService;
   SupabaseService? get supabaseServiceOrNull => _supabaseService;
   CallManager? get callManagerOrNull => _callManager;
@@ -566,6 +594,8 @@ class ServiceLocator {
     _supabaseService = null;
     _agoraTokenService = null;
     _supabaseAgoraTokenService = null;
+    _agoraService?.dispose();
+    _agoraService = null;
     _callRepository = null;
     _groupChatRepository = null;
     _chatRepository = null;

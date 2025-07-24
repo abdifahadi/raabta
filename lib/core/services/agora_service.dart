@@ -55,6 +55,9 @@ class AgoraService implements AgoraServiceInterface {
   String? get currentChannelName => _currentChannelName;
   
   @override
+  int? get currentUid => _currentUid;
+  
+  @override
   Set<int> get remoteUsers => Set.from(_remoteUsers);
   
   @override

@@ -50,6 +50,9 @@ class AgoraWebService implements AgoraServiceInterface {
   bool get isVideoEnabled => _isVideoEnabled;
   
   @override
+  int? get currentUid => _currentUid;
+  
+  @override
   bool get isMuted => !_isAudioEnabled;
   
   @override
