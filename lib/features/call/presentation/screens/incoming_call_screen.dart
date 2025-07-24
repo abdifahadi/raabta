@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import '../../domain/models/call_model.dart';
-import '../../../../core/services/service_locator.dart';
-import '../../../../core/services/call_manager.dart';
-import '../../../../core/services/ringtone_service.dart';
 import 'package:flutter/foundation.dart';
 
+import '../../domain/models/call_model.dart';
+import '../../../../core/services/service_locator.dart';
+import '../../../../core/services/ringtone_service.dart';
+import 'unified_call_screen.dart';
+
+/// Incoming call screen with accept/decline functionality
+/// Includes ringtone service, call timeout, and proper UI
 class IncomingCallScreen extends StatefulWidget {
   final CallModel call;
 
@@ -19,481 +21,508 @@ class IncomingCallScreen extends StatefulWidget {
   State<IncomingCallScreen> createState() => _IncomingCallScreenState();
 }
 
-class _IncomingCallScreenState extends State<IncomingCallScreen>
-    with TickerProviderStateMixin {
+class _IncomingCallScreenState extends State<IncomingCallScreen> 
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   late AnimationController _pulseController;
   late AnimationController _slideController;
   late Animation<double> _pulseAnimation;
-  late Animation<Offset> _slideUpAnimation;
-
-  Timer? _timeoutTimer;
-  StreamSubscription? _callStatusSubscription;
+  late Animation<Offset> _slideAnimation;
+  
+  Timer? _callTimeoutTimer;
+  Timer? _durationTimer;
+  Duration _callDuration = Duration.zero;
+  
   bool _isAnswering = false;
   bool _isDeclining = false;
-
-  CallManager? _callManager;
-  RingtoneService? _ringtoneService;
 
   @override
   void initState() {
     super.initState();
-    _initializeServices();
-    _initializeAnimations();
-    _setupCallStatusListener();
-    _startRingtoneWithTimeout();
-    _setupCallTimeout();
-  }
-
-  /// Initialize services safely with fallback handling
-  void _initializeServices() {
-    try {
-      if (ServiceLocator().isInitialized) {
-        _callManager = ServiceLocator().callManagerOrNull;
-        _ringtoneService = ServiceLocator().ringtoneServiceOrNull;
-        if (kDebugMode) {
-          debugPrint('✅ Incoming call screen services initialized successfully');
-        }
-      } else {
-        if (kDebugMode) {
-          debugPrint('⚠️ ServiceLocator not initialized - incoming call screen will run with limited functionality');
-        }
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('❌ Error initializing incoming call screen services: $e');
-      }
+    WidgetsBinding.instance.addObserver(this);
+    
+    _setupAnimations();
+    _startRingtone();
+    _startCallTimeout();
+    _startDurationTimer();
+    
+    if (kDebugMode) {
+      debugPrint('📞 Incoming call screen initialized');
+      debugPrint('🔗 Call ID: ${widget.call.id}');
+      debugPrint('👤 From: ${widget.call.callerId}');
+      debugPrint('📱 Type: ${widget.call.callType.name}');
     }
   }
 
-  void _initializeAnimations() {
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    
+    switch (state) {
+      case AppLifecycleState.paused:
+        // Keep ringtone playing when app is minimized
+        if (kDebugMode) debugPrint('📱 App paused - ringtone continues');
+        break;
+      case AppLifecycleState.resumed:
+        // Ensure ringtone is still playing when app returns
+        if (kDebugMode) debugPrint('📱 App resumed - checking ringtone state');
+        _ensureRingtoneState();
+        break;
+      case AppLifecycleState.detached:
+        _declineCall();
+        break;
+      default:
+        break;
+    }
+  }
+
+  void _setupAnimations() {
     _pulseController = AnimationController(
       duration: const Duration(seconds: 2),
       vsync: this,
     );
     
     _slideController = AnimationController(
-      duration: const Duration(milliseconds: 500),
+      duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-
+    
     _pulseAnimation = Tween<double>(
       begin: 1.0,
-      end: 1.2,
+      end: 1.3,
     ).animate(CurvedAnimation(
       parent: _pulseController,
       curve: Curves.easeInOut,
     ));
-
-    _slideUpAnimation = Tween<Offset>(
+    
+    _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 1),
       end: Offset.zero,
     ).animate(CurvedAnimation(
       parent: _slideController,
       curve: Curves.elasticOut,
     ));
-
-
-
-    // Start animations
+    
     _pulseController.repeat(reverse: true);
     _slideController.forward();
   }
 
-  @override
-  void dispose() {
-    _pulseController.dispose();
-    _slideController.dispose();
-    _timeoutTimer?.cancel();
-    _callStatusSubscription?.cancel();
-    _forceStopRingtone();
-    super.dispose();
-  }
-
-  void _setupCallStatusListener() {
+  void _startRingtone() {
     try {
-      if (_callManager != null) {
-        _callStatusSubscription = _callManager!.currentCallStream.listen((call) {
-          if (!mounted) return;
-          
-          if (call == null || call.callId != widget.call.callId) {
-            // Call ended or changed, close this screen
-            if (mounted && !_isAnswering && !_isDeclining) {
-              Navigator.of(context).pop();
-            }
-            return;
-          }
-          
-          // Handle call status changes
-          if (call.status == CallStatus.cancelled || 
-              call.status == CallStatus.ended ||
-              call.status == CallStatus.missed) {
-            if (mounted && !_isAnswering && !_isDeclining) {
-              Navigator.of(context).pop();
-            }
-          }
-        });
-      } else {
-        if (kDebugMode) debugPrint('⚠️ CallManager not available for status listener');
-      }
+      RingtoneService().playWithTimeout(
+        timeout: const Duration(seconds: 45), // Longer timeout for incoming calls
+      );
+      if (kDebugMode) debugPrint('🔔 Ringtone started for incoming call');
     } catch (e) {
-      if (kDebugMode) debugPrint('Error setting up call status listener: $e');
+      if (kDebugMode) debugPrint('❌ Failed to start ringtone: $e');
     }
   }
 
-  void _startRingtoneWithTimeout() async {
-    try {
-      if (_ringtoneService != null) {
-        // Play ringtone with automatic timeout
-        await _ringtoneService!.playWithTimeout(timeout: const Duration(seconds: 30));
-      } else {
-        if (kDebugMode) debugPrint('⚠️ RingtoneService not available');
-      }
-    } catch (e) {
-      // Ringtone failed, continue without it
-      if (kDebugMode) debugPrint('Failed to start ringtone: $e');
+  void _ensureRingtoneState() {
+    if (!RingtoneService().isPlaying && !_isAnswering && !_isDeclining) {
+      _startRingtone();
     }
   }
 
-  Future<void> _forceStopRingtone() async {
-    try {
-      if (_ringtoneService != null) {
-        await _ringtoneService!.forceStopRingtone();
-      }
-    } catch (e) {
-      if (kDebugMode) debugPrint('Failed to stop ringtone: $e');
-    }
-  }
-
-  void _setupCallTimeout() {
-    _timeoutTimer = Timer(const Duration(seconds: 30), () {
+  void _startCallTimeout() {
+    _callTimeoutTimer = Timer(const Duration(seconds: 45), () {
       if (mounted && !_isAnswering && !_isDeclining) {
-        _timeoutCall();
+        if (kDebugMode) debugPrint('⏰ Call timeout reached, auto-declining');
+        _declineCall();
       }
     });
   }
 
-  void _timeoutCall() async {
-    if (_isAnswering || _isDeclining) return;
-    
-    setState(() {
-      _isDeclining = true;
+  void _startDurationTimer() {
+    _durationTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        setState(() {
+          _callDuration = Duration(seconds: timer.tick);
+        });
+      }
     });
-    
-    // Force stop ringtone immediately
-    await _forceStopRingtone();
-    
-    try {
-      final callService = ServiceLocator().callServiceOrNull;
-      if (callService != null) {
-        // Use the proper timeout method to distinguish from user decline
-        await callService.timeoutCall(widget.call);
-      }
-      
-      if (mounted) {
-        Navigator.of(context).pop();
-        // CallManager will handle showing the "Call Missed" feedback
-      }
-    } catch (e) {
-      if (mounted) {
-        Navigator.of(context).pop();
-      }
-    }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Scaffold(
-      backgroundColor: const Color(0xFF1A1A1A),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF2C1810),
-              Color(0xFF1A1A1A),
-              Color(0xFF0D0D0D),
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: SlideTransition(
-            position: _slideUpAnimation,
-            child: Column(
-              children: [
-                // Header
-                Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    children: [
-                      Text(
-                        'Incoming ${widget.call.callType == CallType.video ? 'video' : 'audio'} call',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          color: Colors.white70,
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        widget.call.callerName,
-                        style: theme.textTheme.headlineMedium?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 28,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Profile picture with pulse animation
-                Expanded(
-                  child: Center(
-                    child: AnimatedBuilder(
-                      animation: _pulseAnimation,
-                      builder: (context, child) {
-                        return Transform.scale(
-                          scale: _pulseAnimation.value,
-                          child: Container(
-                            width: 200,
-                            height: 200,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.3),
-                                width: 4,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.white.withOpacity(0.2),
-                                  blurRadius: 20,
-                                  spreadRadius: 5,
-                                ),
-                              ],
-                            ),
-                            child: ClipOval(
-                              child: widget.call.callerPhotoUrl.isNotEmpty
-                                  ? CachedNetworkImage(
-                                      imageUrl: widget.call.callerPhotoUrl,
-                                      fit: BoxFit.cover,
-                                      placeholder: (context, url) => Container(
-                                        color: Colors.grey[800],
-                                        child: const Icon(
-                                          Icons.person,
-                                          size: 80,
-                                          color: Colors.white54,
-                                        ),
-                                      ),
-                                      errorWidget: (context, url, error) => Container(
-                                        color: Colors.grey[800],
-                                        child: const Icon(
-                                          Icons.person,
-                                          size: 80,
-                                          color: Colors.white54,
-                                        ),
-                                      ),
-                                    )
-                                  : Container(
-                                      color: Colors.grey[800],
-                                      child: const Icon(
-                                        Icons.person,
-                                        size: 80,
-                                        color: Colors.white54,
-                                      ),
-                                    ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-
-                // Call type indicator
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 20.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        widget.call.callType == CallType.video
-                            ? Icons.videocam
-                            : Icons.call,
-                        color: Colors.white70,
-                        size: 24,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        widget.call.callType == CallType.video
-                            ? 'Video Call'
-                            : 'Voice Call',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          color: Colors.white70,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Action buttons
-                Padding(
-                  padding: const EdgeInsets.all(40.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      // Decline button
-                      _buildActionButton(
-                        onTap: _isDeclining || _isAnswering ? null : _declineCall,
-                        icon: Icons.call_end,
-                        color: _isDeclining ? Colors.grey : Colors.red,
-                        size: 70,
-                        isLoading: _isDeclining,
-                      ),
-                      
-                      // Answer button
-                      _buildActionButton(
-                        onTap: _isAnswering || _isDeclining ? null : _answerCall,
-                        icon: Icons.call,
-                        color: _isAnswering ? Colors.grey : Colors.green,
-                        size: 70,
-                        isLoading: _isAnswering,
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Bottom padding
-                const SizedBox(height: 20),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+  String _formatDuration(Duration duration) {
+    final minutes = duration.inMinutes;
+    final seconds = duration.inSeconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 
-  Widget _buildActionButton({
-    required VoidCallback? onTap,
-    required IconData icon,
-    required Color color,
-    required double size,
-    bool isLoading = false,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: color,
-          shape: BoxShape.circle,
-          boxShadow: onTap != null ? [
-            BoxShadow(
-              color: color.withOpacity(0.4),
-              blurRadius: 15,
-              spreadRadius: 3,
-            ),
-          ] : null,
-        ),
-        child: Center(
-          child: isLoading
-              ? SizedBox(
-                  width: size * 0.3,
-                  height: size * 0.3,
-                  child: const CircularProgressIndicator(
-                    color: Colors.white,
-                    strokeWidth: 3,
-                  ),
-                )
-              : Icon(
-                  icon,
-                  color: Colors.white,
-                  size: size * 0.4,
-                ),
-        ),
-      ),
-    );
-  }
-
-  void _answerCall() async {
+  Future<void> _acceptCall() async {
     if (_isAnswering || _isDeclining) return;
     
     setState(() {
       _isAnswering = true;
     });
-    
-    _timeoutTimer?.cancel();
-    
-    // Force stop ringtone immediately when answer is pressed
-    await _forceStopRingtone();
-    
+
     try {
-      if (_callManager != null) {
-        await _callManager!.answerCall(widget.call);
-        
-        // Navigate to call screen immediately
-        if (mounted) {
-          Navigator.of(context).pushReplacementNamed(
-            '/call',
-            arguments: widget.call.copyWith(status: CallStatus.accepted),
-          );
-        }
+      if (kDebugMode) debugPrint('✅ Accepting incoming call');
+      
+      // Stop ringtone immediately
+      await RingtoneService().forceStopRingtone();
+      
+      // Cancel timeout
+      _callTimeoutTimer?.cancel();
+      _durationTimer?.cancel();
+      
+      // Update call status
+      try {
+        await ServiceLocator().callRepository.updateCallStatus(
+          widget.call.id, 
+          CallStatus.active
+        );
+      } catch (e) {
+        if (kDebugMode) debugPrint('⚠️ Failed to update call status: $e');
+      }
+      
+      // Navigate to call screen
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => UnifiedCallScreen(call: widget.call),
+          ),
+        );
       }
     } catch (e) {
+      if (kDebugMode) debugPrint('❌ Failed to accept call: $e');
+      
       setState(() {
         _isAnswering = false;
       });
       
+      // Show error message
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to answer call: $e'),
+            content: Text('Failed to accept call: $e'),
             backgroundColor: Colors.red,
           ),
         );
+      }
+    }
+  }
+
+  Future<void> _declineCall() async {
+    if (_isAnswering || _isDeclining) return;
+    
+    setState(() {
+      _isDeclining = true;
+    });
+
+    try {
+      if (kDebugMode) debugPrint('❌ Declining incoming call');
+      
+      // Stop ringtone immediately
+      await RingtoneService().forceStopRingtone();
+      
+      // Cancel timers
+      _callTimeoutTimer?.cancel();
+      _durationTimer?.cancel();
+      
+      // Update call status
+      try {
+        await ServiceLocator().callRepository.updateCallStatus(
+          widget.call.id, 
+          CallStatus.declined
+        );
+      } catch (e) {
+        if (kDebugMode) debugPrint('⚠️ Failed to update call status: $e');
+      }
+      
+      // Navigate back
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('❌ Failed to decline call: $e');
+      
+      // Force navigation back even on error
+      if (mounted) {
         Navigator.of(context).pop();
       }
     }
   }
 
-  void _declineCall() async {
-    if (_isDeclining || _isAnswering) return;
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     
-    setState(() {
-      _isDeclining = true;
-    });
+    // Stop ringtone
+    RingtoneService().forceStopRingtone();
     
-    _timeoutTimer?.cancel();
+    // Cancel timers
+    _callTimeoutTimer?.cancel();
+    _durationTimer?.cancel();
     
-    // Force stop ringtone immediately when decline is pressed
-    await _forceStopRingtone();
+    // Dispose animations
+    _pulseController.dispose();
+    _slideController.dispose();
     
-    try {
-      if (_callManager != null) {
-        await _callManager!.declineCall(widget.call);
-      }
-      
-      if (mounted) {
-        Navigator.of(context).pop();
-      }
-    } catch (e) {
-      setState(() {
-        _isDeclining = false;
-      });
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to decline call: $e'),
-            backgroundColor: Colors.red,
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.blue.shade900.withOpacity(0.8),
+              Colors.purple.shade900.withOpacity(0.8),
+              Colors.black.withOpacity(0.9),
+            ],
           ),
-        );
-        Navigator.of(context).pop();
-      }
-    }
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              _buildHeader(),
+              Expanded(child: _buildCallInfo()),
+              _buildActionButtons(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.orange,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AnimatedBuilder(
+                  animation: _pulseAnimation,
+                  builder: (context, child) {
+                    return Transform.scale(
+                      scale: _pulseAnimation.value,
+                      child: Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(width: 6),
+                const Text(
+                  'INCOMING',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Spacer(),
+          Text(
+            _formatDuration(_callDuration),
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCallInfo() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        // Caller avatar with pulse animation
+        AnimatedBuilder(
+          animation: _pulseAnimation,
+          builder: (context, child) {
+            return Container(
+              width: 160 * _pulseAnimation.value,
+              height: 160 * _pulseAnimation.value,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.1),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.3),
+                  width: 3,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.blue.withOpacity(0.3),
+                    blurRadius: 20,
+                    spreadRadius: 5,
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.person,
+                size: 80,
+                color: Colors.white,
+              ),
+            );
+          },
+        ),
+        
+        const SizedBox(height: 30),
+        
+        // Caller name/ID
+        Text(
+          'Incoming Call',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        
+        const SizedBox(height: 8),
+        
+        Text(
+          'From: ${widget.call.callerId}',
+          style: const TextStyle(
+            color: Colors.white70,
+            fontSize: 18,
+          ),
+        ),
+        
+        const SizedBox(height: 16),
+        
+        // Call type indicator
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: widget.call.callType == CallType.video 
+                ? Colors.blue.withOpacity(0.3)
+                : Colors.green.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: widget.call.callType == CallType.video 
+                  ? Colors.blue
+                  : Colors.green,
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                widget.call.callType == CallType.video 
+                    ? Icons.videocam 
+                    : Icons.phone,
+                color: Colors.white,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '${widget.call.callType.name.toUpperCase()} CALL',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        const SizedBox(height: 24),
+        
+        // Channel info
+        Text(
+          'Channel: ${widget.call.channelName}',
+          style: const TextStyle(
+            color: Colors.white60,
+            fontSize: 14,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return SlideTransition(
+      position: _slideAnimation,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 40),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            // Decline button
+            GestureDetector(
+              onTap: _isDeclining ? null : _declineCall,
+              child: Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: _isDeclining ? Colors.grey : Colors.red,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.red.withOpacity(0.3),
+                      blurRadius: 15,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: _isDeclining 
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : const Icon(
+                      Icons.call_end,
+                      color: Colors.white,
+                      size: 40,
+                    ),
+              ),
+            ),
+            
+            // Accept button
+            GestureDetector(
+              onTap: _isAnswering ? null : _acceptCall,
+              child: Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: _isAnswering ? Colors.grey : Colors.green,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.green.withOpacity(0.3),
+                      blurRadius: 15,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: _isAnswering 
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : Icon(
+                      widget.call.callType == CallType.video 
+                          ? Icons.videocam 
+                          : Icons.call,
+                      color: Colors.white,
+                      size: 40,
+                    ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

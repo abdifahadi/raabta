@@ -1,25 +1,19 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'agora_service_interface.dart';
-import 'agora_uikit_service.dart';
-import 'agora_web_service.dart';
+import 'agora_unified_service.dart';
 
 class AgoraServiceFactory {
   static AgoraServiceInterface? _instance;
   
-  /// Get the appropriate AgoraService implementation based on platform
-  /// Uses web-specific service for web platforms and UIKit for others
+  /// Get the unified AgoraService implementation for all platforms
+  /// Uses agora_uikit with cross-platform support for Web, Android, iOS, Windows, macOS, Linux
   static AgoraServiceInterface getInstance() {
     if (_instance != null) {
       return _instance!;
     }
     
-    if (kIsWeb) {
-      // Use web-specific service for better web compatibility
-      _instance = AgoraWebService();
-    } else {
-      // Use AgoraUIKit service for native platforms (Android, iOS, Windows, macOS, Linux)
-      _instance = AgoraUIKitService();
-    }
+    // Use unified service for all platforms with agora_uikit
+    _instance = AgoraUnifiedService();
     
     return _instance!;
   }
