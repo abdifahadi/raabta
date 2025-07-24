@@ -72,8 +72,8 @@ dependencies:
   encrypt: ^5.0.3
   crypto: ^3.0.3
   
-  # Audio/Video Calling - UIKit implementation with web support
-  agora_uikit: ^1.3.10
+  # Audio/Video Calling - Direct RTC engine for cross-platform support
+  agora_rtc_engine: ^6.3.2
   
   # Supabase for backend services
   supabase_flutter: ^2.5.6
