@@ -244,7 +244,7 @@ class _CallTestScreenState extends State<CallTestScreen> {
     _addTestResult('🌍 Testing platform compatibility...');
     
     try {
-      final platform = kIsWeb ? 'Web' : 'Native';
+      const platform = kIsWeb ? 'Web' : 'Native';
       _addTestResult('✅ Platform detected: $platform');
       
       if (kIsWeb) {
@@ -555,8 +555,8 @@ class _CallTestScreenState extends State<CallTestScreen> {
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     const SizedBox(height: 8),
-                    Text('Platform: ${kIsWeb ? 'Web' : 'Native'}'),
-                    Text('Debug Mode: $kDebugMode'),
+                    const Text('Platform: ${kIsWeb ? 'Web' : 'Native'}'),
+                    const Text('Debug Mode: $kDebugMode'),
                     Text('Services Initialized: $_servicesInitialized'),
                     if (_testCall != null)
                       Text('Test Call ID: ${_testCall!.callId}'),

@@ -457,6 +457,9 @@ class _CallDialerScreenState extends State<CallDialerScreen>
         actions: [
           TextButton(
             onPressed: () async {
+              // Store context before async operation
+              final navigator = Navigator.of(context);
+              
               // Cancel the call
               try {
                 final callService = ServiceLocator().callServiceOrNull;
@@ -464,13 +467,13 @@ class _CallDialerScreenState extends State<CallDialerScreen>
                   await callService.cancelCall(call);
                 }
                 if (mounted) {
-                  Navigator.of(context).pop(); // Close dialog
-                  Navigator.of(context).pop(); // Go back to previous screen
+                  navigator.pop(); // Close dialog
+                  navigator.pop(); // Go back to previous screen
                 }
               } catch (e) {
                 if (mounted) {
-                  Navigator.of(context).pop(); // Close dialog anyway
-                  Navigator.of(context).pop(); // Go back to previous screen
+                  navigator.pop(); // Close dialog anyway
+                  navigator.pop(); // Go back to previous screen
                 }
               }
             },

@@ -3,19 +3,20 @@ import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
 import '../config/agora_config.dart';
-import 'firebase_functions_service.dart';
+import 'supabase_agora_token_service.dart';
+import '../../features/call/domain/models/call_model.dart';
 
 class AgoraTokenService {
   static final AgoraTokenService _instance = AgoraTokenService._internal();
   factory AgoraTokenService() => _instance;
   AgoraTokenService._internal();
 
-  final FirebaseFunctionsService _functionsService = FirebaseFunctionsService();
+  final SupabaseAgoraTokenService _supabaseTokenService = SupabaseAgoraTokenService();
   
   // Development mode flag - in production, always use secure tokens
   static const bool _allowInsecureMode = kDebugMode;
 
-  /// Generate Agora token using Firebase Functions with in-app JWT fallback
+  /// Generate Agora token using Supabase with in-app JWT fallback
   Future<AgoraTokenResponse> generateToken({
     required String channelName,
     int? uid,
@@ -31,30 +32,27 @@ class AgoraTokenService {
       final finalUid = uid ?? _generateRandomUid();
 
       try {
-        // Try Firebase Functions first
-        final response = await _functionsService.callFunction(
-          'generateAgoraToken',
-          data: {
-            'channelName': channelName,
-            'uid': finalUid,
-            'role': role,
-            'expirationTime': expirationTime ?? 3600,
-          },
+        // Try Supabase first
+        final token = await _supabaseTokenService.getToken(
+          channelName: channelName,
+          uid: finalUid,
+          callType: CallType.video, // Default to video call
         );
 
-        if (response != null) {
-          if (kDebugMode) {
-            debugPrint('✅ Secure Agora token generated via Firebase Functions');
-            debugPrint('📋 Token expires at: ${DateTime.fromMillisecondsSinceEpoch(response['expirationTime'] * 1000)}');
-          }
-
-          return AgoraTokenResponse.fromMap(response);
-        } else {
-          throw Exception('Firebase Functions returned null response');
-        }
-      } catch (functionsError) {
         if (kDebugMode) {
-          debugPrint('⚠️ Firebase Functions token generation failed: $functionsError');
+          debugPrint('✅ Secure Agora token generated via Supabase');
+        }
+
+        return AgoraTokenResponse(
+          rtcToken: token,
+          uid: finalUid,
+          channelName: channelName,
+          appId: AgoraConfig.appId,
+          expirationTime: DateTime.now().millisecondsSinceEpoch ~/ 1000 + (expirationTime ?? 3600),
+        );
+      } catch (supabaseError) {
+        if (kDebugMode) {
+          debugPrint('⚠️ Supabase token generation failed: $supabaseError');
           debugPrint('🔄 Falling back to in-app token generation...');
         }
         
