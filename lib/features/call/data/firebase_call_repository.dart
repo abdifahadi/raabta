@@ -286,6 +286,9 @@ class FirebaseCallRepository implements CallRepository {
   Stream<List<CallModel>> listenToIncomingCalls() {
     final currentUserId = _auth.currentUser?.uid;
     if (currentUserId == null) {
+      if (kDebugMode) {
+        debugPrint('⚠️ FirebaseCallRepository: No authenticated user for incoming calls');
+      }
       return Stream.value([]);
     }
 
@@ -294,10 +297,22 @@ class FirebaseCallRepository implements CallRepository {
         .where('receiverId', isEqualTo: currentUserId)
         .where('status', isEqualTo: CallStatus.ringing.name)
         .snapshots()
+        .handleError((error) {
+          if (kDebugMode) {
+            debugPrint('❌ FirebaseCallRepository: Error listening to incoming calls: $error');
+          }
+        })
         .map((snapshot) {
-      return snapshot.docs
-          .map((doc) => CallModel.fromMap(doc.data(), doc.id))
-          .toList();
+      try {
+        return snapshot.docs
+            .map((doc) => CallModel.fromMap(doc.data(), doc.id))
+            .toList();
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('❌ FirebaseCallRepository: Error parsing incoming calls: $e');
+        }
+        return <CallModel>[];
+      }
     });
   }
 

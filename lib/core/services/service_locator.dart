@@ -278,46 +278,116 @@ class ServiceLocator {
       log('📋 Phase 4: Initializing call services...');
     }
 
-    // Initialize ringtone service first (no dependencies)
-    _ringtoneService = RingtoneService();
-    if (kDebugMode) {
-      log('✅ RingtoneService initialized');
-    }
+    try {
+      // Initialize ringtone service first (no dependencies)
+      _ringtoneService = RingtoneService();
+      if (kDebugMode) {
+        log('✅ RingtoneService initialized');
+      }
 
-    // Initialize Agora token services
-    _agoraTokenService = AgoraTokenService();
-    _supabaseAgoraTokenService = SupabaseAgoraTokenService();
-    _supabaseAgoraTokenService!.initializeWithDependencies(_supabaseService!);
+      // Initialize Agora token services with error handling
+      try {
+        _agoraTokenService = AgoraTokenService();
+        if (kDebugMode) {
+          log('✅ AgoraTokenService initialized');
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          log('⚠️ AgoraTokenService initialization failed: $e');
+        }
+        // Continue without legacy token service
+      }
 
-    // Initialize call service and wait for it to complete
-    _callService = CallService();
-    await _callService!.initialize();
-    if (kDebugMode) {
-      log('✅ CallService initialized');
-    }
+      // Initialize Supabase Agora token service (critical for production)
+      try {
+        _supabaseAgoraTokenService = SupabaseAgoraTokenService();
+        if (_supabaseService != null) {
+          _supabaseAgoraTokenService!.initializeWithDependencies(_supabaseService!);
+          if (kDebugMode) {
+            log('✅ SupabaseAgoraTokenService initialized with dependencies');
+          }
+        } else {
+          if (kDebugMode) {
+            log('⚠️ SupabaseService not available for token service');
+          }
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          log('❌ SupabaseAgoraTokenService initialization failed: $e');
+        }
+        throw Exception('Critical service SupabaseAgoraTokenService failed to initialize: $e');
+      }
 
-    // Initialize production call service with safe dependency injection
-    _productionCallService = ProductionCallService();
-    await _productionCallService!.initializeWithDependencies(_ringtoneService!);
-    if (kDebugMode) {
-      log('✅ ProductionCallService initialized');
-    }
+      // Initialize call service and wait for it to complete
+      try {
+        _callService = CallService();
+        await _callService!.initialize();
+        if (kDebugMode) {
+          log('✅ CallService initialized');
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          log('❌ CallService initialization failed: $e');
+        }
+        throw Exception('Critical service CallService failed to initialize: $e');
+      }
 
-    // Initialize call manager last (depends on call service)
-    _callManager = CallManager();
-    if (kDebugMode) {
-      log('✅ CallManager initialized');
-    }
+      // Initialize production call service with safe dependency injection
+      try {
+        _productionCallService = ProductionCallService();
+        if (_ringtoneService != null) {
+          await _productionCallService!.initializeWithDependencies(_ringtoneService!);
+        } else {
+          await _productionCallService!.initialize();
+        }
+        if (kDebugMode) {
+          log('✅ ProductionCallService initialized');
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          log('❌ ProductionCallService initialization failed: $e');
+        }
+        throw Exception('Critical service ProductionCallService failed to initialize: $e');
+      }
 
-    if (kDebugMode) {
-      log('✅ Phase 4 completed: Call services initialized');
+      // Initialize call manager last (depends on call service)
+      try {
+        _callManager = CallManager();
+        if (kDebugMode) {
+          log('✅ CallManager initialized');
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          log('❌ CallManager initialization failed: $e');
+        }
+        throw Exception('Critical service CallManager failed to initialize: $e');
+      }
+
+      if (kDebugMode) {
+        log('✅ Phase 4 completed: All call services initialized successfully');
+        log('🎯 Available services: RingtoneService, CallService, ProductionCallService, CallManager');
+        if (_supabaseAgoraTokenService != null) {
+          log('🔐 Token service: SupabaseAgoraTokenService (Production)');
+        }
+        if (_agoraTokenService != null) {
+          log('🔐 Token service: AgoraTokenService (Legacy/Backup)');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        log('❌ Phase 4 failed: Call services initialization error: $e');
+      }
+      rethrow;
     }
   }
 
   /// Get backend service
   BackendService get backendService {
+    if (!_isInitialized) {
+      throw StateError('ServiceLocator not initialized. Call initialize() first. Error: ${_initializationError ?? "Unknown error"}');
+    }
     if (_backendService == null) {
-      throw StateError('ServiceLocator not initialized. Call initialize() first.');
+      throw StateError('Backend service not available. Initialization may have failed. Error: ${_initializationError ?? "Service not created"}');
     }
     return _backendService!;
   }
@@ -452,8 +522,11 @@ class ServiceLocator {
 
   /// Get call manager
   CallManager get callManager {
+    if (!_isInitialized) {
+      throw StateError('ServiceLocator not initialized. Call initialize() first. Error: ${_initializationError ?? "Unknown error"}');
+    }
     if (_callManager == null) {
-      throw StateError('ServiceLocator not initialized. Call initialize() first.');
+      throw StateError('CallManager not available. Call service initialization may have failed. Error: ${_initializationError ?? "Service not created"}');
     }
     return _callManager!;
   }

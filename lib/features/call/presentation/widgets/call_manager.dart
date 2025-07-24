@@ -59,12 +59,12 @@ class _CallManagerState extends State<CallManager> {
 
 
 
-      // Listen for incoming calls
+      // Listen for incoming calls - Fixed null safety
       _incomingCallsSubscription = callRepository
           .listenToIncomingCalls()
-          .listen((calls) {
-        if (calls.isNotEmpty && mounted) {
-          final call = calls.first;
+          .listen((callStatusList) {
+        if (callStatusList.isNotEmpty && mounted) {
+          final call = callStatusList.first;
           // Only show if it's a new incoming call and still ringing
           if (_currentIncomingCall?.callId != call.callId && 
               call.status == CallStatus.ringing) {

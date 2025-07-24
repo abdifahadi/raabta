@@ -88,7 +88,7 @@ class ImprovedAgoraWebService implements AgoraServiceInterface {
         throw Exception('Media devices not supported in this browser');
       }
 
-      // Check if required WebRTC APIs are available - Fixed using js_util instead of js.context
+      // Check if required WebRTC APIs are available - Fixed using js_util instead of window[]
       final hasWebRTC = js_util.hasProperty(html.window, 'RTCPeerConnection');
       if (!hasWebRTC) {
         throw Exception('WebRTC not supported in this browser');
@@ -281,7 +281,14 @@ class ImprovedAgoraWebService implements AgoraServiceInterface {
         throw Exception('Media permissions not granted: $_permissionError');
       }
 
-      // Get token for the call
+      // Get token for the call - using proper query parameters access
+      String? tokenFromQuery;
+      try {
+        tokenFromQuery = Uri.base.queryParameters['token'];
+      } catch (e) {
+        if (kDebugMode) debugPrint('No token in query parameters: $e');
+      }
+      
       final tokenResponse = await _tokenService.generateToken(
         channelName: channelName,
         uid: uid,
