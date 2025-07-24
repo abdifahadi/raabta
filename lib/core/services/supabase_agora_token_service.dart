@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import 'supabase_service.dart';
+import '../../../features/call/domain/models/call_model.dart';
 
 /// Production-ready Supabase Agora Token Service
 /// Replaces Firebase Functions with secure Supabase Edge Functions
@@ -25,6 +26,74 @@ class SupabaseAgoraTokenService {
     }
   }
   
+  /// Get Agora token as a simple string using Supabase Edge Function
+  /// 
+  /// Takes required parameters:
+  /// - [channelName]: The name of the channel
+  /// - [uid]: User ID as integer
+  /// - [callType]: Type of call (audio or video)
+  /// 
+  /// Returns a Future<String> representing the Agora RTC token
+  /// Throws [AgoraTokenException] if token generation fails
+  Future<String> getToken({
+    required String channelName,
+    required int uid,
+    required CallType callType,
+  }) async {
+    if (!_isInitialized) {
+      throw StateError('SupabaseAgoraTokenService not initialized. Call initializeWithDependencies() first.');
+    }
+
+    try {
+      if (kDebugMode) {
+        debugPrint('🎯 SupabaseAgoraTokenService.getToken: Requesting token for channel: $channelName, uid: $uid, type: ${callType.name}');
+      }
+
+      // Call Supabase Edge Function with HTTP POST request
+      final response = await _supabaseService.invokeFunction(
+        'generate-agora-token',
+        body: {
+          'channelName': channelName,
+          'uid': uid,
+          'callType': callType.name, // Convert enum to string
+          'role': 'publisher', // Default role for call participants
+          'expirationTime': 3600, // 1 hour expiration
+        },
+      );
+
+      // Handle response and extract token
+      if (response.status == 200 && response.data != null) {
+        final Map<String, dynamic> responseData = response.data as Map<String, dynamic>;
+        
+        if (responseData.containsKey('rtcToken')) {
+          final String token = responseData['rtcToken'] as String;
+          
+          if (kDebugMode) {
+            debugPrint('✅ SupabaseAgoraTokenService.getToken: Token retrieved successfully (${token.length} chars)');
+          }
+          
+          return token;
+        } else {
+          throw AgoraTokenException('Token not found in response: ${responseData.toString()}');
+        }
+      } else {
+        final errorMessage = response.data?.toString() ?? 'Unknown error';
+        throw AgoraTokenException('Edge Function returned error: ${response.status} - $errorMessage');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ SupabaseAgoraTokenService.getToken: Failed to get token: $e');
+      }
+      
+      // Re-throw AgoraTokenException as-is, wrap other exceptions
+      if (e is AgoraTokenException) {
+        rethrow;
+      } else {
+        throw AgoraTokenException('Failed to get Agora token: $e');
+      }
+    }
+  }
+
   /// Generate Agora token using Supabase Edge Function with HMAC-SHA256 security
   Future<AgoraTokenResponse> generateToken({
     required String channelName,
