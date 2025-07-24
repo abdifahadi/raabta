@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:agora_uikit/agora_uikit.dart';
+import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../features/call/domain/models/call_model.dart';
@@ -9,14 +9,14 @@ import 'agora_service_interface.dart';
 import 'supabase_agora_token_service.dart';
 import '../config/agora_config.dart';
 
-/// Cross-platform Agora service implementation using agora_uikit
+/// Cross-platform Agora service implementation using agora_rtc_engine
 /// Supports Web, Android, iOS, Windows, macOS, and Linux
 class AgoraUIKitService implements AgoraServiceInterface {
   static final AgoraUIKitService _instance = AgoraUIKitService._internal();
   factory AgoraUIKitService() => _instance;
   AgoraUIKitService._internal();
 
-  AgoraClient? _client;
+  RtcEngine? _engine;
   String? _currentChannelName;
   int? _currentUid;
   bool _isInCall = false;
@@ -72,14 +72,67 @@ class AgoraUIKitService implements AgoraServiceInterface {
     try {
       if (kDebugMode) debugPrint('🎥 AgoraUIKitService: Initializing...');
       
-      // AgoraUIKit handles platform-specific initialization internally
-      // No explicit initialization needed as it's done when creating AgoraClient
+      // Create RTC engine
+      _engine = createAgoraRtcEngine();
+      
+      // Initialize the engine
+      await _engine!.initialize(RtcEngineContext(
+        appId: AgoraConfig.appId,
+        channelProfile: ChannelProfileType.channelProfileCommunication,
+        logConfig: const LogConfig(level: LogLevel.logLevelInfo),
+      ));
+      
+      // Enable audio and video
+      await _engine!.enableAudio();
+      await _engine!.enableVideo();
+      
+      // Set up event handler
+      _engine!.registerEventHandler(_createEventHandler());
       
       if (kDebugMode) debugPrint('✅ AgoraUIKitService: Initialized successfully');
     } catch (e) {
       if (kDebugMode) debugPrint('❌ AgoraUIKitService: Failed to initialize: $e');
-      throw Exception('Failed to initialize Agora UIKit service: $e');
+      throw Exception('Failed to initialize Agora RTC Engine: $e');
     }
+  }
+
+  RtcEngineEventHandler _createEventHandler() {
+    return RtcEngineEventHandler(
+      onJoinChannelSuccess: (connection, elapsed) {
+        if (kDebugMode) debugPrint('AgoraUIKitService: Joined channel successfully');
+        _callEventController.add({
+          'type': 'joinChannelSuccess',
+          'channel': connection.channelId,
+          'uid': connection.localUid,
+        });
+      },
+      onUserJoined: (connection, uid, elapsed) {
+        _remoteUsers.add(uid);
+        _callEventController.add({
+          'type': 'userJoined',
+          'uid': uid,
+        });
+        if (kDebugMode) debugPrint('AgoraUIKitService: User joined: $uid');
+      },
+      onUserOffline: (connection, uid, reason) {
+        _remoteUsers.remove(uid);
+        _callEventController.add({
+          'type': 'userLeft',
+          'uid': uid,
+          'reason': reason.name,
+        });
+        if (kDebugMode) debugPrint('AgoraUIKitService: User left: $uid');
+      },
+      onLeaveChannel: (connection, stats) {
+        _callEventController.add({
+          'type': 'leaveChannel',
+        });
+        if (kDebugMode) debugPrint('AgoraUIKitService: Left channel');
+      },
+      onError: (err, msg) {
+        if (kDebugMode) debugPrint('AgoraUIKitService: Error $err: $msg');
+      },
+    );
   }
 
   @override
@@ -121,6 +174,10 @@ class AgoraUIKitService implements AgoraServiceInterface {
     required CallType callType,
     int? uid,
   }) async {
+    if (_engine == null) {
+      throw Exception('Agora engine not initialized');
+    }
+
     try {
       if (kDebugMode) {
         debugPrint('AgoraUIKitService: Joining call - Channel: $channelName, Type: ${callType.name}');
@@ -139,113 +196,62 @@ class AgoraUIKitService implements AgoraServiceInterface {
         role: 'publisher',
       );
 
-      // Create AgoraClient with connection data
-      _client = AgoraClient(
-        agoraConnectionData: AgoraConnectionData(
-          appId: AgoraConfig.appId,
-          channelName: channelName,
-          tempToken: tokenResponse.rtcToken,
-          uid: tokenResponse.uid,
-        ),
-      );
-
-      // Initialize the client
-      await _client!.initialize();
-
-      // Set up event listeners
-      _setupEventListeners();
-
-      _currentChannelName = channelName;
-      _currentUid = tokenResponse.uid;
-      _isInCall = true;
+      // Set client role
+      await _engine!.setClientRole(role: ClientRoleType.clientRoleBroadcaster);
 
       // Enable/disable video based on call type
       if (callType == CallType.video) {
         _isVideoEnabled = true;
+        await _engine!.enableLocalVideo(true);
       } else {
         _isVideoEnabled = false;
-        // Disable video for audio-only calls
-        await toggleVideo();
+        await _engine!.enableLocalVideo(false);
       }
+
+      // Join channel
+      await _engine!.joinChannel(
+        token: tokenResponse.rtcToken,
+        channelId: channelName,
+        uid: tokenResponse.uid,
+        options: ChannelMediaOptions(
+          clientRoleType: ClientRoleType.clientRoleBroadcaster,
+          channelProfile: ChannelProfileType.channelProfileCommunication,
+          autoSubscribeAudio: true,
+          autoSubscribeVideo: callType == CallType.video,
+          publishCameraTrack: callType == CallType.video,
+          publishMicrophoneTrack: true,
+        ),
+      );
+
+      _currentChannelName = channelName;
+      _currentUid = tokenResponse.uid;
+      _isInCall = true;
 
       if (kDebugMode) {
         debugPrint('✅ AgoraUIKitService: Successfully joined call');
         debugPrint('🆔 UID: ${tokenResponse.uid}');
         debugPrint('🔐 Token: ${tokenResponse.rtcToken.substring(0, 20)}...');
       }
-
-      _callEventController.add({
-        'type': 'joinChannelSuccess',
-        'channel': channelName,
-        'uid': tokenResponse.uid,
-      });
     } catch (e) {
       if (kDebugMode) debugPrint('❌ AgoraUIKitService: Failed to join call: $e');
       throw Exception('Failed to join call: $e');
     }
   }
 
-  void _setupEventListeners() {
-    if (_client == null) return;
-
-    // Listen to user join events
-    _client!.sessionController.value.users.addListener(() {
-      final currentUsers = _client!.sessionController.value.users.value;
-      final newUsers = currentUsers.where((uid) => !_remoteUsers.contains(uid)).toSet();
-      final leftUsers = _remoteUsers.where((uid) => !currentUsers.contains(uid)).toSet();
-
-      // Handle new users
-      for (final uid in newUsers) {
-        _remoteUsers.add(uid);
-        _callEventController.add({
-          'type': 'userJoined',
-          'uid': uid,
-        });
-        if (kDebugMode) debugPrint('AgoraUIKitService: User joined: $uid');
-      }
-
-      // Handle users who left
-      for (final uid in leftUsers) {
-        _remoteUsers.remove(uid);
-        _callEventController.add({
-          'type': 'userLeft',
-          'uid': uid,
-          'reason': 'UserOffline',
-        });
-        if (kDebugMode) debugPrint('AgoraUIKitService: User left: $uid');
-      }
-    });
-
-    // Listen to connection state changes
-    _client!.sessionController.value.connectionData.addListener(() {
-      final connectionData = _client!.sessionController.value.connectionData.value;
-      _callEventController.add({
-        'type': 'connectionStateChanged',
-        'state': connectionData.toString(),
-      });
-    });
-  }
-
   @override
   Future<void> leaveCall() async {
-    if (_client == null) return;
+    if (_engine == null) return;
 
     try {
       if (kDebugMode) debugPrint('AgoraUIKitService: Leaving call...');
       
-      // Dispose the client
-      await _client!.release();
-      _client = null;
+      await _engine!.leaveChannel();
       
       // Reset state
       _isInCall = false;
       _currentChannelName = null;
       _currentUid = null;
       _remoteUsers.clear();
-      
-      _callEventController.add({
-        'type': 'leaveChannel',
-      });
       
       if (kDebugMode) debugPrint('✅ AgoraUIKitService: Successfully left call');
     } catch (e) {
@@ -256,16 +262,11 @@ class AgoraUIKitService implements AgoraServiceInterface {
 
   @override
   Future<void> toggleMute() async {
-    if (_client == null) return;
+    if (_engine == null) return;
 
     try {
       _isAudioEnabled = !_isAudioEnabled;
-      
-      // UIKit handles audio state through the engine
-      final engine = _client!.sessionController.value.engine;
-      if (engine != null) {
-        await engine.muteLocalAudioStream(!_isAudioEnabled);
-      }
+      await _engine!.muteLocalAudioStream(!_isAudioEnabled);
       
       if (kDebugMode) {
         debugPrint('AgoraUIKitService: Audio ${_isAudioEnabled ? 'unmuted' : 'muted'}');
@@ -283,17 +284,12 @@ class AgoraUIKitService implements AgoraServiceInterface {
 
   @override
   Future<void> toggleVideo() async {
-    if (_client == null) return;
+    if (_engine == null) return;
 
     try {
       _isVideoEnabled = !_isVideoEnabled;
-      
-      // UIKit handles video state through the engine
-      final engine = _client!.sessionController.value.engine;
-      if (engine != null) {
-        await engine.muteLocalVideoStream(!_isVideoEnabled);
-        await engine.enableLocalVideo(_isVideoEnabled);
-      }
+      await _engine!.muteLocalVideoStream(!_isVideoEnabled);
+      await _engine!.enableLocalVideo(_isVideoEnabled);
       
       if (kDebugMode) {
         debugPrint('AgoraUIKitService: Video ${_isVideoEnabled ? 'enabled' : 'disabled'}');
@@ -311,16 +307,14 @@ class AgoraUIKitService implements AgoraServiceInterface {
 
   @override
   Future<void> toggleSpeaker() async {
-    if (_client == null) return;
+    if (_engine == null) return;
 
     try {
       _isSpeakerEnabled = !_isSpeakerEnabled;
       
-      // UIKit handles speaker state through the engine
-      final engine = _client!.sessionController.value.engine;
-      if (engine != null && !kIsWeb) {
+      if (!kIsWeb) {
         // Speaker toggle not applicable on web
-        await engine.setEnableSpeakerphone(_isSpeakerEnabled);
+        await _engine!.setEnableSpeakerphone(_isSpeakerEnabled);
       }
       
       if (kDebugMode) {
@@ -339,14 +333,12 @@ class AgoraUIKitService implements AgoraServiceInterface {
 
   @override
   Future<void> switchCamera() async {
-    if (_client == null) return;
+    if (_engine == null) return;
 
     try {
-      // UIKit handles camera switching through the engine
-      final engine = _client!.sessionController.value.engine;
-      if (engine != null && !kIsWeb) {
+      if (!kIsWeb) {
         // Camera switching not applicable on web in the same way
-        await engine.switchCamera();
+        await _engine!.switchCamera();
       }
       
       if (kDebugMode) debugPrint('AgoraUIKitService: Camera switched');
@@ -362,14 +354,10 @@ class AgoraUIKitService implements AgoraServiceInterface {
 
   @override
   Future<void> renewToken(String token) async {
-    if (_client == null || _currentChannelName == null) return;
+    if (_engine == null || _currentChannelName == null) return;
 
     try {
-      // UIKit handles token renewal through the engine
-      final engine = _client!.sessionController.value.engine;
-      if (engine != null) {
-        await engine.renewToken(token);
-      }
+      await _engine!.renewToken(token);
       
       if (kDebugMode) debugPrint('✅ AgoraUIKitService: Token renewed successfully');
       
@@ -384,7 +372,7 @@ class AgoraUIKitService implements AgoraServiceInterface {
 
   @override
   Widget createLocalVideoView() {
-    if (_client == null) {
+    if (_engine == null) {
       return Container(
         color: Colors.black,
         child: const Center(
@@ -396,7 +384,6 @@ class AgoraUIKitService implements AgoraServiceInterface {
       );
     }
 
-    // Use AgoraVideoViewer from UIKit which handles all platforms including web
     return Container(
       decoration: BoxDecoration(
         color: Colors.black,
@@ -404,13 +391,11 @@ class AgoraUIKitService implements AgoraServiceInterface {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(8),
-        child: AgoraVideoViewer(
-          client: _client!,
-          layoutType: Layout.oneToOne,
-          enableHostControls: false,
-          showNumberOfUsers: false,
-          showMicStatus: false,
-          showAVState: false,
+        child: AgoraVideoView(
+          controller: VideoViewController(
+            rtcEngine: _engine!,
+            canvas: const VideoCanvas(uid: 0),
+          ),
         ),
       ),
     );
@@ -418,7 +403,7 @@ class AgoraUIKitService implements AgoraServiceInterface {
 
   @override
   Widget createRemoteVideoView(int uid) {
-    if (_client == null) {
+    if (_engine == null) {
       return Container(
         color: Colors.black,
         child: const Center(
@@ -430,7 +415,6 @@ class AgoraUIKitService implements AgoraServiceInterface {
       );
     }
 
-    // AgoraVideoViewer automatically handles remote video rendering
     return Container(
       decoration: BoxDecoration(
         color: Colors.black,
@@ -438,28 +422,27 @@ class AgoraUIKitService implements AgoraServiceInterface {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(8),
-        child: AgoraVideoViewer(
-          client: _client!,
-          layoutType: Layout.floating,
-          enableHostControls: false,
-          showNumberOfUsers: false,
-          showMicStatus: false,
-          showAVState: false,
+        child: AgoraVideoView(
+          controller: VideoViewController.remote(
+            rtcEngine: _engine!,
+            canvas: VideoCanvas(uid: uid),
+            connection: RtcConnection(channelId: _currentChannelName),
+          ),
         ),
       ),
     );
   }
 
-  /// Get the AgoraClient for direct UIKit usage
-  AgoraClient? get client => _client;
+  /// Get the RtcEngine for direct access
+  RtcEngine? get engine => _engine;
 
   @override
   void dispose() {
     try {
       _callEventController.close();
       _currentCallController.close();
-      _client?.release();
-      _client = null;
+      _engine?.release();
+      _engine = null;
       
       if (kDebugMode) debugPrint('🧹 AgoraUIKitService: Disposed successfully');
     } catch (e) {

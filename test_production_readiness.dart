@@ -161,11 +161,16 @@ Future<bool> testDependencies() async {
     
     // Check for critical dependencies
     final criticalDeps = [
-      'agora_rtc_engine',
       'firebase_core',
       'firebase_auth',
       'cloud_firestore',
-      'supabase_flutter'
+      'firebase_messaging',
+      'firebase_storage',
+      'google_sign_in',
+      'agora_rtc_engine', // Updated: Now using agora_rtc_engine properly
+      'permission_handler',
+      'supabase_flutter',
+      'encrypt',
     ];
     
     for (final dep in criticalDeps) {
