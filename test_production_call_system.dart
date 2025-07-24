@@ -2,8 +2,6 @@
 /// Run this test to validate the complete call flow from token generation to call termination
 
 import 'dart:async';
-import 'dart:io';
-import 'package:flutter/foundation.dart';
 
 // Mock test environment setup
 void main() async {
@@ -74,16 +72,16 @@ Future<void> testSupabaseTokenGeneration() async {
       };
       
       // Validate token structure
-      assert(mockTokenResponse['rtcToken'] is String);
-      assert(mockTokenResponse['uid'] is int);
-      assert(mockTokenResponse['channelName'] == channel);
-      assert(mockTokenResponse['appId'] is String);
-      assert(mockTokenResponse['expirationTime'] is int);
+      if (!(mockTokenResponse['rtcToken'] is String)) throw Exception('Invalid rtcToken type');
+      if (!(mockTokenResponse['uid'] is int)) throw Exception('Invalid uid type');
+      if (mockTokenResponse['channelName'] != channel) throw Exception('Channel name mismatch');
+      if (!(mockTokenResponse['appId'] is String)) throw Exception('Invalid appId type');
+      if (!(mockTokenResponse['expirationTime'] is int)) throw Exception('Invalid expirationTime type');
       
       print('  ✓ Token structure valid');
       print('  ✓ Channel name: ${mockTokenResponse['channelName']}');
       print('  ✓ UID: ${mockTokenResponse['uid']}');
-      print('  ✓ Expires: ${DateTime.fromMillisecondsSinceEpoch(mockTokenResponse['expirationTime']! * 1000)}');
+      print('  ✓ Expires: ${DateTime.fromMillisecondsSinceEpoch((mockTokenResponse['expirationTime']! as int) * 1000)}');
     }
     
     print('✅ Token generation structure tests passed');
@@ -221,12 +219,5 @@ Future<void> testTokenRenewalSecurity() async {
     print('✅ Token renewal and security verified');
   } catch (e) {
     print('❌ Token renewal and security test failed: $e');
-  }
-}
-
-/// Mock assertion function for testing
-void assert(bool condition, [String? message]) {
-  if (!condition) {
-    throw AssertionError(message ?? 'Assertion failed');
   }
 }
