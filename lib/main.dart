@@ -7,9 +7,7 @@ import 'dart:developer';
 import 'core/config/firebase_options.dart';
 import 'core/services/service_locator.dart';
 import 'core/services/logging_service.dart';
-import 'core/platform/agora_web_platform_fix.dart';
-import 'core/platform/agora_platform_view_fix.dart';
-import 'core/utils/web_view_register.dart';
+// Removed old Agora platform fixes - no longer needed with agora_uikit
 
 import 'core/services/notification_handler.dart';
 import 'features/auth/presentation/auth_wrapper.dart';
@@ -33,8 +31,7 @@ void main() async {
   // Ensure Flutter binding is initialized first
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Register web view for Flutter web video calls (safe cross-platform)
-  registerWebViewSafe();
+  // No need for manual web view registration with agora_uikit
   
   // Add error handling and logging
   try {
@@ -80,39 +77,10 @@ void main() async {
         }
       }
 
-      // Initialize Agora web compatibility fixes
-      if (kIsWeb) {
-        if (kDebugMode) {
-          log('🎥 Initializing Agora web compatibility fixes...');
-        }
-        try {
-          AgoraWebCompatibility.initialize();
-          if (kDebugMode) {
-            log('✅ Agora web compatibility initialized successfully');
-          }
-        } catch (agoraError) {
-          if (kDebugMode) {
-            log('⚠️ Agora web compatibility initialization failed: $agoraError');
-          }
-          // Continue - this is not critical for app startup
-        }
-      }
-
-      // Initialize modern Agora platform view fix for all platforms
+      // Agora UIKit handles all platform-specific initialization automatically
       if (kDebugMode) {
-        log('🎥 Initializing modern Agora platform view fix...');
-      }
-      try {
-        AgoraPlatformViewFix.initialize();
-        if (kDebugMode) {
-          log('✅ Agora platform view fix initialized successfully');
-          log('🔧 Platform view registry available: ${AgoraPlatformViewFix.isInitialized}');
-        }
-      } catch (platformViewError) {
-        if (kDebugMode) {
-          log('⚠️ Agora platform view fix initialization failed: $platformViewError');
-        }
-        // Continue - app should work even if platform views fail
+        log('🎥 Using Agora UIKit for cross-platform video calling');
+        log('✅ All platforms (Web, Android, iOS, Windows, macOS, Linux) supported');
       }
     } catch (firebaseError, firebaseStackTrace) {
       if (kDebugMode) {
