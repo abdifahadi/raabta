@@ -10,10 +10,21 @@ class SupabaseAgoraTokenService {
   factory SupabaseAgoraTokenService() => _instance;
   SupabaseAgoraTokenService._internal();
 
-  final SupabaseService _supabaseService = ServiceLocator().supabaseService;
+  late final SupabaseService _supabaseService;
+  bool _isInitialized = false;
   
   // Token cache for optimization
   final Map<String, AgoraTokenResponse> _tokenCache = {};
+
+  /// Initialize with dependency injection
+  void initializeWithDependencies(SupabaseService supabaseService) {
+    if (_isInitialized) return;
+    _supabaseService = supabaseService;
+    _isInitialized = true;
+    if (kDebugMode) {
+      debugPrint('✅ SupabaseAgoraTokenService: Initialized with dependencies');
+    }
+  }
   
   /// Generate Agora token using Supabase Edge Function with HMAC-SHA256 security
   Future<AgoraTokenResponse> generateToken({
@@ -22,6 +33,10 @@ class SupabaseAgoraTokenService {
     String role = 'publisher',
     int? expirationTime,
   }) async {
+    if (!_isInitialized) {
+      throw StateError('SupabaseAgoraTokenService not initialized. Call initializeWithDependencies() first.');
+    }
+
     try {
       if (kDebugMode) {
         debugPrint('🎯 SupabaseAgoraTokenService: Generating token for channel: $channelName');

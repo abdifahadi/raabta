@@ -95,13 +95,14 @@ class ServiceLocator {
   bool _isInitialized = false;
   bool _isInitializing = false;
   String? _initializationError;
+  final Completer<void> _initializationCompleter = Completer<void>();
 
   /// Check if services are initialized
   bool get isInitialized => _isInitialized;
   bool get isInitializing => _isInitializing;
   String? get initializationError => _initializationError;
 
-  /// Initialize services
+  /// Initialize services with proper dependency order
   Future<void> initialize() async {
     if (_isInitialized) {
       if (kDebugMode) {
@@ -114,14 +115,8 @@ class ServiceLocator {
       if (kDebugMode) {
         log('🔧 ServiceLocator initialization in progress, waiting...');
       }
-      // Wait for initialization to complete with timeout
-      int waitCount = 0;
-      while (_isInitializing && !_isInitialized && waitCount < 100) {
-        await Future.delayed(const Duration(milliseconds: 100));
-        waitCount++;
-      }
-      if (_isInitialized) return;
-      throw Exception('ServiceLocator initialization timeout');
+      // Wait for initialization to complete
+      return _initializationCompleter.future;
     }
 
     _isInitializing = true;
@@ -133,116 +128,189 @@ class ServiceLocator {
         log('🌐 Platform: ${kIsWeb ? 'Web' : 'Native'}');
       }
 
-      // Initialize backend service with timeout
-      _backendService = FirebaseService();
+      // Phase 1: Initialize core services (no dependencies)
+      await _initializeCoreServices();
       
-      // Add timeout for Firebase initialization with better web handling
-      try {
-        await _backendService!.initialize().timeout(
-          kIsWeb ? const Duration(seconds: 5) : const Duration(seconds: 10),
-          onTimeout: () {
-            if (kDebugMode) {
-              log('⏰ Firebase initialization timeout in ServiceLocator');
-            }
-            throw TimeoutException('Firebase initialization timeout', kIsWeb ? const Duration(seconds: 5) : const Duration(seconds: 10));
-          },
-        );
-      } catch (e) {
-        if (kDebugMode) {
-          log('❌ Firebase service initialization failed: $e');
-        }
-        // For web, continue with degraded mode instead of throwing
-        if (kIsWeb) {
-          if (kDebugMode) {
-            log('🌐 Web: Continuing with degraded Firebase services');
-          }
-        } else {
-          rethrow;
-        }
-      }
-
-      // Initialize auth provider
-      _authProvider = FirebaseAuthService();
-
-      // Initialize user repository
-      _userRepository = FirebaseUserRepository();
-
-      // Initialize user profile repository
-      _userProfileRepository = FirebaseUserProfileRepository();
-
-      // Initialize storage repository
-      _storageRepository = FirebaseStorageRepository();
-
-      // Initialize encryption key manager
-      _encryptionKeyManager = EncryptionKeyManager();
-
-      // Initialize chat repository with storage dependency
-      _chatRepository = FirebaseChatRepository(
-        storageRepository: _storageRepository!,
-        encryptionKeyManager: _encryptionKeyManager!,
-      );
-
-      // Initialize group chat repository
-      _groupChatRepository = FirebaseGroupChatRepository(
-        firestore: null, // Use default FirebaseFirestore instance
-        storageRepository: _storageRepository!,
-        encryptionKeyManager: _encryptionKeyManager!,
-      );
-
-      // Initialize media picker service
-      _mediaPickerService = MediaPickerService();
-
-      // Initialize notification service
-      _notificationService = NotificationService();
-      await _notificationService!.initialize();
-
-      // Initialize call repository
-      _callRepository = FirebaseCallRepository();
-
-      // Initialize call service and Agora services for all platforms
-      _callService = CallService();
-      await _callService!.initialize();
-
-      // Initialize Agora token service (legacy)
-      _agoraTokenService = AgoraTokenService();
-
-      // Initialize Supabase Agora token service (production)
-      _supabaseAgoraTokenService = SupabaseAgoraTokenService();
-
-      // Initialize production call service (primary)
-      _productionCallService = ProductionCallService();
-      await _productionCallService!.initialize();
-
-      // Initialize ringtone service
-      _ringtoneService = RingtoneService();
-
-      // Initialize Supabase service
-      _supabaseService = SupabaseService();
-      try {
-        await _supabaseService!.initialize();
-      } catch (e) {
-        if (kDebugMode) {
-          log('⚠️ Supabase service initialization failed: $e');
-        }
-        // Continue without Supabase for now, but log the error
-      }
-
-      // Initialize call manager
-      _callManager = CallManager();
+      // Phase 2: Initialize storage and authentication services
+      await _initializeStorageServices();
+      
+      // Phase 3: Initialize chat and communication services
+      await _initializeCommunicationServices();
+      
+      // Phase 4: Initialize call-related services
+      await _initializeCallServices();
 
       _isInitialized = true;
+      _initializationCompleter.complete();
       
       if (kDebugMode) {
         log('✅ ServiceLocator initialized successfully');
+        log('✅ All services registered and ready');
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       _initializationError = e.toString();
       if (kDebugMode) {
         log('❌ ServiceLocator initialization failed: $e');
+        log('🔍 Stack trace: $stackTrace');
       }
+      _initializationCompleter.completeError(e, stackTrace);
       rethrow;
     } finally {
       _isInitializing = false;
+    }
+  }
+
+  /// Phase 1: Initialize core services with no dependencies
+  Future<void> _initializeCoreServices() async {
+    if (kDebugMode) {
+      log('📋 Phase 1: Initializing core services...');
+    }
+
+    // Initialize backend service with timeout
+    _backendService = FirebaseService();
+    
+    try {
+      await _backendService!.initialize().timeout(
+        kIsWeb ? const Duration(seconds: 5) : const Duration(seconds: 10),
+        onTimeout: () {
+          if (kDebugMode) {
+            log('⏰ Firebase initialization timeout in ServiceLocator');
+          }
+          throw TimeoutException('Firebase initialization timeout', kIsWeb ? const Duration(seconds: 5) : const Duration(seconds: 10));
+        },
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        log('❌ Firebase service initialization failed: $e');
+      }
+      // For web, continue with degraded mode instead of throwing
+      if (kIsWeb) {
+        if (kDebugMode) {
+          log('🌐 Web: Continuing with degraded Firebase services');
+        }
+      } else {
+        rethrow;
+      }
+    }
+
+    // Initialize auth provider
+    _authProvider = FirebaseAuthService();
+
+    // Initialize user repository
+    _userRepository = FirebaseUserRepository();
+
+    // Initialize user profile repository
+    _userProfileRepository = FirebaseUserProfileRepository();
+
+    // Initialize media picker service
+    _mediaPickerService = MediaPickerService();
+
+    // Initialize Supabase service
+    _supabaseService = SupabaseService();
+    try {
+      await _supabaseService!.initialize();
+      if (kDebugMode) {
+        log('✅ Supabase service initialized');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        log('⚠️ Supabase service initialization failed: $e');
+      }
+      // Continue without Supabase for now, but log the error
+    }
+
+    if (kDebugMode) {
+      log('✅ Phase 1 completed: Core services initialized');
+    }
+  }
+
+  /// Phase 2: Initialize storage and authentication services
+  Future<void> _initializeStorageServices() async {
+    if (kDebugMode) {
+      log('📋 Phase 2: Initializing storage services...');
+    }
+
+    // Initialize storage repository
+    _storageRepository = FirebaseStorageRepository();
+
+    // Initialize encryption key manager
+    _encryptionKeyManager = EncryptionKeyManager();
+
+    // Initialize notification service
+    _notificationService = NotificationService();
+    await _notificationService!.initialize();
+
+    if (kDebugMode) {
+      log('✅ Phase 2 completed: Storage services initialized');
+    }
+  }
+
+  /// Phase 3: Initialize communication services that depend on storage
+  Future<void> _initializeCommunicationServices() async {
+    if (kDebugMode) {
+      log('📋 Phase 3: Initializing communication services...');
+    }
+
+    // Initialize chat repository with storage dependency
+    _chatRepository = FirebaseChatRepository(
+      storageRepository: _storageRepository!,
+      encryptionKeyManager: _encryptionKeyManager!,
+    );
+
+    // Initialize group chat repository
+    _groupChatRepository = FirebaseGroupChatRepository(
+      firestore: null, // Use default FirebaseFirestore instance
+      storageRepository: _storageRepository!,
+      encryptionKeyManager: _encryptionKeyManager!,
+    );
+
+    // Initialize call repository
+    _callRepository = FirebaseCallRepository();
+
+    if (kDebugMode) {
+      log('✅ Phase 3 completed: Communication services initialized');
+    }
+  }
+
+  /// Phase 4: Initialize call services with proper dependency injection
+  Future<void> _initializeCallServices() async {
+    if (kDebugMode) {
+      log('📋 Phase 4: Initializing call services...');
+    }
+
+    // Initialize ringtone service first (no dependencies)
+    _ringtoneService = RingtoneService();
+    if (kDebugMode) {
+      log('✅ RingtoneService initialized');
+    }
+
+    // Initialize Agora token services
+    _agoraTokenService = AgoraTokenService();
+    _supabaseAgoraTokenService = SupabaseAgoraTokenService();
+    _supabaseAgoraTokenService!.initializeWithDependencies(_supabaseService!);
+
+    // Initialize call service and wait for it to complete
+    _callService = CallService();
+    await _callService!.initialize();
+    if (kDebugMode) {
+      log('✅ CallService initialized');
+    }
+
+    // Initialize production call service with safe dependency injection
+    _productionCallService = ProductionCallService();
+    await _productionCallService!.initializeWithDependencies(_ringtoneService!);
+    if (kDebugMode) {
+      log('✅ ProductionCallService initialized');
+    }
+
+    // Initialize call manager last (depends on call service)
+    _callManager = CallManager();
+    if (kDebugMode) {
+      log('✅ CallManager initialized');
+    }
+
+    if (kDebugMode) {
+      log('✅ Phase 4 completed: Call services initialized');
     }
   }
 
@@ -405,4 +473,39 @@ class ServiceLocator {
   ProductionCallService? get productionCallServiceOrNull => _productionCallService;
   SupabaseService? get supabaseServiceOrNull => _supabaseService;
   CallManager? get callManagerOrNull => _callManager;
+
+  /// Reset all services (for testing or clean restart)
+  Future<void> reset() async {
+    if (kDebugMode) {
+      log('🔄 Resetting ServiceLocator...');
+    }
+
+    _isInitialized = false;
+    _isInitializing = false;
+    _initializationError = null;
+
+    // Dispose services that need cleanup
+    _callManager = null;
+    _productionCallService = null;
+    _callService = null;
+    _ringtoneService = null;
+    _notificationService = null;
+    _supabaseService = null;
+    _agoraTokenService = null;
+    _supabaseAgoraTokenService = null;
+    _callRepository = null;
+    _groupChatRepository = null;
+    _chatRepository = null;
+    _encryptionKeyManager = null;
+    _storageRepository = null;
+    _mediaPickerService = null;
+    _userProfileRepository = null;
+    _userRepository = null;
+    _authProvider = null;
+    _backendService = null;
+
+    if (kDebugMode) {
+      log('✅ ServiceLocator reset completed');
+    }
+  }
 }
