@@ -43,8 +43,8 @@ dependencies:
   google_sign_in: ^6.2.1
   cloud_firestore: ^4.17.4
   
-  # Media and file handling
-  file_picker: ^6.1.1
+  # Media and file handling - Updated for cross-platform compatibility
+  file_selector: ^1.0.3
   image_picker: ^1.0.7
   video_player: ^2.8.2
   cached_network_image: ^3.3.1
@@ -64,9 +64,8 @@ dependencies:
   logger: ^2.0.2+1
   http: ^0.13.6
   permission_handler: ^11.3.1
-  share_plus: ^9.0.0
+  share_plus: ^10.0.0
   web: ^0.5.1
-  js: ^0.6.7
   flutter_local_notifications: ^17.2.1
   
   # Encryption

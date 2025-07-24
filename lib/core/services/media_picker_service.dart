@@ -1,6 +1,6 @@
 import 'dart:developer';
 import 'dart:io';
-import 'package:file_picker/file_picker.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/foundation.dart';
 
@@ -194,30 +194,120 @@ class MediaPickerService {
     }
   }
 
-  /// Pick any file
+  /// Pick any file using file_selector for cross-platform compatibility
   Future<PickedMediaFile?> pickFile({
     List<String>? allowedExtensions,
-    FileType type = FileType.any,
   }) async {
     try {
       if (kDebugMode) {
-        log('📎 Picking file of type $type');
+        log('📎 Picking file with extensions: $allowedExtensions');
       }
 
-      final FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: type,
-        allowedExtensions: allowedExtensions,
-        allowMultiple: false,
-        withData: kIsWeb,
+      // Convert extensions to XTypeGroup for file_selector
+      final typeGroups = <XTypeGroup>[];
+      if (allowedExtensions != null && allowedExtensions.isNotEmpty) {
+        typeGroups.add(XTypeGroup(
+          label: 'Allowed Files',
+          extensions: allowedExtensions,
+        ));
+      }
+
+      final XFile? pickedFile = await openFile(
+        acceptedTypeGroups: typeGroups,
       );
 
-      if (result == null || result.files.isEmpty) return null;
-
-      final platformFile = result.files.first;
+      if (pickedFile == null) return null;
 
       MediaType mediaType;
-      if (platformFile.extension != null) {
-        switch (platformFile.extension!.toLowerCase()) {
+      final extension = pickedFile.path.split('.').last.toLowerCase();
+      
+      switch (extension) {
+        case 'jpg':
+        case 'jpeg':
+        case 'png':
+        case 'gif':
+        case 'webp':
+        case 'bmp':
+          mediaType = MediaType.image;
+          break;
+        case 'mp4':
+        case 'avi':
+        case 'mov':
+        case 'mkv':
+        case 'webm':
+          mediaType = MediaType.video;
+          break;
+        case 'mp3':
+        case 'wav':
+        case 'aac':
+        case 'm4a':
+        case 'ogg':
+          mediaType = MediaType.audio;
+          break;
+        default:
+          mediaType = MediaType.document;
+      }
+
+      if (kIsWeb) {
+        final bytes = await pickedFile.readAsBytes();
+        return PickedMediaFile(
+          bytes: bytes,
+          name: pickedFile.name,
+          extension: extension,
+          size: bytes.length,
+          type: mediaType,
+        );
+      } else {
+        final file = File(pickedFile.path);
+        final stat = await file.stat();
+        
+        return PickedMediaFile(
+          file: file,
+          name: pickedFile.name,
+          extension: extension,
+          size: stat.size,
+          type: mediaType,
+        );
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        log('❌ Error picking file: $e');
+      }
+      throw Exception('Failed to pick file: $e');
+    }
+  }
+
+  /// Pick multiple files using file_selector
+  Future<List<PickedMediaFile>> pickMultipleFiles({
+    List<String>? allowedExtensions,
+  }) async {
+    try {
+      if (kDebugMode) {
+        log('📎 Picking multiple files with extensions: $allowedExtensions');
+      }
+
+      // Convert extensions to XTypeGroup for file_selector
+      final typeGroups = <XTypeGroup>[];
+      if (allowedExtensions != null && allowedExtensions.isNotEmpty) {
+        typeGroups.add(XTypeGroup(
+          label: 'Allowed Files',
+          extensions: allowedExtensions,
+        ));
+      }
+
+      final List<XFile> pickedFiles = await openFiles(
+        acceptedTypeGroups: typeGroups,
+      );
+
+      if (pickedFiles.isEmpty) return [];
+
+      final List<PickedMediaFile> result = [];
+
+      for (final pickedFile in pickedFiles) {
+        MediaType mediaType;
+        final extension = pickedFile.path.split('.').last.toLowerCase();
+        
+        switch (extension) {
           case 'jpg':
           case 'jpeg':
           case 'png':
@@ -243,113 +333,31 @@ class MediaPickerService {
           default:
             mediaType = MediaType.document;
         }
-      } else {
-        mediaType = MediaType.document;
-      }
-
-      if (kIsWeb) {
-        return PickedMediaFile(
-          bytes: platformFile.bytes,
-          name: platformFile.name,
-          extension: platformFile.extension,
-          size: platformFile.size,
-          type: mediaType,
-        );
-      } else {
-        final file = File(platformFile.path!);
-        
-        return PickedMediaFile(
-          file: file,
-          name: platformFile.name,
-          extension: platformFile.extension,
-          size: platformFile.size,
-          type: mediaType,
-        );
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        log('❌ Error picking file: $e');
-      }
-      throw Exception('Failed to pick file: $e');
-    }
-  }
-
-  /// Pick multiple files
-  Future<List<PickedMediaFile>> pickMultipleFiles({
-    List<String>? allowedExtensions,
-    FileType type = FileType.any,
-  }) async {
-    try {
-      if (kDebugMode) {
-        log('📎 Picking multiple files of type $type');
-      }
-
-      final FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: type,
-        allowedExtensions: allowedExtensions,
-        allowMultiple: true,
-        withData: kIsWeb,
-      );
-
-      if (result == null || result.files.isEmpty) return [];
-
-      final List<PickedMediaFile> pickedFiles = [];
-
-      for (final platformFile in result.files) {
-        MediaType mediaType;
-        if (platformFile.extension != null) {
-          switch (platformFile.extension!.toLowerCase()) {
-            case 'jpg':
-            case 'jpeg':
-            case 'png':
-            case 'gif':
-            case 'webp':
-            case 'bmp':
-              mediaType = MediaType.image;
-              break;
-            case 'mp4':
-            case 'avi':
-            case 'mov':
-            case 'mkv':
-            case 'webm':
-              mediaType = MediaType.video;
-              break;
-            case 'mp3':
-            case 'wav':
-            case 'aac':
-            case 'm4a':
-            case 'ogg':
-              mediaType = MediaType.audio;
-              break;
-            default:
-              mediaType = MediaType.document;
-          }
-        } else {
-          mediaType = MediaType.document;
-        }
 
         if (kIsWeb) {
-          pickedFiles.add(PickedMediaFile(
-            bytes: platformFile.bytes,
-            name: platformFile.name,
-            extension: platformFile.extension,
-            size: platformFile.size,
+          final bytes = await pickedFile.readAsBytes();
+          result.add(PickedMediaFile(
+            bytes: bytes,
+            name: pickedFile.name,
+            extension: extension,
+            size: bytes.length,
             type: mediaType,
           ));
         } else {
-          final file = File(platformFile.path!);
+          final file = File(pickedFile.path);
+          final stat = await file.stat();
           
-          pickedFiles.add(PickedMediaFile(
+          result.add(PickedMediaFile(
             file: file,
-            name: platformFile.name,
-            extension: platformFile.extension,
-            size: platformFile.size,
+            name: pickedFile.name,
+            extension: extension,
+            size: stat.size,
             type: mediaType,
           ));
         }
       }
 
-      return pickedFiles;
+      return result;
     } catch (e) {
       if (kDebugMode) {
         log('❌ Error picking multiple files: $e');
