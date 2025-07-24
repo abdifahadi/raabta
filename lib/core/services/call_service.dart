@@ -2,10 +2,11 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 import 'package:flutter/material.dart';
 import '../../features/call/domain/models/call_model.dart';
-import '../../features/call/domain/repositories/call_repository.dart';
+
 import 'agora_service_interface.dart';
 import 'agora_service_factory.dart';
 import 'service_locator.dart';
+import '../config/agora_config.dart';
 
 class CallService {
   static final CallService _instance = CallService._internal();
@@ -132,16 +133,21 @@ class CallService {
         throw Exception('Recipient is currently in another call');
       }
 
-      // Create call in Firestore
-      final call = await callRepository.initiateCall(
+      // Create call object
+      final channelName = AgoraConfig.generateChannelName(currentUser.uid, receiverId);
+      final call = CallModel.create(
         callerId: currentUser.uid,
         receiverId: receiverId,
         callType: callType,
+        channelName: channelName,
         callerName: callerName,
         callerPhotoUrl: callerPhotoUrl,
         receiverName: receiverName,
         receiverPhotoUrl: receiverPhotoUrl,
       );
+
+      // Store call in Firestore
+      await callRepository.initiateCall(call);
 
       // Update call status to ringing
       await callRepository.updateCallStatus(call.callId, CallStatus.ringing);

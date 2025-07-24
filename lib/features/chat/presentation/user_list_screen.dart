@@ -152,12 +152,14 @@ class _UserListScreenState extends State<UserListScreen> {
       _showCallingDialog(call, user);
       
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to start call: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to start call: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -189,9 +191,13 @@ class _UserListScreenState extends State<UserListScreen> {
               try {
                 final callManager = ServiceLocator().callManager;
                 await callManager.cancelCall(call);
-                Navigator.of(context).pop();
+                if (mounted) {
+                  Navigator.of(context).pop();
+                }
               } catch (e) {
-                Navigator.of(context).pop();
+                if (mounted) {
+                  Navigator.of(context).pop();
+                }
               }
             },
             child: const Text('Cancel', style: TextStyle(color: Colors.red)),

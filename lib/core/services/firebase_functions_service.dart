@@ -6,14 +6,14 @@ import 'package:flutter/foundation.dart';
 /// DEPRECATED: Firebase Functions Service
 /// This service has been replaced with Supabase Edge Functions
 /// Use SupabaseAgoraTokenService instead for token generation
-@deprecated
+@Deprecated('Use SupabaseAgoraTokenService instead')
 class FirebaseFunctionsService {
   static final FirebaseFunctionsService _instance = FirebaseFunctionsService._internal();
   factory FirebaseFunctionsService() => _instance;
   FirebaseFunctionsService._internal();
 
   /// DEPRECATED: Initialize Firebase Functions
-  @deprecated
+  @Deprecated('Use SupabaseAgoraTokenService.initialize() instead')
   Future<void> initialize() async {
     if (kDebugMode) {
       debugPrint('⚠️ FirebaseFunctionsService is DEPRECATED');
@@ -26,7 +26,7 @@ class FirebaseFunctionsService {
   }
 
   /// DEPRECATED: Call a Firebase Cloud Function
-  @deprecated
+  @Deprecated('Use SupabaseAgoraTokenService for token generation instead')
   Future<Map<String, dynamic>?> callFunction(
     String functionName, {
     Map<String, dynamic>? data,
@@ -42,10 +42,10 @@ class FirebaseFunctionsService {
   }
 
   /// DEPRECATED: Check if Firebase Functions is available
-  @deprecated
+  @Deprecated('Firebase Functions are no longer used')
   bool get isAvailable => false;
 
   /// DEPRECATED: Get the Firebase Functions instance
-  @deprecated
+  @Deprecated('Firebase Functions are no longer used')
   dynamic get functions => null;
 }

@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+
 import 'supabase_service.dart';
 import 'service_locator.dart';
 
@@ -33,7 +32,7 @@ class SupabaseAgoraTokenService {
       final finalExpirationTime = expirationTime ?? 3600;
 
       // Create cache key
-      final cacheKey = '${channelName}_${finalUid}_${role}_${finalExpirationTime}';
+      final cacheKey = '${channelName}_${finalUid}_${role}_$finalExpirationTime';
       
       // Check cache first
       if (_tokenCache.containsKey(cacheKey)) {

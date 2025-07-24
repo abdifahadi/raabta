@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+
 import '../../features/call/domain/models/call_model.dart';
 import '../../features/call/domain/repositories/call_repository.dart';
 import '../../features/call/data/firebase_call_repository.dart';
@@ -8,7 +8,7 @@ import 'agora_service_interface.dart';
 import 'agora_service_factory.dart';
 import 'supabase_agora_token_service.dart';
 import 'ringtone_service.dart';
-import 'notification_service.dart';
+
 import 'service_locator.dart';
 import '../config/agora_config.dart';
 
@@ -23,8 +23,7 @@ class ProductionCallService {
   final AgoraServiceInterface _agoraService = AgoraServiceFactory.getInstance();
   final SupabaseAgoraTokenService _tokenService = SupabaseAgoraTokenService();
   final CallRepository _callRepository = FirebaseCallRepository();
-  late final RingtoneService _ringtoneService;
-  late final NotificationService _notificationService;
+  late final RingtoneService _ringtoneService; 
 
   // Current call state
   CallModel? _currentCall;
@@ -63,7 +62,6 @@ class ProductionCallService {
       // Initialize services
       await _agoraService.initialize();
       _ringtoneService = ServiceLocator().ringtoneService;
-      _notificationService = ServiceLocator().notificationService;
 
       // Setup event forwarding
       _agoraService.callEventStream.listen(_forwardAgoraEvents);
@@ -130,17 +128,9 @@ class ProductionCallService {
       );
 
       // Store call in repository
-      final initiatedCall = await _callRepository.initiateCall(
-        callerId: callerId,
-        receiverId: receiverId,
-        callType: callType,
-        callerName: callerName,
-        callerPhotoUrl: callerPhotoUrl,
-        receiverName: receiverName,
-        receiverPhotoUrl: receiverPhotoUrl,
-      );
+      await _callRepository.initiateCall(call);
 
-      _currentCall = initiatedCall;
+      _currentCall = call;
       _currentCallController.add(_currentCall);
 
       // Start call timeout
@@ -162,7 +152,7 @@ class ProductionCallService {
         debugPrint('🆔 UID: ${_currentToken!.uid}');
       }
 
-      return initiatedCall;
+      return call;
     } catch (e) {
       if (kDebugMode) {
         debugPrint('❌ ProductionCallService: Failed to initiate call: $e');
@@ -315,7 +305,7 @@ class ProductionCallService {
   /// Start call timeout timer
   void _startCallTimeout() {
     _callTimeoutTimer?.cancel();
-    _callTimeoutTimer = Timer(Duration(seconds: AgoraConfig.callTimeout), () async {
+    _callTimeoutTimer = Timer(const Duration(seconds: AgoraConfig.callTimeout), () async {
       if (_currentCall?.status == CallStatus.calling) {
         if (kDebugMode) {
           debugPrint('⏰ ProductionCallService: Call timeout');

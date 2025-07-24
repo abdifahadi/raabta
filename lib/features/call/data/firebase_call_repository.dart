@@ -1,9 +1,10 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../domain/models/call_model.dart';
 import '../domain/repositories/call_repository.dart';
-import '../../../core/config/agora_config.dart';
+
 
 class FirebaseCallRepository implements CallRepository {
   static final FirebaseCallRepository _instance = FirebaseCallRepository._internal();
@@ -11,51 +12,25 @@ class FirebaseCallRepository implements CallRepository {
   FirebaseCallRepository._internal();
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
   
   // Real-time call streams
   final Map<String, StreamController<CallModel?>> _callStreamControllers = {};
   final Map<String, StreamSubscription> _callSubscriptions = {};
 
   @override
-  Future<CallModel> initiateCall({
-    required String callerId,
-    required String receiverId,
-    required CallType callType,
-    required String callerName,
-    required String callerPhotoUrl,
-    required String receiverName,
-    required String receiverPhotoUrl,
-  }) async {
+  Future<void> initiateCall(CallModel call) async {
     try {
-      final callId = _generateCallId();
-      final channelName = AgoraConfig.generateChannelName(callerId, receiverId);
-      
-      final call = CallModel(
-        callId: callId,
-        callerId: callerId,
-        receiverId: receiverId,
-        channelName: channelName,
-        callType: callType,
-        status: CallStatus.calling,
-        createdAt: DateTime.now(),
-        callerName: callerName,
-        callerPhotoUrl: callerPhotoUrl,
-        receiverName: receiverName,
-        receiverPhotoUrl: receiverPhotoUrl,
-      );
-
       // Store in Firestore with server timestamp
-      await _firestore.collection('calls').doc(callId).set({
+      await _firestore.collection('calls').doc(call.callId).set({
         ...call.toMap(),
         'createdAt': FieldValue.serverTimestamp(),
         'lastUpdated': FieldValue.serverTimestamp(),
       });
 
       if (kDebugMode) {
-        debugPrint('✅ Call initiated: $callId');
+        debugPrint('✅ Call initiated: ${call.callId}');
       }
-
-      return call;
     } catch (e) {
       if (kDebugMode) {
         debugPrint('❌ Failed to initiate call: $e');
@@ -293,10 +268,40 @@ class FirebaseCallRepository implements CallRepository {
     }
   }
 
-  /// Generate a unique call ID
-  String _generateCallId() {
-    return '${DateTime.now().millisecondsSinceEpoch}_${DateTime.now().microsecond}';
+  @override
+  Stream<CallModel?> getCallStream(String callId) {
+    return _firestore
+        .collection('calls')
+        .doc(callId)
+        .snapshots()
+        .map((snapshot) {
+      if (snapshot.exists && snapshot.data() != null) {
+        return CallModel.fromMap(snapshot.data()!, snapshot.id);
+      }
+      return null;
+    });
   }
+
+  @override
+  Stream<List<CallModel>> listenToIncomingCalls() {
+    final currentUserId = _auth.currentUser?.uid;
+    if (currentUserId == null) {
+      return Stream.value([]);
+    }
+
+    return _firestore
+        .collection('calls')
+        .where('receiverId', isEqualTo: currentUserId)
+        .where('status', isEqualTo: CallStatus.ringing.name)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs
+          .map((doc) => CallModel.fromMap(doc.data(), doc.id))
+          .toList();
+    });
+  }
+
+
 
   /// Clean up stream resources for a specific call
   Future<void> _cleanupCallStream(String callId) async {

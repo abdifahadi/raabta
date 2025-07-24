@@ -392,7 +392,7 @@ class AgoraWebService implements AgoraServiceInterface {
       color: Colors.grey[900],
       child: _isVideoEnabled
           ? HtmlElementView(
-              key: ValueKey('local-video-${_currentUid}'),
+              key: ValueKey('local-video-$_currentUid'),
               viewType: 'local-video-view',
               onPlatformViewCreated: (id) {
                 _setupLocalVideoElement();

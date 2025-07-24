@@ -57,13 +57,14 @@ class _CallManagerState extends State<CallManager> {
         return;
       }
 
-      final currentUserId = authService!.currentUser!.uid;
+
 
       // Listen for incoming calls
       _incomingCallsSubscription = callRepository
-          .listenToIncomingCalls(currentUserId)
-          .listen((call) {
-        if (call != null && mounted) {
+          .listenToIncomingCalls()
+          .listen((calls) {
+        if (calls.isNotEmpty && mounted) {
+          final call = calls.first;
           // Only show if it's a new incoming call and still ringing
           if (_currentIncomingCall?.callId != call.callId && 
               call.status == CallStatus.ringing) {

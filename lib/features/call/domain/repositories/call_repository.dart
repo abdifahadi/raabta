@@ -2,15 +2,7 @@ import '../models/call_model.dart';
 
 abstract class CallRepository {
   /// Initiate a new call
-  Future<CallModel> initiateCall({
-    required String callerId,
-    required String receiverId,
-    required CallType callType,
-    required String callerName,
-    required String callerPhotoUrl,
-    required String receiverName,
-    required String receiverPhotoUrl,
-  });
+  Future<void> initiateCall(CallModel call);
 
   /// Update call status with additional metadata
   Future<void> updateCallStatus(
@@ -40,9 +32,9 @@ abstract class CallRepository {
   /// Delete a call record
   Future<void> deleteCall(String callId);
 
-  /// Stream call updates (alias for watchCall)
-  Stream<CallModel?> getCallStream(String callId) => watchCall(callId);
+  /// Stream call updates 
+  Stream<CallModel?> getCallStream(String callId);
   
-  /// Listen to incoming calls (alias for watchIncomingCalls)
-  Stream<CallModel?> listenToIncomingCalls(String userId) => watchIncomingCalls(userId);
+  /// Listen to incoming calls
+  Stream<List<CallModel>> listenToIncomingCalls();
 }

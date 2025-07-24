@@ -452,11 +452,15 @@ class _CallDialerScreenState extends State<CallDialerScreen>
               try {
                 final callService = ServiceLocator().callService;
                 await callService.cancelCall(call);
-                Navigator.of(context).pop(); // Close dialog
-                Navigator.of(context).pop(); // Go back to previous screen
+                if (mounted) {
+                  Navigator.of(context).pop(); // Close dialog
+                  Navigator.of(context).pop(); // Go back to previous screen
+                }
               } catch (e) {
-                Navigator.of(context).pop(); // Close dialog anyway
-                Navigator.of(context).pop(); // Go back to previous screen
+                if (mounted) {
+                  Navigator.of(context).pop(); // Close dialog anyway
+                  Navigator.of(context).pop(); // Go back to previous screen
+                }
               }
             },
             child: const Text('Cancel', style: TextStyle(color: Colors.red)),
