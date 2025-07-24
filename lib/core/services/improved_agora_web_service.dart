@@ -288,6 +288,9 @@ class ImprovedAgoraWebService implements AgoraServiceInterface {
       String? tokenFromQuery;
       try {
         tokenFromQuery = Uri.base.queryParameters['token'];
+        if (kDebugMode && tokenFromQuery != null) {
+          debugPrint('Token found in query parameters: ${tokenFromQuery.substring(0, 10)}...');
+        }
       } catch (e) {
         if (kDebugMode) debugPrint('No token in query parameters: $e');
       }
