@@ -73,7 +73,7 @@ dependencies:
   crypto: ^3.0.3
   
   # Audio/Video Calling - Direct RTC engine for cross-platform support
-  agora_rtc_engine: ^6.3.2
+  agora_rtc_engine: ^6.5.2
   
   # Supabase for backend services
   supabase_flutter: ^2.5.6

@@ -8,6 +8,7 @@ import '../../features/call/domain/models/call_model.dart';
 import 'agora_service_interface.dart';
 import 'supabase_agora_token_service.dart';
 import '../config/agora_config.dart';
+import '../widgets/agora_video_view_web.dart';
 
 /// Cross-platform Agora service implementation using agora_rtc_engine
 /// Supports Web, Android, iOS, Windows, macOS, and Linux
@@ -75,16 +76,42 @@ class AgoraUIKitService implements AgoraServiceInterface {
       // Create RTC engine
       _engine = createAgoraRtcEngine();
       
-      // Initialize the engine
+      // Initialize the engine with platform-specific settings
       await _engine!.initialize(RtcEngineContext(
         appId: AgoraConfig.appId,
         channelProfile: ChannelProfileType.channelProfileCommunication,
         logConfig: const LogConfig(level: LogLevel.logLevelInfo),
+        // Add web-specific configurations if needed
+        audioScenario: kIsWeb 
+          ? AudioScenarioType.audioScenarioGameStreaming 
+          : AudioScenarioType.audioScenarioDefault,
       ));
       
       // Enable audio and video
       await _engine!.enableAudio();
       await _engine!.enableVideo();
+      
+      // Use platform-appropriate video configuration
+      if (kIsWeb) {
+        // Web-optimized settings
+        await _engine!.setVideoEncoderConfiguration(
+          const VideoEncoderConfiguration(
+            dimensions: VideoDimensions(width: 640, height: 480),
+            frameRate: 15,
+            bitrate: 300, // Lower bitrate for web
+            orientationMode: OrientationMode.orientationModeFixedPortrait,
+          ),
+        );
+      } else {
+        // Native platform settings
+        await _engine!.setVideoEncoderConfiguration(
+          const VideoEncoderConfiguration(
+            dimensions: VideoDimensions(width: 640, height: 480),
+            frameRate: 15,
+            bitrate: 400,
+          ),
+        );
+      }
       
       // Set up event handler
       _engine!.registerEventHandler(_createEventHandler());
@@ -391,8 +418,8 @@ class AgoraUIKitService implements AgoraServiceInterface {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(8),
-        child: AgoraVideoView(
-          controller: VideoViewController(
+        child: createVideoView(
+          VideoViewController(
             rtcEngine: _engine!,
             canvas: const VideoCanvas(uid: 0),
           ),
@@ -422,8 +449,8 @@ class AgoraUIKitService implements AgoraServiceInterface {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(8),
-        child: AgoraVideoView(
-          controller: VideoViewController.remote(
+        child: createVideoView(
+          VideoViewController.remote(
             rtcEngine: _engine!,
             canvas: VideoCanvas(uid: uid),
             connection: RtcConnection(channelId: _currentChannelName),
