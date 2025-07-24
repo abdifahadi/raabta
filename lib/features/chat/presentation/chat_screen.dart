@@ -321,9 +321,13 @@ class _ChatScreenState extends State<ChatScreen> {
               try {
                 final callManager = ServiceLocator().callManager;
                 await callManager.cancelCall(call);
-                Navigator.of(context).pop(); // Close dialog
+                if (mounted) {
+                  Navigator.of(context).pop(); // Close dialog
+                }
               } catch (e) {
-                Navigator.of(context).pop(); // Close dialog anyway
+                if (mounted) {
+                  Navigator.of(context).pop(); // Close dialog anyway
+                }
               }
             },
             child: const Text('Cancel', style: TextStyle(color: Colors.red)),

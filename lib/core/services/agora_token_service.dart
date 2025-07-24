@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+
 import 'package:crypto/crypto.dart';
 import '../config/agora_config.dart';
 import 'firebase_functions_service.dart';
@@ -168,7 +168,7 @@ class AgoraTokenService {
       final signature = _generateHmacSignature(appCertificate, message);
       
       final tokenData = signature + message;
-      final token = '007' + base64Url.encode(tokenData.codeUnits);
+      final token = '007${base64Url.encode(tokenData.codeUnits)}';
       
       return token;
     } catch (e) {

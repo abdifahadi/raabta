@@ -128,7 +128,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
     }
   }
 
-  void _forceStopRingtone() async {
+  Future<void> _forceStopRingtone() async {
     try {
       final ringtoneService = ServiceLocator().ringtoneServiceOrNull;
       if (ringtoneService != null) {

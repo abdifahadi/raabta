@@ -4,7 +4,7 @@ import 'dart:js_util' as js_util;
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 // Conditional import to avoid dart:ui_web errors
-import 'package:js/js.dart' as js;
+
 import '../../features/call/domain/models/call_model.dart';
 import 'agora_service_interface.dart';
 import 'supabase_agora_token_service.dart';
