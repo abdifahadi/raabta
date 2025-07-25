@@ -7,7 +7,7 @@ import 'dart:developer';
 import 'core/config/firebase_options.dart';
 import 'core/services/service_locator.dart';
 import 'core/services/logging_service.dart';
-// Removed old Agora platform fixes - no longer needed with agora_uikit
+// Using agora_rtc_engine for cross-platform compatibility
 
 import 'core/services/notification_handler.dart';
 import 'features/auth/presentation/auth_wrapper.dart';
@@ -31,7 +31,7 @@ void main() async {
   // Ensure Flutter binding is initialized first
   WidgetsFlutterBinding.ensureInitialized();
   
-  // No need for manual web view registration with agora_uikit
+  // Using agora_rtc_engine for video rendering
   
   // Add error handling and logging
   try {

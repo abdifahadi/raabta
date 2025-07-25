@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:agora_uikit/agora_uikit.dart';
+import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 
 import '../../domain/models/call_model.dart';
 import '../../../../core/services/agora_unified_service.dart';
@@ -23,7 +23,7 @@ class UnifiedCallScreen extends StatefulWidget {
 }
 
 class _UnifiedCallScreenState extends State<UnifiedCallScreen> with WidgetsBindingObserver {
-  AgoraClient? _client;
+  RtcEngine? _engine;
   late AgoraUnifiedService _agoraService;
   bool _isInitialized = false;
   String? _errorMessage;
@@ -113,7 +113,7 @@ class _UnifiedCallScreenState extends State<UnifiedCallScreen> with WidgetsBindi
   Future<void> _initializeCall() async {
     try {
       if (kDebugMode) {
-        debugPrint('🎥 Initializing Agora UIKit call...');
+        debugPrint('🎥 Initializing Agora RTC Engine call...');
         debugPrint('📱 Platform: ${_getPlatformName()}');
         debugPrint('📞 Call Type: ${widget.call.callType.name}');
         debugPrint('🔗 Channel: ${widget.call.channelName}');
@@ -129,10 +129,10 @@ class _UnifiedCallScreenState extends State<UnifiedCallScreen> with WidgetsBindi
         uid: widget.call.callerId == widget.call.receiverId ? null : int.tryParse(widget.call.callerId),
       );
 
-      // Get the client
-      _client = _agoraService.client;
+      // Get the engine
+      _engine = _agoraService.engine;
 
-      if (_client != null) {
+      if (_engine != null) {
         setState(() {
           _isInitialized = true;
           _isVideoEnabled = widget.call.callType == CallType.video;
@@ -374,11 +374,31 @@ class _UnifiedCallScreenState extends State<UnifiedCallScreen> with WidgetsBindi
     return SizedBox(
       width: double.infinity,
       height: double.infinity,
-      child: AgoraVideoViewer(
-        client: _client!,
-        layoutType: Layout.floating,
-        showNumberOfUsers: true,
-        showAVState: true,
+      child: Stack(
+        children: [
+          // Remote video (full screen)
+          if (_agoraService.remoteUsers.isNotEmpty)
+            _agoraService.createRemoteVideoView(_agoraService.remoteUsers.first)
+          else
+            Container(
+              color: Colors.black,
+              child: const Center(
+                child: Text(
+                  'Waiting for other participants...',
+                  style: TextStyle(color: Colors.white, fontSize: 16),
+                ),
+              ),
+            ),
+          
+          // Local video (floating)
+          Positioned(
+            top: 50,
+            right: 20,
+            width: 120,
+            height: 160,
+            child: _agoraService.createLocalVideoView(),
+          ),
+        ],
       ),
     );
   }

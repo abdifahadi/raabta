@@ -11,9 +11,8 @@ void main() async {
     );
     debugPrint('✅ Firebase initialized successfully');
     
-    // No need for manual Agora web compatibility fixes with agora_uikit
-    // agora_uikit handles web compatibility internally
-    debugPrint('✅ Using agora_uikit for cross-platform compatibility');
+    // Using agora_rtc_engine for cross-platform compatibility
+    debugPrint('✅ Using agora_rtc_engine for cross-platform compatibility');
   } catch (e) {
     debugPrint('❌ Firebase initialization failed: $e');
   }
@@ -62,7 +61,7 @@ class WebChatScreen extends StatelessWidget {
             ),
             SizedBox(height: 16),
             Text(
-              'Cross-platform calling powered by Agora UIKit',
+              'Cross-platform calling powered by Agora RTC Engine',
               style: TextStyle(fontSize: 16, color: Colors.grey),
             ),
           ],
