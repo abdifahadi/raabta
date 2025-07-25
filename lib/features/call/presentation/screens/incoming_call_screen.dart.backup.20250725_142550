@@ -271,9 +271,9 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Colors.blue.shade900.withValues(alpha: 0.8),
-              Colors.purple.shade900.withValues(alpha: 0.8),
-              Colors.black.withValues(alpha: 0.9),
+              Colors.blue.shade900.withOpacity(0.8),
+              Colors.purple.shade900.withOpacity(0.8),
+              Colors.black.withOpacity(0.9),
             ],
           ),
         ),
@@ -359,14 +359,14 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
               height: 160 * _pulseAnimation.value,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.1),
+                color: Colors.white.withOpacity(0.1),
                 border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.3),
+                  color: Colors.white.withOpacity(0.3),
                   width: 3,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.blue.withValues(alpha: 0.3),
+                    color: Colors.blue.withOpacity(0.3),
                     blurRadius: 20,
                     spreadRadius: 5,
                   ),
@@ -410,8 +410,8 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
             color: widget.call.callType == CallType.video 
-                ? Colors.blue.withValues(alpha: 0.3)
-                : Colors.green.withValues(alpha: 0.3),
+                ? Colors.blue.withOpacity(0.3)
+                : Colors.green.withOpacity(0.3),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: widget.call.callType == CallType.video 
@@ -476,7 +476,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.red.withValues(alpha: 0.3),
+                      color: Colors.red.withOpacity(0.3),
                       blurRadius: 15,
                       spreadRadius: 2,
                     ),
@@ -503,7 +503,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.green.withValues(alpha: 0.3),
+                      color: Colors.green.withOpacity(0.3),
                       blurRadius: 15,
                       spreadRadius: 2,
                     ),

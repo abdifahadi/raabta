@@ -181,14 +181,14 @@ class _CrossPlatformVideoViewState extends State<CrossPlatformVideoView> {
           children: [
             Icon(
               Icons.error_outline,
-              color: Colors.red.withValues(alpha: 0.7),
+              color: Colors.red.withOpacity(0.7),
               size: widget.width != null && widget.width! < 150 ? 24 : 32,
             ),
             const SizedBox(height: 4),
             Text(
               'Video Error',
               style: TextStyle(
-                color: Colors.red.withValues(alpha: 0.7),
+                color: Colors.red.withOpacity(0.7),
                 fontSize: widget.width != null && widget.width! < 150 ? 8 : 10,
               ),
               textAlign: TextAlign.center,
@@ -198,7 +198,7 @@ class _CrossPlatformVideoViewState extends State<CrossPlatformVideoView> {
               Text(
                 _errorMessage!,
                 style: TextStyle(
-                  color: Colors.red.withValues(alpha: 0.5),
+                  color: Colors.red.withOpacity(0.5),
                   fontSize: 8,
                 ),
                 textAlign: TextAlign.center,
