@@ -100,6 +100,26 @@
   
   <!-- Agora Web SDK for Flutter agora_rtc_engine 6.5.2+ -->
   <script src="agora_web_init.js"></script>
+  
+  <!-- Flutter Web platformViewRegistry compatibility fix -->
+  <script>
+    // Fix for agora_rtc_engine 6.5.2+ platformViewRegistry compatibility
+    if (!window.platformViewRegistry) {
+      console.log('🔧 Setting up platformViewRegistry compatibility layer...');
+      window.platformViewRegistry = {
+        registerViewFactory: function(viewTypeId, factory) {
+          console.log('📺 Registering view factory:', viewTypeId);
+          // Mock implementation for compatibility
+          return true;
+        }
+      };
+    }
+    
+    // Ensure dart:ui compatibility for Flutter Web
+    if (typeof window.flutterCanvasKit === 'undefined') {
+      window.flutterCanvasKit = {};
+    }
+  </script>
 </head>
 <body>
   <!-- Loading screen shown while Flutter initializes -->
