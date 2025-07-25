@@ -4,6 +4,7 @@ enum CallType { audio, video }
 
 enum CallStatus { 
   calling,       // Call is being initiated/outgoing call
+  initiated,     // Call has been initiated (alias for calling)
   ringing,       // Call is ringing on receiver's end
   accepted,      // Call was accepted by receiver  
   active,        // Call is active/in progress (alias for connected)

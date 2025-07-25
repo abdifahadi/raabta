@@ -36,7 +36,7 @@ Future<void> testAgoraServiceInitialization() async {
   
   try {
     // Test production agora service
-    final productionService = ProductionAgoraService();
+    ProductionAgoraService();
     print('  ✓ ProductionAgoraService created');
     
     // Test service factory
@@ -44,7 +44,7 @@ Future<void> testAgoraServiceInitialization() async {
     print('  ✓ AgoraServiceFactory created');
     
     // Test service interface compliance
-    final serviceInterface = factory.createService();
+    factory.createService();
     print('  ✓ Service interface compliance verified');
     
     print('  ✅ Agora service initialization: PASSED');
@@ -62,7 +62,7 @@ Future<void> testCrossPlatformVideoViews() async {
     final service = factory.createService();
     
     // Test local video view creation
-    final localView = service.createLocalVideoView(
+    service.createLocalVideoView(
       width: 200,
       height: 150,
       borderRadius: BorderRadius.circular(8),
@@ -70,7 +70,7 @@ Future<void> testCrossPlatformVideoViews() async {
     print('  ✓ Local video view created');
     
     // Test remote video view creation
-    final remoteView = service.createRemoteVideoView(
+    service.createRemoteVideoView(
       12345,
       width: 200,
       height: 150,
@@ -88,7 +88,7 @@ Future<void> testServiceLocator() async {
   print('🔧 Testing Service Locator...');
   
   try {
-    final serviceLocator = ServiceLocator();
+    ServiceLocator();
     print('  ✓ ServiceLocator instance created');
     
     // Test if agora service can be resolved
@@ -129,6 +129,10 @@ CallModel createTestCall() {
     channelName: 'test-channel',
     callType: CallType.video,
     status: CallStatus.initiated,
-    timestamp: DateTime.now(),
+    createdAt: DateTime.now(),
+    callerName: 'Test Caller',
+    callerPhotoUrl: 'https://example.com/caller.jpg',
+    receiverName: 'Test Receiver',
+    receiverPhotoUrl: 'https://example.com/receiver.jpg',
   );
 }
