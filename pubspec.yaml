@@ -74,6 +74,8 @@ dependencies:
   
   # Audio/Video Calling - Using latest agora_rtc_engine for cross-platform support
   agora_rtc_engine: ^6.5.2
+  js: ^0.6.7
+  universal_html: ^2.2.4
   
   # Supabase for backend services
   supabase_flutter: ^2.5.6
