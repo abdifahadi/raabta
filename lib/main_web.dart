@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'core/config/firebase_options.dart';
+// Import Agora platform view fix for web platform
+import 'agora_web_stub_fix.dart';
+import 'core/platform/agora_platform_view_fix.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -11,8 +14,18 @@ void main() async {
     );
     debugPrint('✅ Firebase initialized successfully');
     
-    // No need for manual Agora web compatibility fixes with agora_uikit
-    // agora_uikit handles web compatibility internally
+    // Initialize Agora platform view fix for web compatibility
+    try {
+      debugPrint('🎥 Initializing Agora platform view fix for web...');
+      initializeAgoraWebStubFix();
+      AgoraPlatformViewFix.initialize();
+      debugPrint('✅ Agora platform view fix initialized successfully');
+    } catch (e) {
+      debugPrint('⚠️ Agora platform view fix initialization failed: $e');
+      // Continue - the fix provides graceful fallbacks
+    }
+    
+    // agora_uikit now works with proper web compatibility
     debugPrint('✅ Using agora_uikit for cross-platform compatibility');
   } catch (e) {
     debugPrint('❌ Firebase initialization failed: $e');

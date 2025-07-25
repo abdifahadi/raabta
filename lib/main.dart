@@ -7,7 +7,9 @@ import 'dart:developer';
 import 'core/config/firebase_options.dart';
 import 'core/services/service_locator.dart';
 import 'core/services/logging_service.dart';
-// Removed old Agora platform fixes - no longer needed with agora_uikit
+// Import Agora platform view fix for web compatibility
+import 'agora_web_stub_fix.dart';
+import 'core/platform/agora_platform_view_fix.dart';
 
 import 'core/services/notification_handler.dart';
 import 'features/auth/presentation/auth_wrapper.dart';
@@ -75,6 +77,27 @@ void main() async {
           log('  - Storage Bucket: ${app.options.storageBucket}');
           log('  - API Key Length: ${app.options.apiKey.length} chars');
         }
+      }
+
+      // Initialize Agora platform view fix for web compatibility
+      try {
+        if (kDebugMode) {
+          log('🎥 Initializing Agora platform view fix...');
+        }
+        
+        // Initialize the Agora web stub fix
+        initializeAgoraWebStubFix();
+        AgoraPlatformViewFix.initialize();
+        
+        if (kDebugMode) {
+          log('✅ Agora platform view fix initialized successfully');
+          log('🔧 Platform view registry available: ${AgoraPlatformViewFix.isInitialized}');
+        }
+      } catch (agoraError) {
+        if (kDebugMode) {
+          log('⚠️ Agora platform view fix initialization failed: $agoraError');
+        }
+        // Continue - the fix provides graceful fallbacks
       }
 
       // Agora UIKit handles all platform-specific initialization automatically
