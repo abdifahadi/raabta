@@ -115,7 +115,7 @@ class ProductionAgoraService implements AgoraServiceInterface {
       await _engine!.initialize(RtcEngineContext(
         appId: AgoraConfig.appId,
         channelProfile: ChannelProfileType.channelProfileCommunication,
-        areaCode: AreaCode.areaCodeGlob, // Global area code for best connectivity
+        areaCode: AreaCode.areaCodeGlob.value(), // Global area code for best connectivity
         logConfig: LogConfig(
           level: kDebugMode ? LogLevel.logLevelInfo : LogLevel.logLevelWarn,
         ),
@@ -162,7 +162,7 @@ class ProductionAgoraService implements AgoraServiceInterface {
           frameRate: AgoraConfig.videoFrameRate,
           bitrate: AgoraConfig.videoBitrate,
           orientationMode: OrientationMode.orientationModeAdaptive,
-          degradationPreference: DegradationPreference.degradationMaintainQuality,
+          degradationPreference: DegradationPreference.maintainQuality,
         ));
       }
 
@@ -327,7 +327,7 @@ class ProductionAgoraService implements AgoraServiceInterface {
         _handleTokenRenewal();
         break;
       case ErrorCodeType.errNetDown:
-      case ErrorCodeType.errNetNoconnect:
+      case ErrorCodeType.errFailed:
         _handleNetworkError();
         break;
       default:

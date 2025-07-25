@@ -26,14 +26,18 @@ class AgoraService {
     // Register event handlers
     _engine!.registerEventHandler(
       RtcEngineEventHandler(
-        onJoinChannelSuccess: (connection, elapsed) =>
-            print("✅ Join success on ${connection.channelId}"),
-        onUserJoined: (connection, remoteUid, elapsed) => 
-            print("🎉 User $remoteUid joined"),
-        onUserOffline: (connection, remoteUid, reason) => 
-            print("🚫 User $remoteUid left"),
-        onError: (err, msg) => 
-            print("❌ Agora Error: $err - $msg"),
+        onJoinChannelSuccess: (connection, elapsed) {
+          if (kDebugMode) debugPrint("✅ Join success on ${connection.channelId}");
+        },
+        onUserJoined: (connection, remoteUid, elapsed) { 
+          if (kDebugMode) debugPrint("🎉 User $remoteUid joined");
+        },
+        onUserOffline: (connection, remoteUid, reason) { 
+          if (kDebugMode) debugPrint("🚫 User $remoteUid left");
+        },
+        onError: (err, msg) { 
+          if (kDebugMode) debugPrint("❌ Agora Error: $err - $msg");
+        },
       ),
     );
     

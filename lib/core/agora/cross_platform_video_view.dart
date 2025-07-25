@@ -3,6 +3,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 
+// Conditional imports for web
+import 'video_view_web.dart' if (dart.library.io) 'video_view_native.dart';
+
 /// Cross-platform video view implementation for Agora RTC Engine 6.5.2+
 /// Supports Android, iOS, Web, Windows, Linux, and macOS
 class CrossPlatformVideoView extends StatefulWidget {
@@ -125,41 +128,20 @@ class _CrossPlatformVideoViewState extends State<CrossPlatformVideoView> {
   }
 
   Widget _buildLocalVideoView() {
-    return AgoraVideoView(
-      controller: VideoViewController(
-        rtcEngine: widget.engine,
-        canvas: const VideoCanvas(
-          uid: 0,
-          renderMode: RenderModeType.renderModeHidden,
-          mirrorMode: VideoMirrorModeType.videoMirrorModeAuto,
-        ),
-      ),
-      onAgoraVideoViewCreated: (viewId) {
-        if (kDebugMode) {
-          debugPrint('🎬 CrossPlatformVideoView: Local video view created with ID: $viewId');
-        }
-      },
+    return PlatformVideoView(
+      engine: widget.engine,
+      uid: 0,
+      isLocal: true,
+      channelId: widget.channelId,
     );
   }
 
   Widget _buildRemoteVideoView() {
-    return AgoraVideoView(
-      controller: VideoViewController.remote(
-        rtcEngine: widget.engine,
-        canvas: VideoCanvas(
-          uid: widget.uid,
-          renderMode: RenderModeType.renderModeHidden,
-          mirrorMode: VideoMirrorModeType.videoMirrorModeDisabled,
-        ),
-        connection: widget.channelId != null 
-            ? RtcConnection(channelId: widget.channelId!)
-            : const RtcConnection(),
-      ),
-      onAgoraVideoViewCreated: (viewId) {
-        if (kDebugMode) {
-          debugPrint('🎬 CrossPlatformVideoView: Remote video view created for UID: ${widget.uid}, View ID: $viewId');
-        }
-      },
+    return PlatformVideoView(
+      engine: widget.engine,
+      uid: widget.uid,
+      isLocal: false,
+      channelId: widget.channelId,
     );
   }
 

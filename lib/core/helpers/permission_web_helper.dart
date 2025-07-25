@@ -8,15 +8,15 @@ Future<void> requestWebPermissions() async {
   try {
     final navigator = html.window.navigator;
     if (navigator.mediaDevices != null) {
-      print('🔐 Requesting web media permissions...');
+      if (kDebugMode) debugPrint('🔐 Requesting web media permissions...');
       await navigator.mediaDevices!
           .getUserMedia({'audio': true, 'video': true});
-      print('✅ Web permissions granted successfully');
+      if (kDebugMode) debugPrint('✅ Web permissions granted successfully');
     } else {
-      print('⚠️ MediaDevices not supported in this browser');
+      if (kDebugMode) debugPrint('⚠️ MediaDevices not supported in this browser');
     }
   } catch (e) {
-    print('❌ Web permission request failed: $e');
+    if (kDebugMode) debugPrint('❌ Web permission request failed: $e');
     // Continue anyway as some permissions might be granted later
   }
 }
@@ -36,7 +36,7 @@ Future<bool> checkWebPermissions() async {
       return true;
     }
   } catch (e) {
-    print('🔍 Web permissions check failed: $e');
+    if (kDebugMode) debugPrint('🔍 Web permissions check failed: $e');
     return false;
   }
   

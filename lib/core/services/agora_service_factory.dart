@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import '../agora/agora_service.dart';
+import '../agora/cross_platform_video_view.dart';
 import 'agora_service_interface.dart';
-import 'agora_unified_service.dart';
 import 'production_agora_service.dart';
 import '../../features/call/domain/models/call_model.dart';
 
@@ -126,62 +126,64 @@ class AgoraUnifiedServiceAdapter implements AgoraServiceInterface {
   }
   
   @override
-  Widget createLocalVideoView() {
-    // Return a FutureBuilder to handle the async setupLocalVideo
-    return FutureBuilder<Widget>(
-      future: _agoraService.setupLocalVideo(0),
-      builder: (context, snapshot) {
-        if (snapshot.hasData) {
-          return snapshot.data!;
-        } else if (snapshot.hasError) {
-          return Container(
-            color: Colors.black,
-            child: Center(
-              child: Text(
-                'Error loading video',
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-          );
-        } else {
-          return Container(
-            color: Colors.black,
-            child: Center(
-              child: CircularProgressIndicator(),
-            ),
-          );
-        }
-      },
+  Widget createLocalVideoView({
+    double? width,
+    double? height,
+    BorderRadius? borderRadius,
+  }) {
+    final engine = _agoraService.engine;
+    if (engine == null) {
+      return Container(
+        width: width,
+        height: height,
+        color: Colors.black,
+        child: Center(
+          child: Text(
+            'Engine not initialized',
+            style: TextStyle(color: Colors.white),
+          ),
+        ),
+      );
+    }
+    
+    return CrossPlatformVideoView(
+      engine: engine,
+      uid: 0, // Local video always uses uid 0
+      isLocal: true,
+      width: width,
+      height: height,
+      borderRadius: borderRadius,
     );
   }
   
   @override
-  Widget createRemoteVideoView(int uid) {
-    // Return a FutureBuilder to handle the async setupRemoteVideo
-    return FutureBuilder<Widget>(
-      future: _agoraService.setupRemoteVideo(0, uid),
-      builder: (context, snapshot) {
-        if (snapshot.hasData) {
-          return snapshot.data!;
-        } else if (snapshot.hasError) {
-          return Container(
-            color: Colors.black,
-            child: Center(
-              child: Text(
-                'Error loading remote video',
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-          );
-        } else {
-          return Container(
-            color: Colors.black,
-            child: Center(
-              child: CircularProgressIndicator(),
-            ),
-          );
-        }
-      },
+  Widget createRemoteVideoView(int uid, {
+    double? width,
+    double? height,
+    BorderRadius? borderRadius,
+  }) {
+    final engine = _agoraService.engine;
+    if (engine == null) {
+      return Container(
+        width: width,
+        height: height,
+        color: Colors.black,
+        child: Center(
+          child: Text(
+            'Engine not initialized',
+            style: TextStyle(color: Colors.white),
+          ),
+        ),
+      );
+    }
+    
+    return CrossPlatformVideoView(
+      engine: engine,
+      uid: uid,
+      isLocal: false,
+      width: width,
+      height: height,
+      borderRadius: borderRadius,
     );
   }
   
