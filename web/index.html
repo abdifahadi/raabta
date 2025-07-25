@@ -100,6 +100,7 @@
   
   <!-- Agora Web SDK for Flutter agora_rtc_engine 6.5.2+ -->
   <script src="https://download.agora.io/sdk/release/AgoraRTC_N.js"></script>
+  <script src="https://download.agora.io/sdk/release/iris-web-rtc_n450_w4220_0.8.6.js"></script>
   <script src="agora_web_init.js"></script>
   
   <!-- Flutter Web platformViewRegistry compatibility fix -->
@@ -108,10 +109,14 @@
     if (!window.platformViewRegistry) {
       console.log('🔧 Setting up platformViewRegistry compatibility layer...');
       window.platformViewRegistry = {
-        registerViewFactory: function(viewTypeId, factory) {
-          console.log('📺 Registering view factory:', viewTypeId);
-          // Mock implementation for compatibility
-          return true;
+        registerViewFactory: function(viewTypeId, factory, options) {
+          console.log('📺 Registering view factory:', viewTypeId, options);
+          // Enhanced implementation for better compatibility
+          return {
+            viewType: viewTypeId,
+            factory: factory,
+            options: options || {}
+          };
         }
       };
     }
@@ -119,6 +124,15 @@
     // Ensure dart:ui compatibility for Flutter Web
     if (typeof window.flutterCanvasKit === 'undefined') {
       window.flutterCanvasKit = {};
+    }
+    
+    // Add dart:ui_web compatibility layer
+    if (typeof window.ui === 'undefined') {
+      window.ui = {};
+    }
+    if (typeof window.ui.platformViewRegistry === 'undefined') {
+      window.ui = window.ui || {};
+      window.ui.platformViewRegistry = window.platformViewRegistry;
     }
   </script>
 </head>
