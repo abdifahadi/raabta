@@ -11,6 +11,11 @@ import '../../features/call/domain/models/call_model.dart';
 class AgoraServiceFactory {
   static AgoraServiceInterface? _instance;
   
+  /// Create a new service instance
+  AgoraServiceInterface createService() {
+    return ProductionAgoraService();
+  }
+  
   /// Get the unified AgoraService implementation for all platforms
   /// Uses agora_rtc_engine 6.5.2 with cross-platform support for Web, Android, iOS, Windows, macOS, Linux
   static AgoraServiceInterface getInstance() {
