@@ -98,43 +98,58 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-storage-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-messaging-compat.js"></script>
   
+  <!-- Critical fix for platformViewRegistry - Must be loaded BEFORE any other Agora scripts -->
+  <script>
+    console.log('🔧 Setting up critical Flutter Web and Agora compatibility layers...');
+    
+    // Ensure window.ui namespace exists for dart:ui compatibility
+    if (typeof window.ui === 'undefined') {
+      window.ui = {};
+      console.log('✅ Created window.ui namespace');
+    }
+    
+    // Create robust platformViewRegistry implementation
+    if (typeof window.ui.platformViewRegistry === 'undefined') {
+      window.ui.platformViewRegistry = {
+        registerViewFactory: function(viewTypeId, factory, options) {
+          console.log('📺 Registering platform view factory:', viewTypeId);
+          
+          // Store the factory for later use
+          if (!window._platformViewFactories) {
+            window._platformViewFactories = new Map();
+          }
+          window._platformViewFactories.set(viewTypeId, {
+            factory: factory,
+            options: options || {}
+          });
+          
+          return true;
+        }
+      };
+      console.log('✅ Created window.ui.platformViewRegistry');
+    }
+    
+    // Legacy compatibility - expose platformViewRegistry at window level
+    if (typeof window.platformViewRegistry === 'undefined') {
+      window.platformViewRegistry = window.ui.platformViewRegistry;
+      console.log('✅ Exposed platformViewRegistry at window level for legacy compatibility');
+    }
+    
+    // Additional dart:ui compatibility for Flutter Web
+    if (typeof window.ui.webOnlyInitializePlatform === 'undefined') {
+      window.ui.webOnlyInitializePlatform = function() {
+        console.log('📱 Platform initialized for Flutter Web');
+        return Promise.resolve();
+      };
+    }
+    
+    console.log('✅ Flutter Web platformViewRegistry compatibility setup complete');
+  </script>
+  
   <!-- Agora Web SDK for Flutter agora_rtc_engine 6.5.2+ -->
   <script src="https://download.agora.io/sdk/release/AgoraRTC_N.js"></script>
   <script src="https://download.agora.io/sdk/release/iris-web-rtc_n450_w4220_0.8.6.js"></script>
   <script src="agora_web_init.js"></script>
-  
-  <!-- Flutter Web platformViewRegistry compatibility fix -->
-  <script>
-    // Fix for agora_rtc_engine 6.5.2+ platformViewRegistry compatibility
-    if (!window.platformViewRegistry) {
-      console.log('🔧 Setting up platformViewRegistry compatibility layer...');
-      window.platformViewRegistry = {
-        registerViewFactory: function(viewTypeId, factory, options) {
-          console.log('📺 Registering view factory:', viewTypeId, options);
-          // Enhanced implementation for better compatibility
-          return {
-            viewType: viewTypeId,
-            factory: factory,
-            options: options || {}
-          };
-        }
-      };
-    }
-    
-    // Ensure dart:ui compatibility for Flutter Web
-    if (typeof window.flutterCanvasKit === 'undefined') {
-      window.flutterCanvasKit = {};
-    }
-    
-    // Add dart:ui_web compatibility layer
-    if (typeof window.ui === 'undefined') {
-      window.ui = {};
-    }
-    if (typeof window.ui.platformViewRegistry === 'undefined') {
-      window.ui = window.ui || {};
-      window.ui.platformViewRegistry = window.platformViewRegistry;
-    }
-  </script>
 </head>
 <body>
   <!-- Loading screen shown while Flutter initializes -->
@@ -145,8 +160,6 @@
       <div class="loading-subtext">Loading chat application...</div>
     </div>
   </div>
-
-  <!-- Agora UIKit handles video rendering automatically -->
 
   <!-- This script installs service_worker.js to provide PWA functionality to
        application. For more information, see:
