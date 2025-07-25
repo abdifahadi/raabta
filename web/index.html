@@ -108,7 +108,7 @@
       console.log('✅ Created window.ui namespace');
     }
     
-    // Create robust platformViewRegistry implementation
+    // Create robust platformViewRegistry implementation for agora_rtc_engine 6.5.2+
     if (typeof window.ui.platformViewRegistry === 'undefined') {
       window.ui.platformViewRegistry = {
         registerViewFactory: function(viewTypeId, factory, options) {
@@ -118,15 +118,34 @@
           if (!window._platformViewFactories) {
             window._platformViewFactories = new Map();
           }
+          
+          // Enhanced factory storage for agora_rtc_engine
           window._platformViewFactories.set(viewTypeId, {
             factory: factory,
-            options: options || {}
+            options: options || {},
+            timestamp: Date.now(),
+            type: 'agora_video_view'
           });
+          
+          // For Agora video views, create a container element
+          if (viewTypeId && (viewTypeId.includes('agora') || viewTypeId.includes('video'))) {
+            const container = document.createElement('div');
+            container.id = 'agora-video-container-' + viewTypeId;
+            container.style.cssText = 'width: 100%; height: 100%; background: #000; position: relative;';
+            
+            // Store reference for later cleanup
+            if (!window._agoraVideoContainers) {
+              window._agoraVideoContainers = new Map();
+            }
+            window._agoraVideoContainers.set(viewTypeId, container);
+            
+            console.log('📹 Created video container for:', viewTypeId);
+          }
           
           return true;
         }
       };
-      console.log('✅ Created window.ui.platformViewRegistry');
+      console.log('✅ Created window.ui.platformViewRegistry with enhanced Agora support');
     }
     
     // Legacy compatibility - expose platformViewRegistry at window level
@@ -143,7 +162,11 @@
       };
     }
     
-    console.log('✅ Flutter Web platformViewRegistry compatibility setup complete');
+    // Agora-specific web initialization flags
+    window.agoraWebCompatibilityReady = true;
+    window.platformViewRegistryReady = true;
+    
+    console.log('✅ Flutter Web platformViewRegistry compatibility setup complete for agora_rtc_engine 6.5.2+');
   </script>
   
   <!-- Agora Web SDK for Flutter agora_rtc_engine 6.5.2+ -->
