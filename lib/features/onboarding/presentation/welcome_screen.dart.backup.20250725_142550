@@ -102,11 +102,11 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                           width: 120,
                           height: 120,
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
+                            color: Colors.white.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(60),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.2),
+                                color: Colors.black.withOpacity(0.2),
                                 blurRadius: 20,
                                 offset: const Offset(0, 10),
                               ),
@@ -140,7 +140,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                           style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.w300,
-                            color: Colors.white.withValues(alpha: 0.9),
+                            color: Colors.white.withOpacity(0.9),
                             letterSpacing: 1,
                           ),
                         ),
@@ -172,7 +172,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                         'Connect with your friends and family\nthrough secure messaging',
                         style: TextStyle(
                           fontSize: 16,
-                          color: Colors.white.withValues(alpha: 0.9),
+                          color: Colors.white.withOpacity(0.9),
                           height: 1.5,
                         ),
                         textAlign: TextAlign.center,
@@ -225,7 +225,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                           backgroundColor: Colors.white,
                           foregroundColor: const Color(0xFF667eea),
                           elevation: 8,
-                          shadowColor: Colors.black.withValues(alpha: 0.3),
+                          shadowColor: Colors.black.withOpacity(0.3),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(28),
                           ),
@@ -252,7 +252,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                     'By continuing, you agree to our Terms & Privacy Policy',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.white.withValues(alpha: 0.7),
+                      color: Colors.white.withOpacity(0.7),
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -275,10 +275,10 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.1),
+        color: Colors.white.withOpacity(0.1),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.2),
+          color: Colors.white.withOpacity(0.2),
           width: 1,
         ),
       ),
@@ -288,7 +288,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
+              color: Colors.white.withOpacity(0.2),
               borderRadius: BorderRadius.circular(24),
             ),
             child: Icon(
@@ -315,7 +315,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                   subtitle,
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.white.withValues(alpha: 0.8),
+                    color: Colors.white.withOpacity(0.8),
                   ),
                 ),
               ],
