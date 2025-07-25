@@ -167,7 +167,7 @@ Future<bool> testDependencies() async {
       'firebase_messaging',
       'firebase_storage',
       'google_sign_in',
-      'agora_rtc_engine', // Updated: Now using agora_rtc_engine properly
+      'agora_uikit', // Using agora_uikit only for cross-platform calling
       'permission_handler',
       'supabase_flutter',
       'encrypt',
