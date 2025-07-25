@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../agora/agora_service.dart';
 import 'agora_service_interface.dart';
 import 'agora_unified_service.dart';
+import 'production_agora_service.dart';
 import '../../features/call/domain/models/call_model.dart';
 
 /// Factory for creating Agora service instances
@@ -17,8 +18,8 @@ class AgoraServiceFactory {
       return _instance!;
     }
     
-    // Use the new AgoraService for all platforms with agora_rtc_engine 6.5.2
-    _instance = AgoraUnifiedServiceAdapter();
+    // Use the production AgoraService for all platforms with agora_rtc_engine 6.5.2
+    _instance = ProductionAgoraService();
     
     return _instance!;
   }

@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 
 import '../../domain/models/call_model.dart';
-import '../../../../core/services/agora_unified_service.dart';
+import '../../../../core/services/production_agora_service.dart';
 import '../../../../core/services/service_locator.dart';
 
 /// Cross-platform call screen using Agora UIKit 1.3.10
@@ -24,7 +24,7 @@ class UnifiedCallScreen extends StatefulWidget {
 
 class _UnifiedCallScreenState extends State<UnifiedCallScreen> with WidgetsBindingObserver {
   RtcEngine? _engine;
-  late AgoraUnifiedService _agoraService;
+  late ProductionAgoraService _agoraService;
   bool _isInitialized = false;
   String? _errorMessage;
   Timer? _callTimer;
@@ -40,7 +40,7 @@ class _UnifiedCallScreenState extends State<UnifiedCallScreen> with WidgetsBindi
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _agoraService = AgoraUnifiedService();
+    _agoraService = ProductionAgoraService();
     _initializeCall();
     _listenToCallEvents();
   }
@@ -152,7 +152,7 @@ class _UnifiedCallScreenState extends State<UnifiedCallScreen> with WidgetsBindi
 
         if (kDebugMode) debugPrint('✅ Agora UIKit call initialized successfully');
       } else {
-        throw Exception('Failed to initialize Agora client');
+        throw Exception('Failed to initialize Agora engine');
       }
     } catch (e) {
       if (kDebugMode) debugPrint('❌ Failed to initialize call: $e');
@@ -277,7 +277,7 @@ class _UnifiedCallScreenState extends State<UnifiedCallScreen> with WidgetsBindi
       return _buildErrorInterface();
     }
 
-    if (!_isInitialized || _client == null) {
+    if (!_isInitialized || _engine == null) {
       return _buildLoadingInterface();
     }
 
@@ -378,7 +378,10 @@ class _UnifiedCallScreenState extends State<UnifiedCallScreen> with WidgetsBindi
         children: [
           // Remote video (full screen)
           if (_agoraService.remoteUsers.isNotEmpty)
-            _agoraService.createRemoteVideoView(_agoraService.remoteUsers.first)
+            _agoraService.createRemoteVideoView(
+              _agoraService.remoteUsers.first,
+              borderRadius: BorderRadius.circular(0),
+            )
           else
             Container(
               color: Colors.black,
@@ -396,7 +399,11 @@ class _UnifiedCallScreenState extends State<UnifiedCallScreen> with WidgetsBindi
             right: 20,
             width: 120,
             height: 160,
-            child: _agoraService.createLocalVideoView(),
+            child: _agoraService.createLocalVideoView(
+              width: 120,
+              height: 160,
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         ],
       ),

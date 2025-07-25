@@ -9,6 +9,7 @@ import 'package:logger/logger.dart';
 import '../../features/call/domain/models/call_model.dart';
 import '../config/agora_config.dart';
 import '../services/supabase_agora_token_service.dart';
+import 'cross_platform_video_view.dart';
 
 /// Unified cross-platform Agora service using agora_rtc_engine 6.5.2
 /// Supports Android, iOS, Web, Windows, Linux, macOS with proper video rendering
@@ -212,86 +213,80 @@ class AgoraService {
     }
   }
 
-  /// Setup local video view
-  Future<Widget> setupLocalVideo(int viewId) async {
+  /// Create local video view using the new cross-platform implementation
+  Widget createLocalVideoView({
+    double? width,
+    double? height,
+    BorderRadius? borderRadius,
+  }) {
     try {
       if (_engine == null) {
-        throw Exception('Agora engine not initialized');
-      }
-
-      _logger.i('📹 AgoraService: Setting up local video view');
-
-      // Create video view widget based on platform
-      if (kIsWeb) {
-        return AgoraVideoView(
-          controller: VideoViewController(
-            rtcEngine: _engine!,
-            canvas: const VideoCanvas(uid: 0),
-          ),
-        );
-      } else {
-        return AgoraVideoView(
-          controller: VideoViewController(
-            rtcEngine: _engine!,
-            canvas: const VideoCanvas(uid: 0),
-          ),
+        return CrossPlatformVideoViewFactory.createPlaceholderView(
+          label: 'Camera Not Available',
+          icon: Icons.videocam_off,
+          width: width,
+          height: height,
+          borderRadius: borderRadius,
         );
       }
-    } catch (e) {
-      _logger.e('❌ AgoraService: Failed to setup local video: $e');
-      return _buildErrorVideoView('Local Video Error');
-    }
-  }
 
-  /// Setup remote video view for a specific user
-  Future<Widget> setupRemoteVideo(int viewId, int remoteUid) async {
-    try {
-      if (_engine == null) {
-        throw Exception('Agora engine not initialized');
-      }
+      _logger.i('📹 AgoraService: Creating local video view');
 
-      _logger.i('📹 AgoraService: Setting up remote video view for UID: $remoteUid');
-
-      // Create video view widget for remote user
-      return AgoraVideoView(
-        controller: VideoViewController.remote(
-          rtcEngine: _engine!,
-          canvas: VideoCanvas(uid: remoteUid),
-          connection: RtcConnection(channelId: _currentChannelName),
-        ),
+      return CrossPlatformVideoViewFactory.createLocalVideoView(
+        engine: _engine!,
+        width: width,
+        height: height,
+        borderRadius: borderRadius,
       );
     } catch (e) {
-      _logger.e('❌ AgoraService: Failed to setup remote video: $e');
-      return _buildErrorVideoView('Remote Video Error');
+      _logger.e('❌ AgoraService: Failed to create local video view: $e');
+      return CrossPlatformVideoViewFactory.createPlaceholderView(
+        label: 'Local Video Error',
+        icon: Icons.error_outline,
+        width: width,
+        height: height,
+        borderRadius: borderRadius,
+      );
     }
   }
 
-  /// Build error video view widget
-  Widget _buildErrorVideoView(String errorText) {
-    return Container(
-      color: Colors.black,
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.videocam_off,
-              color: Colors.white54,
-              size: 48,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              errorText,
-              style: const TextStyle(
-                color: Colors.white54,
-                fontSize: 12,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
+  /// Create remote video view using the new cross-platform implementation
+  Widget createRemoteVideoView(int remoteUid, {
+    double? width,
+    double? height,
+    BorderRadius? borderRadius,
+  }) {
+    try {
+      if (_engine == null) {
+        return CrossPlatformVideoViewFactory.createPlaceholderView(
+          label: 'Remote Video Not Available',
+          icon: Icons.person,
+          width: width,
+          height: height,
+          borderRadius: borderRadius,
+        );
+      }
+
+      _logger.i('📹 AgoraService: Creating remote video view for UID: $remoteUid');
+
+      return CrossPlatformVideoViewFactory.createRemoteVideoView(
+        engine: _engine!,
+        uid: remoteUid,
+        channelId: _currentChannelName,
+        width: width,
+        height: height,
+        borderRadius: borderRadius,
+      );
+    } catch (e) {
+      _logger.e('❌ AgoraService: Failed to create remote video view: $e');
+      return CrossPlatformVideoViewFactory.createPlaceholderView(
+        label: 'Remote Video Error',
+        icon: Icons.error_outline,
+        width: width,
+        height: height,
+        borderRadius: borderRadius,
+      );
+    }
   }
 
   /// Handle call events (user joined, user offline, etc.)
@@ -450,6 +445,9 @@ class AgoraService {
       throw Exception('Failed to renew token: $e');
     }
   }
+
+  /// Get the engine instance for direct access
+  RtcEngine? get engine => _engine;
 
   /// Dispose of the service and clean up resources
   void dispose() {
