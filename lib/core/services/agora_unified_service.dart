@@ -12,7 +12,8 @@ import '../config/agora_config.dart';
 import '../agora/cross_platform_video_view.dart';
 
 /// Unified cross-platform Agora service using agora_rtc_engine 6.5.2
-/// Supports Android, iOS, Web, Windows, Linux, macOS with proper video rendering
+/// Supports Android, iOS, Windows, Linux, macOS with proper video rendering
+/// Web platform does not support video calling
 class AgoraUnifiedService implements AgoraServiceInterface {
   static final AgoraUnifiedService _instance = AgoraUnifiedService._internal();
   factory AgoraUnifiedService() => _instance;
@@ -72,8 +73,14 @@ class AgoraUnifiedService implements AgoraServiceInterface {
 
   @override
   Future<void> initialize() async {
+    // Web platform does not support video calling
+    if (kIsWeb) {
+      if (kDebugMode) debugPrint('🌐 AgoraUnifiedService: Video calling is not supported on web platform');
+      throw UnsupportedError('Video calling is not supported on web platform');
+    }
+
     try {
-      if (kDebugMode) debugPrint('🚀 AgoraUnifiedService: Initializing with agora_rtc_engine...');
+      if (kDebugMode) debugPrint('🚀 AgoraUnifiedService: Initializing with agora_rtc_engine (native platform)...');
       
       // Create RTC engine
       _engine = createAgoraRtcEngine();
@@ -169,9 +176,9 @@ class AgoraUnifiedService implements AgoraServiceInterface {
   Future<bool> checkPermissions(CallType callType) async {
     try {
       if (kIsWeb) {
-        // On web, permissions are handled by the browser automatically
-        if (kDebugMode) debugPrint('🌐 AgoraUnifiedService: Web permissions handled by browser');
-        return true;
+        // Web platform does not support video calling
+        if (kDebugMode) debugPrint('🌐 AgoraUnifiedService: Video calling is not supported on web platform');
+        return false;
       }
 
       List<Permission> permissions = [Permission.microphone];

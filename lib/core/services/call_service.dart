@@ -54,14 +54,22 @@ class CallService {
       }
       return;
     }
+
+    // Web platform does not support video calling
+    if (kIsWeb) {
+      if (kDebugMode) {
+        debugPrint('CallService: Video calling is not supported on web platform');
+      }
+      throw UnsupportedError('Video calling is not supported on web platform');
+    }
     
     try {
-      // Initialize real Agora service for all platforms including web
+      // Initialize Agora service for native platforms only
       await _agoraService.initialize();
       _isInitialized = true;
       
       if (kDebugMode) {
-        debugPrint('CallService: Initialized successfully with Agora (${kIsWeb ? 'Web' : 'Native'} mode)');
+        debugPrint('CallService: Initialized successfully with Agora (Native mode)');
       }
     } catch (e) {
       if (kDebugMode) {
@@ -94,7 +102,7 @@ class CallService {
       );
       
       if (kDebugMode) {
-        debugPrint('CallService: Joined call $channelName successfully with Agora (${kIsWeb ? 'Web' : 'Native'})');
+        debugPrint('CallService: Joined call $channelName successfully with Agora (Native)');
       }
       
     } catch (e) {
@@ -454,7 +462,7 @@ class CallService {
       await _agoraService.leaveCall();
       
       if (kDebugMode) {
-        debugPrint('CallService: Call ended successfully with Agora (${kIsWeb ? 'Web' : 'Native'})');
+        debugPrint('CallService: Call ended successfully with Agora (Native)');
       }
     } catch (e) {
       if (kDebugMode) {
@@ -470,7 +478,7 @@ class CallService {
       await _agoraService.toggleMute();
       
       if (kDebugMode) {
-        debugPrint('CallService: Audio toggled with Agora (${kIsWeb ? 'Web' : 'Native'})');
+        debugPrint('CallService: Audio toggled with Agora (Native)');
       }
     } catch (e) {
       if (kDebugMode) {
@@ -486,7 +494,7 @@ class CallService {
       await _agoraService.toggleVideo();
       
       if (kDebugMode) {
-        debugPrint('CallService: Video toggled with Agora (${kIsWeb ? 'Web' : 'Native'})');
+        debugPrint('CallService: Video toggled with Agora (Native)');
       }
     } catch (e) {
       if (kDebugMode) {
@@ -502,7 +510,7 @@ class CallService {
       await _agoraService.toggleSpeaker();
       
       if (kDebugMode) {
-        debugPrint('CallService: Speaker toggled with Agora (${kIsWeb ? 'Web' : 'Native'})');
+        debugPrint('CallService: Speaker toggled with Agora (Native)');
       }
     } catch (e) {
       if (kDebugMode) {
@@ -518,7 +526,7 @@ class CallService {
       await _agoraService.switchCamera();
       
       if (kDebugMode) {
-        debugPrint('CallService: Camera switched with Agora (${kIsWeb ? 'Web' : 'Native'})');
+        debugPrint('CallService: Camera switched with Agora (Native)');
       }
     } catch (e) {
       if (kDebugMode) {

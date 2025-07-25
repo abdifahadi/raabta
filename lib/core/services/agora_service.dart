@@ -1,6 +1,5 @@
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:flutter/foundation.dart';
-import '../helpers/permission_web_helper.dart';
 
 class AgoraService {
   static RtcEngine? _engine;
@@ -11,18 +10,14 @@ class AgoraService {
     required String channelName,
     required int uid,
   }) async {
-    // Initialize web-specific support first if on web platform
+    // Web platform does not support video calling
     if (kIsWeb) {
-      WebPermissionHelper.initializeAgoraWebSupport();
-      await WebPermissionHelper.requestWebPermissions();
-      
-      // Log browser info for debugging
-      final browserInfo = WebPermissionHelper.getWebBrowserInfo();
-      debugPrint('🌐 AgoraService: Browser info: $browserInfo');
+      debugPrint('🌐 AgoraService: Video calling is not supported on web platform');
+      throw UnsupportedError('Video calling is not supported on web platform');
     }
     
     try {
-      debugPrint('🚀 AgoraService: Initializing with agora_rtc_engine 6.5.2...');
+      debugPrint('🚀 AgoraService: Initializing with agora_rtc_engine 6.5.2 (native platform)...');
       
       // Create engine with modern API
       _engine = createAgoraRtcEngine();
@@ -106,6 +101,9 @@ class AgoraService {
 
   /// Check if engine is initialized
   static bool get isInitialized => _engine != null;
+
+  /// Check if platform supports video calling
+  static bool get isPlatformSupported => !kIsWeb;
 
   // Legacy aliases for backward compatibility
   static Future<void> initialize({

@@ -151,6 +151,12 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
   Future<void> _acceptCall() async {
     if (_isAnswering || _isDeclining) return;
     
+    // Web platform does not support video calling
+    if (kIsWeb) {
+      _showWebNotSupportedDialog();
+      return;
+    }
+    
     setState(() {
       _isAnswering = true;
     });
@@ -522,6 +528,27 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showWebNotSupportedDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Feature Not Available'),
+        content: const Text(
+          'Video calling is not supported on the web platform. Please use the mobile app or desktop version for video calls.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // Close dialog
+              _declineCall(); // Decline the call since we can't accept it
+            },
+            child: const Text('OK'),
+          ),
+        ],
       ),
     );
   }

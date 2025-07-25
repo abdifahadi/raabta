@@ -3,11 +3,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 
-// Conditional imports for web
-import 'video_view_web.dart' if (dart.library.io) 'video_view_native.dart';
+// Import only native video view - web calls not supported
+import 'video_view_native.dart';
 
 /// Cross-platform video view implementation for Agora RTC Engine 6.5.2+
-/// Supports Android, iOS, Web, Windows, Linux, and macOS
+/// Supports Android, iOS, Windows, Linux, and macOS
+/// Web platform does not support video calling
 class CrossPlatformVideoView extends StatefulWidget {
   final RtcEngine engine;
   final int uid;
@@ -47,6 +48,15 @@ class _CrossPlatformVideoViewState extends State<CrossPlatformVideoView> {
 
   Future<void> _initializeVideoView() async {
     try {
+      // Web platform doesn't support video calling
+      if (kIsWeb) {
+        setState(() {
+          _hasError = true;
+          _errorMessage = 'Video calling not supported on web platform';
+        });
+        return;
+      }
+
       if (kDebugMode) {
         debugPrint('🎬 CrossPlatformVideoView: Initializing video view');
         debugPrint('   UID: ${widget.uid}');
@@ -54,7 +64,7 @@ class _CrossPlatformVideoViewState extends State<CrossPlatformVideoView> {
         debugPrint('   Platform: ${_getPlatformName()}');
       }
 
-      // Video is enabled by default
+      // Video is enabled by default on native platforms
       setState(() {
         _isVideoEnabled = true;
         _hasError = false;
@@ -105,6 +115,11 @@ class _CrossPlatformVideoViewState extends State<CrossPlatformVideoView> {
   }
 
   Widget _buildVideoView() {
+    // Web platform doesn't support video calling
+    if (kIsWeb) {
+      return _buildWebNotSupportedView();
+    }
+
     if (_hasError) {
       return _buildErrorView();
     }
@@ -172,6 +187,33 @@ class _CrossPlatformVideoViewState extends State<CrossPlatformVideoView> {
     );
   }
 
+  Widget _buildWebNotSupportedView() {
+    return Container(
+      color: Colors.black,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.web_asset_off,
+              color: Colors.orange.withOpacity(0.7),
+              size: widget.width != null && widget.width! < 150 ? 24 : 32,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Video calls not\nsupported on web',
+              style: TextStyle(
+                color: Colors.orange.withOpacity(0.7),
+                fontSize: widget.width != null && widget.width! < 150 ? 8 : 10,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildErrorView() {
     return Container(
       color: Colors.black,
@@ -181,14 +223,14 @@ class _CrossPlatformVideoViewState extends State<CrossPlatformVideoView> {
           children: [
             Icon(
               Icons.error_outline,
-              color: Colors.red.withValues(alpha: 0.7),
+              color: Colors.red.withOpacity(0.7),
               size: widget.width != null && widget.width! < 150 ? 24 : 32,
             ),
             const SizedBox(height: 4),
             Text(
               'Video Error',
               style: TextStyle(
-                color: Colors.red.withValues(alpha: 0.7),
+                color: Colors.red.withOpacity(0.7),
                 fontSize: widget.width != null && widget.width! < 150 ? 8 : 10,
               ),
               textAlign: TextAlign.center,
@@ -198,7 +240,7 @@ class _CrossPlatformVideoViewState extends State<CrossPlatformVideoView> {
               Text(
                 _errorMessage!,
                 style: TextStyle(
-                  color: Colors.red.withValues(alpha: 0.5),
+                  color: Colors.red.withOpacity(0.5),
                   fontSize: 8,
                 ),
                 textAlign: TextAlign.center,
@@ -233,8 +275,9 @@ class _CrossPlatformVideoViewState extends State<CrossPlatformVideoView> {
 }
 
 /// Factory class for creating cross-platform video views
+/// Only supports native platforms (Android, iOS, Windows, macOS, Linux)
 class CrossPlatformVideoViewFactory {
-  /// Create a local video view
+  /// Create a local video view (native platforms only)
   static Widget createLocalVideoView({
     required RtcEngine engine,
     double? width,
@@ -242,6 +285,17 @@ class CrossPlatformVideoViewFactory {
     BoxFit fit = BoxFit.cover,
     BorderRadius? borderRadius,
   }) {
+    if (kIsWeb) {
+      return createPlaceholderView(
+        label: 'Video calls not\nsupported on web',
+        icon: Icons.web_asset_off,
+        width: width,
+        height: height,
+        borderRadius: borderRadius,
+        color: Colors.orange.withOpacity(0.7),
+      );
+    }
+
     return CrossPlatformVideoView(
       engine: engine,
       uid: 0,
@@ -253,7 +307,7 @@ class CrossPlatformVideoViewFactory {
     );
   }
 
-  /// Create a remote video view
+  /// Create a remote video view (native platforms only)
   static Widget createRemoteVideoView({
     required RtcEngine engine,
     required int uid,
@@ -263,6 +317,17 @@ class CrossPlatformVideoViewFactory {
     BoxFit fit = BoxFit.cover,
     BorderRadius? borderRadius,
   }) {
+    if (kIsWeb) {
+      return createPlaceholderView(
+        label: 'Video calls not\nsupported on web',
+        icon: Icons.web_asset_off,
+        width: width,
+        height: height,
+        borderRadius: borderRadius,
+        color: Colors.orange.withOpacity(0.7),
+      );
+    }
+
     return CrossPlatformVideoView(
       engine: engine,
       uid: uid,
@@ -282,6 +347,7 @@ class CrossPlatformVideoViewFactory {
     double? width,
     double? height,
     BorderRadius? borderRadius,
+    Color? color,
   }) {
     return Container(
       width: width,
@@ -297,14 +363,14 @@ class CrossPlatformVideoViewFactory {
           children: [
             Icon(
               icon ?? Icons.videocam_off,
-              color: Colors.white54,
+              color: color ?? Colors.white54,
               size: width != null && width < 150 ? 32 : 48,
             ),
             const SizedBox(height: 8),
             Text(
               label,
               style: TextStyle(
-                color: Colors.white54,
+                color: color ?? Colors.white54,
                 fontSize: width != null && width < 150 ? 10 : 12,
               ),
               textAlign: TextAlign.center,

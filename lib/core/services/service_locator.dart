@@ -360,7 +360,7 @@ class ServiceLocator {
         _agoraService = AgoraServiceFactory.getInstance();
         await _agoraService!.initialize();
         if (kDebugMode) {
-          log('✅ AgoraService initialized (${kIsWeb ? 'Web' : 'Native'} implementation)');
+          log('✅ AgoraService initialized (Native implementation)');
         }
       } catch (e) {
         if (kDebugMode) {

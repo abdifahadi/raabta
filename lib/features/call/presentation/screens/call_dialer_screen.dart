@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../domain/models/call_model.dart';
@@ -308,6 +309,12 @@ class _CallDialerScreenState extends State<CallDialerScreen>
   void _initiateCall(CallType callType) async {
     if (_isInitiatingCall) return;
 
+    // Web platform does not support video calling
+    if (kIsWeb) {
+      _showWebNotSupportedDialog();
+      return;
+    }
+
     setState(() {
       _isInitiatingCall = true;
     });
@@ -488,5 +495,23 @@ class _CallDialerScreenState extends State<CallDialerScreen>
       });
       _callStatusSubscription?.cancel();
     });
+  }
+
+  void _showWebNotSupportedDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Feature Not Available'),
+        content: const Text(
+          'Video calling is not supported on the web platform. Please use the mobile app or desktop version for video calls.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 }
