@@ -36,8 +36,16 @@ abstract class AgoraServiceInterface {
   Future<void> renewToken(String token);
   
   // Video views
-  Widget createLocalVideoView();
-  Widget createRemoteVideoView(int uid);
+  Widget createLocalVideoView({
+    double? width,
+    double? height,
+    BorderRadius? borderRadius,
+  });
+  Widget createRemoteVideoView(int uid, {
+    double? width,
+    double? height,
+    BorderRadius? borderRadius,
+  });
   
   // Cleanup
   void dispose();

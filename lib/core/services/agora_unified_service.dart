@@ -9,6 +9,7 @@ import '../../features/call/domain/models/call_model.dart';
 import 'agora_service_interface.dart';
 import 'supabase_agora_token_service.dart';
 import '../config/agora_config.dart';
+import '../agora/cross_platform_video_view.dart';
 
 /// Unified cross-platform Agora service using agora_rtc_engine 6.5.2
 /// Supports Android, iOS, Web, Windows, Linux, macOS with proper video rendering
@@ -129,6 +130,24 @@ class AgoraUnifiedService implements AgoraServiceInterface {
           if (kDebugMode) debugPrint('🔗 AgoraUnifiedService: Connection state changed - State: $state, Reason: $reason');
           _callEventController.add({
             'type': 'connectionStateChanged',
+            'state': state.toString(),
+            'reason': reason.toString(),
+          });
+        },
+        onRemoteVideoStateChanged: (RtcConnection connection, int remoteUid, RemoteVideoState state, RemoteVideoStateReason reason, int elapsed) {
+          if (kDebugMode) debugPrint('📹 AgoraUnifiedService: Remote video state changed - UID: $remoteUid, State: $state');
+          _callEventController.add({
+            'type': 'remoteVideoStateChanged',
+            'uid': remoteUid,
+            'state': state.toString(),
+            'reason': reason.toString(),
+          });
+        },
+        onRemoteAudioStateChanged: (RtcConnection connection, int remoteUid, RemoteAudioState state, RemoteAudioStateReason reason, int elapsed) {
+          if (kDebugMode) debugPrint('🎤 AgoraUnifiedService: Remote audio state changed - UID: $remoteUid, State: $state');
+          _callEventController.add({
+            'type': 'remoteAudioStateChanged',
+            'uid': remoteUid,
             'state': state.toString(),
             'reason': reason.toString(),
           });
@@ -376,79 +395,52 @@ class AgoraUnifiedService implements AgoraServiceInterface {
   }
 
   @override
-  Widget createLocalVideoView() {
+  Widget createLocalVideoView({
+    double? width,
+    double? height,
+    BorderRadius? borderRadius,
+  }) {
     if (_engine == null) {
-      return _buildPlaceholderView('Local Camera Not Available');
+      return CrossPlatformVideoViewFactory.createPlaceholderView(
+        label: 'Local Camera Not Available',
+        icon: Icons.videocam_off,
+        width: width,
+        height: height,
+        borderRadius: borderRadius,
+      );
     }
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.black,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: AgoraVideoView(
-          controller: VideoViewController(
-            rtcEngine: _engine!,
-            canvas: const VideoCanvas(uid: 0),
-          ),
-        ),
-      ),
+    return CrossPlatformVideoViewFactory.createLocalVideoView(
+      engine: _engine!,
+      width: width,
+      height: height,
+      borderRadius: borderRadius,
     );
   }
 
   @override
-  Widget createRemoteVideoView(int uid) {
+  Widget createRemoteVideoView(int uid, {
+    double? width,
+    double? height,
+    BorderRadius? borderRadius,
+  }) {
     if (_engine == null) {
-      return _buildPlaceholderView('Remote Video Not Available');
+      return CrossPlatformVideoViewFactory.createPlaceholderView(
+        label: 'Remote Video Not Available',
+        icon: Icons.person,
+        width: width,
+        height: height,
+        borderRadius: borderRadius,
+      );
     }
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.black,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: AgoraVideoView(
-          controller: VideoViewController.remote(
-            rtcEngine: _engine!,
-            canvas: VideoCanvas(uid: uid),
-            connection: RtcConnection(channelId: _currentChannelName),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPlaceholderView(String text) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.black,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.videocam_off,
-              color: Colors.white54,
-              size: 48,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              text,
-              style: const TextStyle(
-                color: Colors.white54,
-                fontSize: 12,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
+    return CrossPlatformVideoViewFactory.createRemoteVideoView(
+      engine: _engine!,
+      uid: uid,
+      channelId: _currentChannelName,
+      width: width,
+      height: height,
+      borderRadius: borderRadius,
     );
   }
 
