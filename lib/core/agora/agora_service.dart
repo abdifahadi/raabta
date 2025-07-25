@@ -7,8 +7,6 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:logger/logger.dart';
 
 import '../../features/call/domain/models/call_model.dart';
-import '../config/agora_config.dart';
-import '../services/supabase_agora_token_service.dart';
 import 'cross_platform_video_view.dart';
 
 /// Unified cross-platform Agora service using agora_rtc_engine 6.5.2
@@ -40,9 +38,6 @@ class AgoraService {
 
   // User management
   final Set<int> _remoteUsers = <int>{};
-  
-  // Token service
-  final SupabaseAgoraTokenService _tokenService = SupabaseAgoraTokenService();
   
   // Getters
   bool get isInCall => _isInCall;

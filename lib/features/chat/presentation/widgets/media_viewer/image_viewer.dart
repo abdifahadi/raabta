@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:share_plus/share_plus.dart' as share_plus;
 import '../../../../../core/services/download_service.dart';
 
 class ImageViewer extends StatefulWidget {
@@ -121,7 +121,9 @@ class _ImageViewerState extends State<ImageViewer> {
   Future<void> _shareImage(BuildContext context) async {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     try {
-      await Share.share(widget.imageUrl);
+      await share_plus.SharePlus.instance.share(
+        share_plus.ShareParams(text: widget.imageUrl)
+      );
     } catch (e) {
       if (mounted) {
         scaffoldMessenger.showSnackBar(
