@@ -11,54 +11,103 @@ class AgoraService {
     required String channelName,
     required int uid,
   }) async {
-    // Request web permissions first if on web platform
+    // Initialize web-specific support first if on web platform
     if (kIsWeb) {
-      await requestWebPermissions();
+      WebPermissionHelper.initializeAgoraWebSupport();
+      await WebPermissionHelper.requestWebPermissions();
+      
+      // Log browser info for debugging
+      final browserInfo = WebPermissionHelper.getWebBrowserInfo();
+      debugPrint('🌐 AgoraService: Browser info: $browserInfo');
     }
     
-    // Create engine with context (modern API)
-    _engine = createAgoraRtcEngine();
-    await _engine!.initialize(RtcEngineContext(appId: appId));
-    await _engine!.enableVideo();
-    await _engine!.setChannelProfile(ChannelProfileType.channelProfileCommunication);
-    await _engine!.setClientRole(role: ClientRoleType.clientRoleBroadcaster);
-    
-    // Register event handlers
-    _engine!.registerEventHandler(
-      RtcEngineEventHandler(
-        onJoinChannelSuccess: (connection, elapsed) {
-          if (kDebugMode) debugPrint("✅ Join success on ${connection.channelId}");
-        },
-        onUserJoined: (connection, remoteUid, elapsed) { 
-          if (kDebugMode) debugPrint("🎉 User $remoteUid joined");
-        },
-        onUserOffline: (connection, remoteUid, reason) { 
-          if (kDebugMode) debugPrint("🚫 User $remoteUid left");
-        },
-        onError: (err, msg) { 
-          if (kDebugMode) debugPrint("❌ Agora Error: $err - $msg");
-        },
-      ),
-    );
-    
-    // Join channel
-    await _engine!.joinChannel(
-      token: token,
-      channelId: channelName,
-      uid: uid,
-      options: const ChannelMediaOptions(),
-    );
+    try {
+      debugPrint('🚀 AgoraService: Initializing with agora_rtc_engine 6.5.2...');
+      
+      // Create engine with modern API
+      _engine = createAgoraRtcEngine();
+      await _engine!.initialize(RtcEngineContext(
+        appId: appId,
+        channelProfile: ChannelProfileType.channelProfileCommunication,
+      ));
+      
+      // Configure engine
+      await _engine!.enableVideo();
+      await _engine!.enableAudio();
+      await _engine!.setClientRole(role: ClientRoleType.clientRoleBroadcaster);
+      
+      debugPrint('✅ AgoraService: Engine initialized successfully');
+      
+      // Register event handlers
+      _engine!.registerEventHandler(
+        RtcEngineEventHandler(
+          onJoinChannelSuccess: (connection, elapsed) {
+            debugPrint("✅ AgoraService: Join success on ${connection.channelId}");
+          },
+          onUserJoined: (connection, remoteUid, elapsed) { 
+            debugPrint("🎉 AgoraService: User $remoteUid joined");
+          },
+          onUserOffline: (connection, remoteUid, reason) { 
+            debugPrint("🚫 AgoraService: User $remoteUid left");
+          },
+          onError: (err, msg) { 
+            debugPrint("❌ AgoraService: Error: $err - $msg");
+          },
+          onConnectionStateChanged: (connection, state, reason) {
+            debugPrint("🔗 AgoraService: Connection state: $state, reason: $reason");
+          },
+        ),
+      );
+      
+      debugPrint('✅ AgoraService: Event handlers registered');
+      
+      // Join channel with enhanced options
+      final options = ChannelMediaOptions(
+        clientRoleType: ClientRoleType.clientRoleBroadcaster,
+        channelProfile: ChannelProfileType.channelProfileCommunication,
+        publishCameraTrack: true,
+        publishMicrophoneTrack: true,
+        autoSubscribeVideo: true,
+        autoSubscribeAudio: true,
+      );
+      
+      await _engine!.joinChannel(
+        token: token,
+        channelId: channelName,
+        uid: uid,
+        options: options,
+      );
+      
+      debugPrint('✅ AgoraService: Successfully joined channel $channelName');
+    } catch (e) {
+      debugPrint('❌ AgoraService: Initialization failed: $e');
+      rethrow;
+    }
   }
 
   static Future<void> disposeAgora() async {
     if (_engine != null) {
-      await _engine!.leaveChannel();
-      await _engine!.release();
-      _engine = null;
+      debugPrint('🧹 AgoraService: Disposing engine...');
+      
+      try {
+        await _engine!.leaveChannel();
+        await _engine!.release();
+        _engine = null;
+        
+        debugPrint('✅ AgoraService: Engine disposed successfully');
+      } catch (e) {
+        debugPrint('❌ AgoraService: Error during disposal: $e');
+      }
     }
   }
 
-  // Legacy alias for backward compatibility
+  /// Get the current engine instance
+  static RtcEngine? get engine => _engine;
+
+  /// Check if engine is initialized
+  static bool get isInitialized => _engine != null;
+
+  // Legacy aliases for backward compatibility
   static Future<void> initialize({
     required String appId,
     required String token,
@@ -73,7 +122,6 @@ class AgoraService {
     );
   }
 
-  // Legacy alias for backward compatibility
   static Future<void> leaveChannel() async {
     return disposeAgora();
   }
