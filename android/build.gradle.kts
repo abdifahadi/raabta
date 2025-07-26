@@ -19,16 +19,35 @@ allprojects {
         google()
         mavenCentral()
     }
+    
+    // Configure Java toolchain for all subprojects
+    afterEvaluate {
+        if (project.hasProperty("android")) {
+            (project.property("android") as com.android.build.gradle.BaseExtension).apply {
+                compileOptions {
+                    sourceCompatibility = JavaVersion.VERSION_17
+                    targetCompatibility = JavaVersion.VERSION_17
+                }
+            }
+        }
+        
+        // Configure Java compilation options
+        project.tasks.withType<JavaCompile> {
+            options.compilerArgs.addAll(listOf("-Xlint:-options"))
+            sourceCompatibility = "17"
+            targetCompatibility = "17"
+        }
+    }
 }
 
-rootProject.buildDir = file("../build")
+rootProject.layout.buildDirectory = file("../build")
 subprojects {
-    project.buildDir = file("${rootProject.buildDir}/${project.name}")
+    project.layout.buildDirectory = file("${rootProject.layout.buildDirectory.get()}/${project.name}")
 }
 subprojects {
     project.evaluationDependsOn(":app")
 }
 
 tasks.register("clean", Delete::class) {
-    delete(rootProject.buildDir)
+    delete(rootProject.layout.buildDirectory)
 }
