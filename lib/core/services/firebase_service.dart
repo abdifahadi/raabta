@@ -84,15 +84,26 @@ class FirebaseService implements BackendService {
       }
 
       // Fallback initialization if Firebase was not initialized in main.dart
-      // This should rarely happen now
+      // This should rarely happen now, but we need to be careful not to duplicate
       log('🔥 Fallback Firebase initialization attempt');
 
       // Add timeout for initialization attempt
       const initTimeout = kIsWeb ? Duration(seconds: 8) : Duration(seconds: 10);
       
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      ).timeout(initTimeout);
+      try {
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        ).timeout(initTimeout);
+      } catch (e) {
+        // Check if the error is due to duplicate app
+        if (e.toString().contains('duplicate-app') || e.toString().contains('already exists')) {
+          log('🔥 Firebase app already exists, using existing instance');
+          // Firebase is already initialized, continue
+        } else {
+          // Re-throw other errors
+          rethrow;
+        }
+      }
       
       _initialized = true;
       _isInitializing = false;
