@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:developer';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 
 import 'core/config/firebase_options.dart';
@@ -20,11 +21,8 @@ import 'features/call/domain/models/call_model.dart';
 /// Background message handler for Firebase Cloud Messaging
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // Initialize Firebase if not already initialized
-  try {
-    Firebase.app(); // Check if already initialized
-  } catch (e) {
-    // Only initialize if not already done
+  // Ensure Firebase is initialized before handling background messages
+  if (Firebase.apps.isEmpty) {
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   }
   
@@ -44,20 +42,17 @@ void main() async {
   bool servicesInitialized = false;
   
   try {
-    // Firebase setup with proper error handling and timeout for all platforms
+    // Firebase setup with proper error handling and single initialization
     if (kDebugMode) {
-      log('🔥 Firebase: Initializing...');
+      log('🔥 Firebase: Checking initialization status...');
       log('🌍 Platform detected: ${kIsWeb ? 'Web' : 'Native'}');
     }
     
-    try {
-      // Check if Firebase is already initialized
-      Firebase.app();
+    // ✅ FIREBASE FIX: Only initialize if no apps exist
+    if (Firebase.apps.isEmpty) {
       if (kDebugMode) {
-        log('✅ Firebase: Already initialized, using existing instance');
+        log('🔥 Firebase: Initializing for the first time...');
       }
-    } catch (e) {
-      // Firebase not initialized, proceed with initialization
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
       ).timeout(
@@ -67,11 +62,17 @@ void main() async {
           throw TimeoutException('Firebase initialization timeout', kIsWeb ? const Duration(seconds: 10) : const Duration(seconds: 15));
         },
       );
+      if (kDebugMode) {
+        log('✅ Firebase: Initialized successfully');
+      }
+    } else {
+      if (kDebugMode) {
+        log('✅ Firebase: Already initialized, using existing instance');
+      }
     }
-    
-    if (kDebugMode) {
-      log('✅ Firebase: Initialized successfully');
-    }
+
+    // Setup background message handler
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
     // Setup ServiceLocator with dependency injection
     // Note: Agora services are disabled on Web platform
@@ -332,6 +333,23 @@ class MyApp extends StatelessWidget {
       log('🏗️ Building MyApp widget');
     }
     
+    // ✅ FULLSCREEN FIX: Configure system UI overlays for fullscreen experience
+    SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.edgeToEdge,
+      overlays: [SystemUiOverlay.top, SystemUiOverlay.bottom],
+    );
+    
+    // Set system UI overlay style for transparent status/navigation bars
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
+        systemNavigationBarColor: Colors.transparent,
+        systemNavigationBarIconBrightness: Brightness.dark,
+      ),
+    );
+    
     // Initialize notification handler with navigator key
     NotificationHandler().initialize(navigatorKey);
     
@@ -350,6 +368,10 @@ class MyApp extends StatelessWidget {
         appBarTheme: const AppBarTheme(
           centerTitle: true,
           elevation: 0,
+          systemOverlayStyle: SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness: Brightness.dark,
+          ),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
@@ -366,27 +388,76 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const SafeArea(
-        child: AuthWrapper(),
+      // ✅ FULLSCREEN FIX: Use Scaffold instead of SafeArea for root to handle system UI properly
+      home: Scaffold(
+        body: SafeArea(
+          // Allow the app to extend into system UI areas when needed
+          top: false,
+          bottom: false,
+          child: Container(
+            // Ensure the container takes full screen space
+            width: double.infinity,
+            height: double.infinity,
+            child: const AuthWrapper(),
+          ),
+        ),
       ),
       routes: {
         '/call': (context) {
           final args = ModalRoute.of(context)?.settings.arguments;
           if (args != null && args is CallModel) {
-            return CallScreen(call: args);
+            return Scaffold(
+              body: SafeArea(
+                top: false,
+                bottom: false,
+                child: CallScreen(call: args),
+              ),
+            );
           }
           // If no arguments or wrong type, return to home
-          return const SafeArea(child: AuthWrapper());
+          return Scaffold(
+            body: SafeArea(
+              top: false,
+              bottom: false,
+              child: Container(
+                width: double.infinity,
+                height: double.infinity,
+                child: const AuthWrapper(),
+              ),
+            ),
+          );
         },
         '/incoming-call': (context) {
           final args = ModalRoute.of(context)?.settings.arguments;
           if (args != null && args is CallModel) {
-            return IncomingCallScreen(call: args);
+            return Scaffold(
+              body: SafeArea(
+                top: false,
+                bottom: false,
+                child: IncomingCallScreen(call: args),
+              ),
+            );
           }
           // If no arguments or wrong type, return to home
-          return const SafeArea(child: AuthWrapper());
+          return Scaffold(
+            body: SafeArea(
+              top: false,
+              bottom: false,
+              child: Container(
+                width: double.infinity,
+                height: double.infinity,
+                child: const AuthWrapper(),
+              ),
+            ),
+          );
         },
-        '/call-test': (context) => const SafeArea(child: CallTestScreen()),
+        '/call-test': (context) => Scaffold(
+          body: SafeArea(
+            top: false,
+            bottom: false,
+            child: const CallTestScreen(),
+          ),
+        ),
       },
       // Enhanced error builder for better error handling
       builder: (context, widget) {
@@ -458,8 +529,16 @@ class MyApp extends StatelessWidget {
                       try {
                         Navigator.of(context).pushReplacement(
                           MaterialPageRoute(
-                            builder: (context) => const SafeArea(
-                              child: AuthWrapper(),
+                            builder: (context) => Scaffold(
+                              body: SafeArea(
+                                top: false,
+                                bottom: false,
+                                child: Container(
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  child: const AuthWrapper(),
+                                ),
+                              ),
                             ),
                           ),
                         );
@@ -467,8 +546,16 @@ class MyApp extends StatelessWidget {
                         // If navigation fails, show the auth wrapper directly
                         Navigator.of(context).pushReplacement(
                           MaterialPageRoute(
-                            builder: (context) => const SafeArea(
-                              child: AuthWrapper(),
+                            builder: (context) => Scaffold(
+                              body: SafeArea(
+                                top: false,
+                                bottom: false,
+                                child: Container(
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  child: const AuthWrapper(),
+                                ),
+                              ),
                             ),
                           ),
                         );

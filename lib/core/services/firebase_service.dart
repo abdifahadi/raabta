@@ -31,12 +31,12 @@ class FirebaseService implements BackendService {
   @override
   Future<void> initialize() async {
     if (_initialized) {
-      log('🔥 Firebase already initialized');
+      log('🔥 Firebase service already initialized');
       return;
     }
 
     if (_isInitializing) {
-      log('🔥 Firebase initialization in progress, waiting...');
+      log('🔥 Firebase service initialization in progress, waiting...');
       // Wait for initialization to complete with timeout
       int waitCount = 0;
       while (_isInitializing && !_initialized && waitCount < 50) {
@@ -44,7 +44,7 @@ class FirebaseService implements BackendService {
         waitCount++;
       }
       if (_initialized) return;
-      throw Exception('Firebase initialization timeout while waiting for concurrent initialization');
+      throw Exception('Firebase service initialization timeout while waiting for concurrent initialization');
     }
 
     _isInitializing = true;
@@ -57,8 +57,8 @@ class FirebaseService implements BackendService {
         log('📱 Platform: ${defaultTargetPlatform.toString()}');
       }
 
-      // Check if Firebase is already initialized (should be from main.dart)
-      try {
+      // ✅ FIREBASE FIX: Check if Firebase is already initialized (should be from main.dart)
+      if (Firebase.apps.isNotEmpty) {
         final app = Firebase.app();
         log('🔥 Firebase app already exists: ${app.name} - Project: ${app.options.projectId}');
         
@@ -75,68 +75,17 @@ class FirebaseService implements BackendService {
           log('✅ Firebase service initialization completed (using existing app)');
         }
         return;
-      } catch (e) {
-        // No existing app, this should not happen now since main.dart initializes Firebase
-        log('⚠️ Firebase not initialized yet, this is unexpected. Attempting fallback initialization...');
-        if (kDebugMode) {
-          log('🔍 Firebase app check error: $e');
-        }
       }
 
-      // Fallback initialization if Firebase was not initialized in main.dart
-      // This should rarely happen now, but we need to be careful not to duplicate
-      log('🔥 Fallback Firebase initialization attempt');
-
-      // Add timeout for initialization attempt
-      const initTimeout = kIsWeb ? Duration(seconds: 8) : Duration(seconds: 10);
-      
-      try {
-        await Firebase.initializeApp(
-          options: DefaultFirebaseOptions.currentPlatform,
-        ).timeout(initTimeout);
-      } catch (e) {
-        // Check if the error is due to duplicate app
-        if (e.toString().contains('duplicate-app') || e.toString().contains('already exists')) {
-          log('🔥 Firebase app already exists, using existing instance');
-          // Firebase is already initialized, continue
-        } else {
-          // Re-throw other errors
-          rethrow;
-        }
-      }
-      
-      _initialized = true;
-      _isInitializing = false;
-      
-      log('🔥 Firebase initialized successfully (fallback)');
-
-        // Print platform-specific information
-        if (kIsWeb) {
-          log('🌐 Running on Web platform');
-          log('🔑 Project ID: ${DefaultFirebaseOptions.web.projectId}');
-          log('🔗 Auth Domain: ${DefaultFirebaseOptions.web.authDomain}');
-          log('🗄️ Storage Bucket: ${DefaultFirebaseOptions.web.storageBucket}');
-        } else {
-          log('📱 Running on ${defaultTargetPlatform.toString()} platform');
-          final options = DefaultFirebaseOptions.currentPlatform;
-          log('🔑 Project ID: ${options.projectId}');
-          log('🆔 App ID: ${options.appId}');
-        }
-        
-        // Verify Firebase app is properly initialized
-        final app = Firebase.app();
-        log('✅ Firebase app verification: ${app.name} - ${app.options.projectId}');
-        
-        // Additional web-specific validation
-        if (kIsWeb) {
-          await _validateWebFirebaseSetup();
-        }
+      // ✅ FIREBASE FIX: If no apps exist, this is an error state since main.dart should initialize Firebase
+      log('❌ Firebase not initialized by main.dart - this should not happen in normal flow');
+      throw Exception('Firebase should be initialized before FirebaseService.initialize() is called');
 
     } catch (e, stackTrace) {
       _initialized = false;
       _isInitializing = false;
       
-      log('🚨 Error initializing Firebase: $e');
+      log('🚨 Error initializing Firebase service: $e');
       log('🔍 Stack trace: $stackTrace');
       
       // Additional debugging for web
@@ -157,7 +106,6 @@ class FirebaseService implements BackendService {
       rethrow;
     }
   }
-
 
   /// Validate Firebase setup specifically for web
   Future<void> _validateWebFirebaseSetup() async {

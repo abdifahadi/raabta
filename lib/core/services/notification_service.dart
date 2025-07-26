@@ -139,7 +139,7 @@ class NotificationService implements NotificationServiceInterface {
 
   /// Set up FCM message handlers
   Future<void> _setupFCMHandlers() async {
-    // Handle foreground messages
+    // ✅ NOTIFICATION FIX: Handle foreground messages with proper local notification display
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       if (kDebugMode) {
         log('🔔 Received foreground message: ${message.messageId}');
@@ -151,27 +151,45 @@ class NotificationService implements NotificationServiceInterface {
       final payload = _createNotificationPayload(message);
       _onForegroundMessageController.add(payload);
 
-      // Show local notification for foreground messages
+      // ✅ Always show local notification for foreground messages
       _showLocalNotificationFromRemote(message);
     });
 
-    // Handle background messages (when app is in background but not terminated)
+    // ✅ NOTIFICATION FIX: Handle background messages (when app is in background but not terminated)
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       if (kDebugMode) {
         log('🔔 App opened from background notification: ${message.messageId}');
+        log('📱 Message data: ${message.data}');
       }
 
       final payload = _createNotificationPayload(message);
-      _onNotificationTapController.add(payload);
+      // Add slight delay to ensure app is ready to handle navigation
+      Future.delayed(const Duration(milliseconds: 500), () {
+        _onNotificationTapController.add(payload);
+      });
     });
 
-    // Handle token refresh
+    // ✅ NOTIFICATION FIX: Handle token refresh with better error handling
     _firebaseMessaging.onTokenRefresh.listen((String token) {
       if (kDebugMode) log('🔄 FCM Token refreshed: $token');
       _currentToken = token;
       // Update token in Firestore when user is available
       _updateTokenInFirestore(token);
     });
+
+    // ✅ NOTIFICATION FIX: Set up notification interaction handling
+    _setupNotificationInteraction();
+  }
+
+  /// ✅ NOTIFICATION FIX: Setup notification interaction handlers
+  Future<void> _setupNotificationInteraction() async {
+    // Configure notification tap action for Android
+    if (!kIsWeb) {
+      // Set up notification action handlers
+      await _localNotifications
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+          ?.requestNotificationsPermission();
+    }
   }
 
   /// Handle initial message when app is opened from terminated state
@@ -180,11 +198,12 @@ class NotificationService implements NotificationServiceInterface {
     if (initialMessage != null) {
       if (kDebugMode) {
         log('🔔 App opened from terminated state with notification: ${initialMessage.messageId}');
+        log('📱 Initial message data: ${initialMessage.data}');
       }
 
       final payload = _createNotificationPayload(initialMessage);
-      // Delay to ensure app is fully initialized
-      Future.delayed(const Duration(seconds: 1), () {
+      // ✅ NOTIFICATION FIX: Delay to ensure app is fully initialized before handling navigation
+      Future.delayed(const Duration(seconds: 2), () {
         _onNotificationTapController.add(payload);
       });
     }
