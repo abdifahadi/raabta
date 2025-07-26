@@ -6,29 +6,16 @@ import 'package:firebase_core/firebase_core.dart';
 
 import 'core/config/firebase_options.dart';
 import 'core/services/service_locator.dart';
-import 'core/utils/logging_service.dart';
-import 'features/auth/presentation/screens/splash_screen.dart';
-import 'features/auth/presentation/widgets/error_screen.dart';
-
-// Note: Video calling is disabled on Web platform for compatibility
-// Using agora_rtc_engine for cross-platform compatibility (Android, iOS, Windows, macOS, Linux)
-// On Web, users will see a placeholder message directing them to use mobile/desktop apps
-
-// Authentication imports with proper web support
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'core/services/logging_service.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
-// Core Firebase services for messaging and storage
-import 'core/services/firebase_service.dart';
-import 'core/services/notification_service.dart';
-
-// Chat and UI imports
-import 'features/chat/presentation/chat_list_screen.dart';
-import 'features/home/presentation/home_screen.dart';
-
-// Web-specific conditional setup
-import 'core/services/auth_service.dart';
+// Import required classes
+import 'core/services/notification_handler.dart';
+import 'features/auth/presentation/auth_wrapper.dart';
+import 'features/call/presentation/screens/call_screen.dart';
+import 'features/call/presentation/screens/incoming_call_screen.dart';
+import 'features/call/presentation/screens/call_test_screen.dart';
+import 'features/call/domain/models/call_model.dart';
 
 /// Background message handler for Firebase Cloud Messaging
 @pragma('vm:entry-point')
