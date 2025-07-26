@@ -8,9 +8,8 @@ plugins {
 }
 
 android {
-    namespace = "com.abdifahadi.raabta.raabta"
-    compileSdk = 35
-    ndkVersion = "27.0.12077973"
+    namespace = "com.abdifahadi.raabta"
+    compileSdk = 34
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -19,18 +18,16 @@ android {
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
+        jvmTarget = "17"
     }
 
     defaultConfig {
         // Application ID for Raabta - Cross-platform chat application
-        // This identifier uniquely identifies the app in Google Play Store and on devices
         applicationId = "com.abdifahadi.raabta"
-        
         // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = 23 // Updated for Firebase compatibility
-        targetSdk = 35
+        // For more information, see: https://docs.flutter.dev/deployment/android#reviewing-the-gradle-build-configuration.
+        minSdk = 21
+        targetSdk = 34
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
@@ -45,7 +42,7 @@ android {
 }
 
 dependencies {
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.google.android.material:material:1.11.0")
