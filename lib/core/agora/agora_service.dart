@@ -10,8 +10,6 @@ import 'package:logger/logger.dart';
 import '../../features/call/domain/models/call_model.dart';
 import 'cross_platform_video_view.dart';
 import '../services/agora_service_interface.dart';
-import '../config/agora_config.dart';
-import '../services/supabase_agora_token_service.dart';
 
 /// Unified cross-platform Agora service using agora_rtc_engine 6.5.2
 /// Supports Android, iOS, Web, Windows, Linux, macOS with proper video rendering
@@ -44,16 +42,81 @@ class AgoraService implements AgoraServiceInterface {
   final Set<int> _remoteUsers = <int>{};
   
   // Getters
+  @override
   bool get isInCall => _isInCall;
+  @override
   bool get isVideoEnabled => _isVideoEnabled;
+  @override
   bool get isMuted => !_isAudioEnabled;
+  @override
   bool get isSpeakerEnabled => _isSpeakerEnabled;
+  @override
   String? get currentChannelName => _currentChannelName;
+  @override
   int? get currentUid => _currentUid;
+  @override
   Set<int> get remoteUsers => Set.from(_remoteUsers);
   
+  @override
   Stream<Map<String, dynamic>> get callEventStream => _callEventController.stream;
+  @override
   Stream<CallModel?> get currentCallStream => _currentCallController.stream;
+
+  /// Initialize the Agora service
+  @override
+  Future<void> initialize() async {
+    try {
+      _logger.i('🚀 AgoraService: Initializing service');
+      await initializeEngine('4bfa94cebfb04852951bfdf9858dbc4b');
+      _logger.i('✅ AgoraService: Service initialized successfully');
+    } catch (e) {
+      _logger.e('❌ AgoraService: Failed to initialize service: $e');
+      throw Exception('Failed to initialize Agora service: $e');
+    }
+  }
+
+  /// Join a call with specified parameters
+  @override
+  Future<void> joinCall({
+    required String channelName,
+    required CallType callType,
+    int? uid,
+  }) async {
+    try {
+      _logger.i('📞 AgoraService: Joining call - Channel: $channelName, Type: $callType');
+      
+      // Check permissions first
+      final hasPermissions = await checkPermissions(callType);
+      if (!hasPermissions) {
+        throw Exception('Required permissions not granted');
+      }
+
+      // Generate a temporary token for demo purposes
+      // In production, this should come from your token server
+      const token = ''; // Empty token for testing
+      final userId = uid ?? 0;
+
+      await joinChannel(token, channelName, userId);
+      
+      _logger.i('✅ AgoraService: Successfully joined call');
+    } catch (e) {
+      _logger.e('❌ AgoraService: Failed to join call: $e');
+      throw Exception('Failed to join call: $e');
+    }
+  }
+
+  /// Leave the current call
+  @override
+  Future<void> leaveCall() async {
+    try {
+      _logger.i('🚪 AgoraService: Leaving call');
+      await leaveChannel();
+      _logger.i('✅ AgoraService: Successfully left call');
+    } catch (e) {
+      _logger.e('❌ AgoraService: Failed to leave call: $e');
+      throw Exception('Failed to leave call: $e');
+    }
+  }
 
   /// Initialize the Agora engine with app ID
   Future<void> initializeEngine(String appId) async {
@@ -213,6 +276,7 @@ class AgoraService implements AgoraServiceInterface {
   }
 
   /// Create local video view using the new cross-platform implementation
+  @override
   Widget createLocalVideoView({
     double? width,
     double? height,
@@ -250,6 +314,7 @@ class AgoraService implements AgoraServiceInterface {
   }
 
   /// Create remote video view using the new cross-platform implementation
+  @override
   Widget createRemoteVideoView(int remoteUid, {
     double? width,
     double? height,
@@ -311,6 +376,7 @@ class AgoraService implements AgoraServiceInterface {
   }
 
   /// Check and request permissions for camera and microphone
+  @override
   Future<bool> checkPermissions(CallType callType) async {
     try {
       if (kIsWeb) {
@@ -344,6 +410,7 @@ class AgoraService implements AgoraServiceInterface {
   }
 
   /// Toggle microphone mute/unmute
+  @override
   Future<void> toggleMute() async {
     try {
       if (_engine == null) return;
@@ -364,6 +431,7 @@ class AgoraService implements AgoraServiceInterface {
   }
 
   /// Toggle video on/off
+  @override
   Future<void> toggleVideo() async {
     try {
       if (_engine == null) return;
@@ -385,6 +453,7 @@ class AgoraService implements AgoraServiceInterface {
   }
 
   /// Toggle speaker on/off
+  @override
   Future<void> toggleSpeaker() async {
     try {
       if (_engine == null) return;
@@ -408,6 +477,7 @@ class AgoraService implements AgoraServiceInterface {
   }
 
   /// Switch between front and back camera
+  @override
   Future<void> switchCamera() async {
     try {
       if (_engine == null) return;
@@ -428,6 +498,7 @@ class AgoraService implements AgoraServiceInterface {
   }
 
   /// Renew token when it's about to expire
+  @override
   Future<void> renewToken(String token) async {
     try {
       if (_engine == null || _currentChannelName == null) return;
@@ -449,6 +520,7 @@ class AgoraService implements AgoraServiceInterface {
   RtcEngine? get engine => _engine;
 
   /// Dispose of the service and clean up resources
+  @override
   void dispose() {
     try {
       _logger.i('🧹 AgoraService: Disposing...');

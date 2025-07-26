@@ -1,8 +1,6 @@
 // Web stub for Agora RTC Engine
 // This file provides empty implementations to prevent compilation errors on Web
 
-import 'dart:async';
-
 // Stub implementations for Web platform
 class RtcEngine {}
 
