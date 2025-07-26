@@ -1,8 +1,91 @@
 // Web stub for Agora RTC Engine
 // This file provides empty implementations to prevent compilation errors on Web
 
+import 'dart:async';
+import 'package:flutter/material.dart';
+
 // Stub implementations for Web platform
-class RtcEngine {}
+class RtcEngine {
+  // Initialize method
+  Future<void> initialize(RtcEngineContext context) async {
+    throw UnsupportedError('Agora RTC Engine is not supported on Web platform');
+  }
+  
+  // Event handler registration
+  void registerEventHandler(RtcEngineEventHandler eventHandler) {
+    throw UnsupportedError('Agora RTC Engine is not supported on Web platform');
+  }
+  
+  // Video methods
+  Future<void> enableVideo() async {
+    throw UnsupportedError('Agora RTC Engine is not supported on Web platform');
+  }
+  
+  Future<void> enableAudio() async {
+    throw UnsupportedError('Agora RTC Engine is not supported on Web platform');
+  }
+  
+  Future<void> enableLocalVideo(bool enabled) async {
+    throw UnsupportedError('Agora RTC Engine is not supported on Web platform');
+  }
+  
+  // Channel methods
+  Future<void> joinChannel({
+    required String token,
+    required String channelId,
+    required int uid,
+    ChannelMediaOptions? options,
+  }) async {
+    throw UnsupportedError('Agora RTC Engine is not supported on Web platform');
+  }
+  
+  Future<void> leaveChannel() async {
+    throw UnsupportedError('Agora RTC Engine is not supported on Web platform');
+  }
+  
+  // Audio/Video control
+  Future<void> muteLocalAudioStream(bool mute) async {
+    throw UnsupportedError('Agora RTC Engine is not supported on Web platform');
+  }
+  
+  Future<void> muteLocalVideoStream(bool mute) async {
+    throw UnsupportedError('Agora RTC Engine is not supported on Web platform');
+  }
+  
+  Future<void> setEnableSpeakerphone(bool enabled) async {
+    throw UnsupportedError('Agora RTC Engine is not supported on Web platform');
+  }
+  
+  Future<void> switchCamera() async {
+    throw UnsupportedError('Agora RTC Engine is not supported on Web platform');
+  }
+  
+  // Configuration methods
+  Future<void> setAudioProfile({
+    required AudioProfileType profile,
+    required AudioScenarioType scenario,
+  }) async {
+    throw UnsupportedError('Agora RTC Engine is not supported on Web platform');
+  }
+  
+  Future<void> setVideoEncoderConfiguration(VideoEncoderConfiguration configuration) async {
+    throw UnsupportedError('Agora RTC Engine is not supported on Web platform');
+  }
+  
+  Future<void> setDefaultAudioRouteToSpeakerphone(bool defaultToSpeaker) async {
+    throw UnsupportedError('Agora RTC Engine is not supported on Web platform');
+  }
+  
+  // Token renewal
+  Future<void> renewToken(String token) async {
+    throw UnsupportedError('Agora RTC Engine is not supported on Web platform');
+  }
+  
+  // Cleanup
+  Future<void> release() async {
+    throw UnsupportedError('Agora RTC Engine is not supported on Web platform');
+  }
+}
 
 class RtcEngineContext {
   final String appId;
@@ -104,6 +187,59 @@ class AreaCode {
   int value() => 0;
 }
 
+// Video view related stubs for web
+class AgoraVideoView extends StatelessWidget {
+  final VideoViewController controller;
+  final Function(int)? onAgoraVideoViewCreated;
+  
+  const AgoraVideoView({
+    super.key,
+    required this.controller,
+    this.onAgoraVideoViewCreated,
+  });
+  
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.black,
+      child: const Center(
+        child: Text(
+          'Video not supported on Web',
+          style: TextStyle(color: Colors.white54),
+        ),
+      ),
+    );
+  }
+}
+
+class VideoViewController {
+  final RtcEngine rtcEngine;
+  final VideoCanvas canvas;
+  
+  VideoViewController({
+    required this.rtcEngine,
+    required this.canvas,
+  });
+  
+  VideoViewController.remote({
+    required this.rtcEngine,
+    required this.canvas,
+    RtcConnection? connection,
+  });
+}
+
+class VideoCanvas {
+  final int uid;
+  final RenderModeType? renderMode;
+  final VideoMirrorModeType? mirrorMode;
+  
+  const VideoCanvas({
+    required this.uid,
+    this.renderMode,
+    this.mirrorMode,
+  });
+}
+
 // Enums
 enum ChannelProfileType { channelProfileCommunication }
 enum ClientRoleType { clientRoleBroadcaster }
@@ -121,6 +257,37 @@ enum RemoteVideoStateReason { remoteVideoStateReasonInternal }
 enum RemoteAudioState { remoteAudioStateDecoding, remoteAudioStateFrozen, remoteAudioStateStopped }
 enum RemoteAudioStateReason { remoteAudioStateReasonInternal }
 enum QualityType { qualityPoor, qualityGood, qualityExcellent }
+enum RenderModeType { renderModeHidden }
+enum VideoMirrorModeType { videoMirrorModeAuto, videoMirrorModeDisabled }
+
+// Native platform video view stub for web
+class PlatformVideoView extends StatelessWidget {
+  final RtcEngine engine;
+  final int uid;
+  final bool isLocal;
+  final String? channelId;
+
+  const PlatformVideoView({
+    super.key,
+    required this.engine,
+    required this.uid,
+    required this.isLocal,
+    this.channelId,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.black,
+      child: const Center(
+        child: Text(
+          'Video not supported on Web',
+          style: TextStyle(color: Colors.white54),
+        ),
+      ),
+    );
+  }
+}
 
 // Stub functions
 RtcEngine createAgoraRtcEngine() {

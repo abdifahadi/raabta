@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:agora_rtc_engine/agora_rtc_engine.dart';
+// Conditional import to prevent Agora from being loaded on Web
+import 'package:agora_rtc_engine/agora_rtc_engine.dart' if (dart.library.html) '../services/web_stub.dart';
 
 // Import native video view implementation
-import 'video_view_native.dart';
+import 'video_view_native.dart' if (dart.library.html) '../services/web_stub.dart';
 
 /// Cross-platform video view implementation for Agora RTC Engine 6.5.2+
 /// Supports Android, iOS, Web, Windows, Linux, and macOS
