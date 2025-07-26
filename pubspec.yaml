@@ -35,7 +35,7 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   
-  # Firebase dependencies - Compatible versions for SDK 3.3.0
+  # Firebase dependencies - Compatible versions for SDK 3.3.0 without web conflicts
   firebase_core: ^2.24.2
   firebase_auth: ^4.15.3
   firebase_storage: ^11.6.0

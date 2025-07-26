@@ -107,29 +107,7 @@ class FirebaseService implements BackendService {
     }
   }
 
-  /// Validate Firebase setup specifically for web
-  Future<void> _validateWebFirebaseSetup() async {
-    if (!kIsWeb) return;
-    
-    try {
-      log('🌐 Validating web Firebase setup...');
-      
-      // Check if Firebase Auth is available
-      try {
-        final app = Firebase.app();
-        final _ = app.options;
-        log('✅ Firebase options accessible');
-      } catch (e) {
-        log('⚠️ Firebase options validation failed: $e');
-        throw Exception('Firebase configuration validation failed: $e');
-      }
-      
-      log('✅ Web Firebase setup validation completed');
-    } catch (e) {
-      log('🚨 Web Firebase validation failed: $e');
-      throw Exception('Web Firebase validation failed: $e');
-    }
-  }
+
 
   /// Check web browser compatibility
   void _checkWebCompatibility() {
