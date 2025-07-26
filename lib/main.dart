@@ -1,20 +1,34 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'dart:async';
 import 'dart:developer';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+
 import 'core/config/firebase_options.dart';
 import 'core/services/service_locator.dart';
-import 'core/services/logging_service.dart';
-// Using agora_rtc_engine for cross-platform compatibility
+import 'core/utils/logging_service.dart';
+import 'features/auth/presentation/screens/splash_screen.dart';
+import 'features/auth/presentation/widgets/error_screen.dart';
 
-import 'core/services/notification_handler.dart';
-import 'features/auth/presentation/auth_wrapper.dart';
-import 'features/call/domain/models/call_model.dart';
-import 'features/call/presentation/screens/call_screen.dart';
-import 'features/call/presentation/screens/incoming_call_screen.dart';
-import 'features/call/presentation/screens/call_test_screen.dart';
+// Note: Video calling is disabled on Web platform for compatibility
+// Using agora_rtc_engine for cross-platform compatibility (Android, iOS, Windows, macOS, Linux)
+// On Web, users will see a placeholder message directing them to use mobile/desktop apps
+
+// Authentication imports with proper web support
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+
+// Core Firebase services for messaging and storage
+import 'core/services/firebase_service.dart';
+import 'core/services/notification_service.dart';
+
+// Chat and UI imports
+import 'features/chat/presentation/chat_list_screen.dart';
+import 'features/home/presentation/home_screen.dart';
+
+// Web-specific conditional setup
+import 'core/services/auth_service.dart';
 
 /// Background message handler for Firebase Cloud Messaging
 @pragma('vm:entry-point')
@@ -28,114 +42,69 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 }
 
 void main() async {
-  // Ensure Flutter binding is initialized first
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Using agora_rtc_engine for video rendering
+  if (kDebugMode) {
+    log('🚀 Raabta: Starting application...');
+    log('🌍 Platform: ${kIsWeb ? 'Web' : 'Native'}');
+  }
+
+  bool servicesInitialized = false;
   
-  // Add error handling and logging
   try {
+    // Firebase setup with proper error handling and timeout for all platforms
     if (kDebugMode) {
-      log('🚀 Starting Raabta app...');
-      log('🌍 Platform: ${kIsWeb ? 'Web' : 'Native'}');
-      log('🔧 Debug mode: $kDebugMode');
-    }
-
-    // Initialize Firebase first with proper error handling
-    try {
-      if (kDebugMode) {
-        log('🔥 Initializing Firebase...');
-        log('🌍 Platform detected: ${kIsWeb ? 'Web' : 'Native'}');
-        log('🔧 Using Firebase options for current platform');
-      }
-      
-      // Add timeout for Firebase initialization
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      ).timeout(
-        kIsWeb ? const Duration(seconds: 10) : const Duration(seconds: 15),
-        onTimeout: () {
-          if (kDebugMode) {
-            log('⏰ Firebase initialization timeout');
-          }
-          throw TimeoutException('Firebase initialization timeout', kIsWeb ? const Duration(seconds: 10) : const Duration(seconds: 15));
-        },
-      );
-      
-      if (kDebugMode) {
-        log('✅ Firebase initialized successfully');
-        
-        // Verify Firebase app is working
-        final app = Firebase.app();
-        log('✅ Firebase app verified: ${app.name} - Project: ${app.options.projectId}');
-        
-        if (kIsWeb) {
-          log('🌐 Web Firebase config:');
-          log('  - Auth Domain: ${app.options.authDomain}');
-          log('  - Storage Bucket: ${app.options.storageBucket}');
-          log('  - API Key Length: ${app.options.apiKey.length} chars');
-        }
-      }
-
-      // Agora UIKit handles all platform-specific initialization automatically
-      if (kDebugMode) {
-        log('🎥 Using Agora UIKit for cross-platform video calling');
-        log('✅ All platforms (Web, Android, iOS, Windows, macOS, Linux) supported');
-      }
-    } catch (firebaseError, firebaseStackTrace) {
-      if (kDebugMode) {
-        log('❌ Firebase initialization failed: $firebaseError');
-        log('🔍 Firebase Stack Trace: $firebaseStackTrace');
-        
-        // Additional debugging for web
-        if (kIsWeb) {
-          log('🌐 Web-specific debugging:');
-          log('  - Check if Firebase scripts are loaded in index.html');
-          log('  - Verify network connectivity');
-          log('  - Check browser console for additional errors');
-        }
-      }
-      
-      // Log the error but don't stop the app - some features might still work
-      LoggingService.error('Firebase initialization failed: $firebaseError');
-      
-      // Continue with app initialization in degraded mode
+      log('🔥 Firebase: Initializing...');
+      log('🌍 Platform detected: ${kIsWeb ? 'Web' : 'Native'}');
     }
     
-    // Set up FCM background message handler (skip on web)
-    if (!kIsWeb) {
-      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    ).timeout(
+      kIsWeb ? const Duration(seconds: 10) : const Duration(seconds: 15),
+      onTimeout: () {
+        if (kDebugMode) log('⏰ Firebase: Initialization timeout');
+        throw TimeoutException('Firebase initialization timeout', kIsWeb ? const Duration(seconds: 10) : const Duration(seconds: 15));
+      },
+    );
+    
+    if (kDebugMode) {
+      log('✅ Firebase: Initialized successfully');
     }
 
-    // Set up Flutter error handling
-    FlutterError.onError = (FlutterErrorDetails details) {
+    // Setup ServiceLocator with dependency injection
+    // Note: Agora services are disabled on Web platform
+    if (kIsWeb) {
       if (kDebugMode) {
-        log('🚨 Flutter Error: ${details.exception}');
-        log('🔍 Library: ${details.library}');
-        log('🔍 Context: ${details.context}');
-        log('🔍 Stack Trace: ${details.stack}');
+        log('🌐 Web platform: Agora video calling disabled');
+        log('📱 For video calls, users should use mobile/desktop apps');
       }
-    };
+    }
 
-    // Initialize services with setupLocator function - CRITICAL: This must happen before runApp
-    bool servicesInitialized = false;
     try {
       if (kDebugMode) {
-        log('⚙️ Setting up ServiceLocator - CRITICAL INITIALIZATION STEP...');
+        log('🔧 ServiceLocator: Setting up services...');
       }
-      
-      // Use setupLocator function with proper error handling
       await setupLocator();
       servicesInitialized = true;
-      
       if (kDebugMode) {
-        log('✅ ServiceLocator setup completed successfully');
-        log('✅ All services are now available for use');
+        log('✅ ServiceLocator: All services initialized successfully');
       }
-    } catch (serviceError, serviceStackTrace) {
-      if (kDebugMode) {
-        log('🚨 CRITICAL: ServiceLocator setup failed: $serviceError');
-        log('🔍 Service Stack Trace: $serviceStackTrace');
+    } catch (serviceError) {
+      servicesInitialized = false;
+      
+      // Web platform specific handling
+      if (kIsWeb) {
+        if (kDebugMode) {
+          log('🌐 Web platform: Service initialization with limited features');
+        }
+        // Continue with basic services only
+        servicesInitialized = true;
+      } else {
+        // Non-web platforms require full service initialization
+        if (kDebugMode) {
+          log('❌ Native platform: Service initialization failed: $serviceError');
+        }
       }
       
       // This is critical - don't continue without initialized services

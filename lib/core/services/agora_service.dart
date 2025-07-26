@@ -1,4 +1,5 @@
-import 'package:agora_rtc_engine/agora_rtc_engine.dart';
+// Conditional import to prevent Agora from being loaded on Web
+import 'package:agora_rtc_engine/agora_rtc_engine.dart' if (dart.library.html) 'web_stub.dart';
 import 'package:flutter/foundation.dart';
 
 class AgoraService {
@@ -10,9 +11,9 @@ class AgoraService {
     required String channelName,
     required int uid,
   }) async {
-    // Note: Web platform calling is disabled in this version
+    // Completely disable Agora on Web platform
     if (kIsWeb) {
-      debugPrint('🌐 AgoraService: Web platform calling disabled - use mobile/desktop app');
+      debugPrint('🌐 AgoraService: Web platform - Agora completely disabled');
       throw UnsupportedError('Video calling is not supported on Web platform. Please use the mobile or desktop app.');
     }
     
@@ -81,6 +82,12 @@ class AgoraService {
   }
 
   static Future<void> disposeAgora() async {
+    // Skip disposal on Web
+    if (kIsWeb) {
+      debugPrint('🌐 AgoraService: Web platform - nothing to dispose');
+      return;
+    }
+    
     if (_engine != null) {
       debugPrint('🧹 AgoraService: Disposing engine...');
       
@@ -96,11 +103,11 @@ class AgoraService {
     }
   }
 
-  /// Get the current engine instance
-  static RtcEngine? get engine => _engine;
+  /// Get the current engine instance - null on Web
+  static RtcEngine? get engine => kIsWeb ? null : _engine;
 
-  /// Check if engine is initialized
-  static bool get isInitialized => _engine != null;
+  /// Check if engine is initialized - false on Web
+  static bool get isInitialized => kIsWeb ? false : (_engine != null);
 
   // Legacy aliases for backward compatibility
   static Future<void> initialize({

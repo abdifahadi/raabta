@@ -2,7 +2,8 @@ import 'dart:async';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:agora_rtc_engine/agora_rtc_engine.dart';
+// Conditional import to prevent Agora from being loaded on Web
+import 'package:agora_rtc_engine/agora_rtc_engine.dart' if (dart.library.html) 'web_stub.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../features/call/domain/models/call_model.dart';
@@ -14,7 +15,8 @@ import '../agora/cross_platform_video_view.dart';
 /// Production-ready cross-platform Agora service using agora_rtc_engine 6.5.2
 /// 
 /// Features:
-/// - Full cross-platform support (Android, iOS, Web, Windows, Linux, macOS)
+/// - Full cross-platform support (Android, iOS, Windows, Linux, macOS)
+/// - Web platform: Calling disabled with proper fallbacks
 /// - Production-grade error handling and recovery
 /// - Automatic token management and renewal
 /// - Optimized video rendering with fallbacks
@@ -26,7 +28,7 @@ class ProductionAgoraService implements AgoraServiceInterface {
   factory ProductionAgoraService() => _instance;
   ProductionAgoraService._internal();
 
-  // Core engine and state
+  // Core engine and state - null on Web
   RtcEngine? _engine;
   String? _currentChannelName;
   int? _currentUid;
@@ -48,8 +50,8 @@ class ProductionAgoraService implements AgoraServiceInterface {
   // User management
   final Set<int> _remoteUsers = <int>{};
   
-  // Token service
-  final SupabaseAgoraTokenService _tokenService = SupabaseAgoraTokenService();
+  // Token service - disabled on Web
+  SupabaseAgoraTokenService? _tokenService;
   
   // Token renewal timer
   Timer? _tokenRenewalTimer;
@@ -65,25 +67,25 @@ class ProductionAgoraService implements AgoraServiceInterface {
   
   // Getters
   @override
-  bool get isInCall => _isInCall;
+  bool get isInCall => kIsWeb ? false : _isInCall;
   
   @override
-  bool get isVideoEnabled => _isVideoEnabled;
+  bool get isVideoEnabled => kIsWeb ? false : _isVideoEnabled;
   
   @override
-  bool get isMuted => !_isAudioEnabled;
+  bool get isMuted => kIsWeb ? true : !_isAudioEnabled;
   
   @override
-  bool get isSpeakerEnabled => _isSpeakerEnabled;
+  bool get isSpeakerEnabled => kIsWeb ? false : _isSpeakerEnabled;
   
   @override
-  String? get currentChannelName => _currentChannelName;
+  String? get currentChannelName => kIsWeb ? null : _currentChannelName;
   
   @override
-  int? get currentUid => _currentUid;
+  int? get currentUid => kIsWeb ? null : _currentUid;
   
   @override
-  Set<int> get remoteUsers => Set.from(_remoteUsers);
+  Set<int> get remoteUsers => kIsWeb ? <int>{} : Set.from(_remoteUsers);
   
   @override
   Stream<Map<String, dynamic>> get callEventStream => _callEventController.stream;
@@ -91,17 +93,17 @@ class ProductionAgoraService implements AgoraServiceInterface {
   @override
   Stream<CallModel?> get currentCallStream => _currentCallController.stream;
 
-  /// Get the RTC engine for direct access
-  RtcEngine? get engine => _engine;
+  /// Get the RTC engine for direct access - null on Web
+  RtcEngine? get engine => kIsWeb ? null : _engine;
 
   /// Get initialization status
-  bool get isInitialized => _isInitialized;
+  bool get isInitialized => kIsWeb ? true : _isInitialized; // Always true on Web (no-op)
 
   @override
   Future<void> initialize() async {
-    // Handle Web platform differently - don't initialize Agora but mark as initialized
+    // Completely skip Agora initialization on Web platform
     if (kIsWeb) {
-      if (kDebugMode) debugPrint('🌐 ProductionAgoraService: Web platform - skipping Agora initialization (calling disabled)');
+      if (kDebugMode) debugPrint('🌐 ProductionAgoraService: Web platform - Agora completely disabled');
       _isInitialized = true;
       return;
     }
@@ -116,6 +118,9 @@ class ProductionAgoraService implements AgoraServiceInterface {
         debugPrint('🚀 ProductionAgoraService: Initializing with agora_rtc_engine 6.5.2...');
         debugPrint('📱 Platform: ${_getPlatformName()}');
       }
+      
+      // Initialize token service only on non-Web platforms
+      _tokenService = SupabaseAgoraTokenService();
       
       // Create RTC engine with proper configuration
       _engine = createAgoraRtcEngine();
@@ -146,32 +151,26 @@ class ProductionAgoraService implements AgoraServiceInterface {
   }
 
   Future<void> _configurePlatformOptimizations() async {
-    if (_engine == null) return;
+    if (kIsWeb || _engine == null) return;
 
     try {
-      if (kIsWeb) {
-        // Web-specific optimizations
-        await _engine!.setParameters('{"che.audio.web.enable_worklet": true}');
-        await _engine!.setParameters('{"che.video.web.enable_hardware_acceleration": true}');
-      } else if (!kIsWeb) {
-        // Mobile/Desktop optimizations
-        await _engine!.setAudioProfile(
-          profile: AudioProfileType.audioProfileDefault,
-          scenario: AudioScenarioType.audioScenarioChatroom,
-        );
-        
-        // Set optimal video encoder configuration
-        await _engine!.setVideoEncoderConfiguration(VideoEncoderConfiguration(
-          dimensions: VideoDimensions(
-            width: AgoraConfig.videoWidth,
-            height: AgoraConfig.videoHeight,
-          ),
-          frameRate: AgoraConfig.videoFrameRate,
-          bitrate: AgoraConfig.videoBitrate,
-          orientationMode: OrientationMode.orientationModeAdaptive,
-          degradationPreference: DegradationPreference.maintainQuality,
-        ));
-      }
+      // Mobile/Desktop optimizations only
+      await _engine!.setAudioProfile(
+        profile: AudioProfileType.audioProfileDefault,
+        scenario: AudioScenarioType.audioScenarioChatroom,
+      );
+      
+      // Set optimal video encoder configuration
+      await _engine!.setVideoEncoderConfiguration(VideoEncoderConfiguration(
+        dimensions: VideoDimensions(
+          width: AgoraConfig.videoWidth,
+          height: AgoraConfig.videoHeight,
+        ),
+        frameRate: AgoraConfig.videoFrameRate,
+        bitrate: AgoraConfig.videoBitrate,
+        orientationMode: OrientationMode.orientationModeAdaptive,
+        degradationPreference: DegradationPreference.maintainQuality,
+      ));
 
       if (kDebugMode) debugPrint('✅ ProductionAgoraService: Platform optimizations applied');
     } catch (e) {
@@ -181,7 +180,7 @@ class ProductionAgoraService implements AgoraServiceInterface {
   }
 
   Future<void> _registerEventHandlers() async {
-    if (_engine == null) return;
+    if (kIsWeb || _engine == null) return;
 
     _engine!.registerEventHandler(RtcEngineEventHandler(
       onJoinChannelSuccess: (RtcConnection connection, int elapsed) {
@@ -306,7 +305,7 @@ class ProductionAgoraService implements AgoraServiceInterface {
   }
 
   Future<void> _configureMediaSettings() async {
-    if (_engine == null) return;
+    if (kIsWeb || _engine == null) return;
 
     try {
       // Enable audio with optimal settings
@@ -365,6 +364,8 @@ class ProductionAgoraService implements AgoraServiceInterface {
   }
 
   void _handleNetworkError() {
+    if (kIsWeb) return; // No network error handling on Web
+
     if (_reconnectAttempts < _maxReconnectAttempts) {
       _reconnectTimer?.cancel();
       _reconnectTimer = Timer(Duration(seconds: 2 * _reconnectAttempts + 1), () {
@@ -377,12 +378,14 @@ class ProductionAgoraService implements AgoraServiceInterface {
   }
 
   void _handleTokenRenewal() {
+    if (kIsWeb) return; // No token renewal on Web
+
     if (_currentChannelName == null || _currentUid == null) return;
     
     _tokenRenewalTimer?.cancel();
     _tokenRenewalTimer = Timer(const Duration(seconds: 5), () async {
       try {
-        final newToken = await _tokenService.getToken(
+        final newToken = await _tokenService!.getToken(
           channelName: _currentChannelName!,
           uid: _currentUid!,
           callType: _isVideoEnabled ? CallType.video : CallType.audio,
@@ -433,7 +436,6 @@ class ProductionAgoraService implements AgoraServiceInterface {
     required CallType callType,
     int? uid,
   }) async {
-    // Disable calling on Web platform
     if (kIsWeb) {
       if (kDebugMode) debugPrint('🌐 ProductionAgoraService: joinCall disabled on Web platform');
       throw UnsupportedError('Video calling is not supported on Web platform. Please use the mobile or desktop app.');
@@ -462,7 +464,7 @@ class ProductionAgoraService implements AgoraServiceInterface {
       }
 
       // Get token from Supabase
-      final token = await _tokenService.getToken(
+      final token = await _tokenService!.getToken(
         channelName: channelName,
         uid: uid ?? 0,
         callType: callType,
@@ -512,7 +514,6 @@ class ProductionAgoraService implements AgoraServiceInterface {
 
   @override
   Future<void> leaveCall() async {
-    // On Web platform, nothing to leave
     if (kIsWeb) {
       if (kDebugMode) debugPrint('🌐 ProductionAgoraService: leaveCall - nothing to do on Web platform');
       return;
@@ -645,7 +646,7 @@ class ProductionAgoraService implements AgoraServiceInterface {
   @override
   Future<void> renewToken(String token) async {
     try {
-      if (_engine == null || _currentChannelName == null) return;
+      if (kIsWeb || _currentChannelName == null) return;
 
       await _engine!.renewToken(token);
 
@@ -667,7 +668,7 @@ class ProductionAgoraService implements AgoraServiceInterface {
     double? height,
     BorderRadius? borderRadius,
   }) {
-    if (!_isInitialized || _engine == null) {
+    if (kIsWeb || !_isInitialized || _engine == null) {
       return CrossPlatformVideoViewFactory.createPlaceholderView(
         label: 'Local Camera Not Available',
         icon: Icons.videocam_off,
@@ -691,7 +692,7 @@ class ProductionAgoraService implements AgoraServiceInterface {
     double? height,
     BorderRadius? borderRadius,
   }) {
-    if (!_isInitialized || _engine == null) {
+    if (kIsWeb || !_isInitialized || _engine == null) {
       return CrossPlatformVideoViewFactory.createPlaceholderView(
         label: 'Remote Video Not Available',
         icon: Icons.person,

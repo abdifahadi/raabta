@@ -7,7 +7,7 @@ import 'production_agora_service.dart';
 import '../../features/call/domain/models/call_model.dart';
 
 /// Factory for creating Agora service instances
-/// Now uses the new AgoraService with agora_rtc_engine 6.5.2
+/// Uses ProductionAgoraService with Web platform calling completely disabled
 class AgoraServiceFactory {
   static AgoraServiceInterface? _instance;
   
@@ -17,19 +17,20 @@ class AgoraServiceFactory {
   }
   
   /// Get the unified AgoraService implementation for all platforms
-  /// Uses agora_rtc_engine 6.5.2 with cross-platform support for Web, Android, iOS, Windows, macOS, Linux
+  /// Uses ProductionAgoraService with Web calling disabled
   static AgoraServiceInterface getInstance() {
     if (_instance != null) {
       return _instance!;
     }
     
-    // Use the production AgoraService for all platforms with agora_rtc_engine 6.5.2
+    // Use the production AgoraService for all platforms
+    // Web platform will have calling disabled within the service
     _instance = ProductionAgoraService();
     
     return _instance!;
   }
   
-  /// Get the raw AgoraService instance (new implementation)
+  /// Get the raw AgoraService instance (legacy support)
   static AgoraService getNewService() {
     return AgoraService();
   }
@@ -41,37 +42,38 @@ class AgoraServiceFactory {
   }
   
   /// Check if current platform supports Agora natively
-  /// Now all platforms are supported through agora_rtc_engine 6.5.2
-  static bool get isNativeSupported => true;
+  /// Returns false for Web platform where calling is disabled
+  static bool get isNativeSupported => !kIsWeb;
   
   /// Check if current platform is web
   static bool get isWebPlatform => kIsWeb;
 }
 
 /// Adapter to make the new AgoraService compatible with the existing interface
+/// Web platform functionality is disabled at the service level
 class AgoraUnifiedServiceAdapter implements AgoraServiceInterface {
   final AgoraService _agoraService = AgoraService();
   
   @override
-  bool get isInCall => _agoraService.isInCall;
+  bool get isInCall => kIsWeb ? false : _agoraService.isInCall;
   
   @override
-  bool get isVideoEnabled => _agoraService.isVideoEnabled;
+  bool get isVideoEnabled => kIsWeb ? false : _agoraService.isVideoEnabled;
   
   @override
-  bool get isMuted => _agoraService.isMuted;
+  bool get isMuted => kIsWeb ? true : _agoraService.isMuted;
   
   @override
-  bool get isSpeakerEnabled => _agoraService.isSpeakerEnabled;
+  bool get isSpeakerEnabled => kIsWeb ? false : _agoraService.isSpeakerEnabled;
   
   @override
-  String? get currentChannelName => _agoraService.currentChannelName;
+  String? get currentChannelName => kIsWeb ? null : _agoraService.currentChannelName;
   
   @override
-  int? get currentUid => _agoraService.currentUid;
+  int? get currentUid => kIsWeb ? null : _agoraService.currentUid;
   
   @override
-  Set<int> get remoteUsers => _agoraService.remoteUsers;
+  Set<int> get remoteUsers => kIsWeb ? <int>{} : _agoraService.remoteUsers;
   
   @override
   Stream<Map<String, dynamic>> get callEventStream => _agoraService.callEventStream;
@@ -81,11 +83,19 @@ class AgoraUnifiedServiceAdapter implements AgoraServiceInterface {
   
   @override
   Future<void> initialize() async {
+    if (kIsWeb) {
+      if (kDebugMode) debugPrint('🌐 AgoraUnifiedServiceAdapter: Web platform - initialization skipped');
+      return;
+    }
     await _agoraService.initializeEngine('4bfa94cebfb04852951bfdf9858dbc4b'); // Using the appId from AgoraConfig
   }
   
   @override
   Future<bool> checkPermissions(CallType callType) async {
+    if (kIsWeb) {
+      if (kDebugMode) debugPrint('🌐 AgoraUnifiedServiceAdapter: Web platform - permissions not required');
+      return false; // Always false on Web since calling is disabled
+    }
     return await _agoraService.checkPermissions(callType);
   }
   
@@ -95,6 +105,9 @@ class AgoraUnifiedServiceAdapter implements AgoraServiceInterface {
     required CallType callType,
     int? uid,
   }) async {
+    if (kIsWeb) {
+      throw UnsupportedError('Video calling is not supported on Web platform. Please use the mobile or desktop app.');
+    }
     // Get token from the service
     final token = ''; // Will be handled internally by the service
     await _agoraService.joinChannel(token, channelName, uid ?? 0);
@@ -102,31 +115,55 @@ class AgoraUnifiedServiceAdapter implements AgoraServiceInterface {
   
   @override
   Future<void> leaveCall() async {
+    if (kIsWeb) {
+      if (kDebugMode) debugPrint('🌐 AgoraUnifiedServiceAdapter: Web platform - leaveCall is no-op');
+      return;
+    }
     await _agoraService.leaveChannel();
   }
   
   @override
   Future<void> toggleMute() async {
+    if (kIsWeb) {
+      if (kDebugMode) debugPrint('🌐 AgoraUnifiedServiceAdapter: Web platform - toggleMute is no-op');
+      return;
+    }
     await _agoraService.toggleMute();
   }
   
   @override
   Future<void> toggleVideo() async {
+    if (kIsWeb) {
+      if (kDebugMode) debugPrint('🌐 AgoraUnifiedServiceAdapter: Web platform - toggleVideo is no-op');
+      return;
+    }
     await _agoraService.toggleVideo();
   }
   
   @override
   Future<void> toggleSpeaker() async {
+    if (kIsWeb) {
+      if (kDebugMode) debugPrint('🌐 AgoraUnifiedServiceAdapter: Web platform - toggleSpeaker is no-op');
+      return;
+    }
     await _agoraService.toggleSpeaker();
   }
   
   @override
   Future<void> switchCamera() async {
+    if (kIsWeb) {
+      if (kDebugMode) debugPrint('🌐 AgoraUnifiedServiceAdapter: Web platform - switchCamera is no-op');
+      return;
+    }
     await _agoraService.switchCamera();
   }
   
   @override
   Future<void> renewToken(String token) async {
+    if (kIsWeb) {
+      if (kDebugMode) debugPrint('🌐 AgoraUnifiedServiceAdapter: Web platform - renewToken is no-op');
+      return;
+    }
     await _agoraService.renewToken(token);
   }
   
@@ -136,6 +173,16 @@ class AgoraUnifiedServiceAdapter implements AgoraServiceInterface {
     double? height,
     BorderRadius? borderRadius,
   }) {
+    if (kIsWeb) {
+      return CrossPlatformVideoViewFactory.createPlaceholderView(
+        label: 'Video calling not supported on Web',
+        icon: Icons.web,
+        width: width,
+        height: height,
+        borderRadius: borderRadius,
+      );
+    }
+    
     final engine = _agoraService.engine;
     if (engine == null) {
       return Container(
@@ -167,6 +214,16 @@ class AgoraUnifiedServiceAdapter implements AgoraServiceInterface {
     double? height,
     BorderRadius? borderRadius,
   }) {
+    if (kIsWeb) {
+      return CrossPlatformVideoViewFactory.createPlaceholderView(
+        label: 'Video calling not supported on Web',
+        icon: Icons.web,
+        width: width,
+        height: height,
+        borderRadius: borderRadius,
+      );
+    }
+    
     final engine = _agoraService.engine;
     if (engine == null) {
       return Container(
@@ -194,6 +251,10 @@ class AgoraUnifiedServiceAdapter implements AgoraServiceInterface {
   
   @override
   void dispose() {
+    if (kIsWeb) {
+      if (kDebugMode) debugPrint('🌐 AgoraUnifiedServiceAdapter: Web platform - dispose is no-op');
+      return;
+    }
     _agoraService.dispose();
   }
 }

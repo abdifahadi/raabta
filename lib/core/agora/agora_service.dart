@@ -2,16 +2,20 @@ import 'dart:async';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:agora_rtc_engine/agora_rtc_engine.dart';
+// Conditional import to prevent Agora from being loaded on Web
+import 'package:agora_rtc_engine/agora_rtc_engine.dart' if (dart.library.html) '../services/web_stub.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:logger/logger.dart';
 
 import '../../features/call/domain/models/call_model.dart';
 import 'cross_platform_video_view.dart';
+import '../services/agora_service_interface.dart';
+import '../config/agora_config.dart';
+import '../services/supabase_agora_token_service.dart';
 
 /// Unified cross-platform Agora service using agora_rtc_engine 6.5.2
 /// Supports Android, iOS, Web, Windows, Linux, macOS with proper video rendering
-class AgoraService {
+class AgoraService implements AgoraServiceInterface {
   static final AgoraService _instance = AgoraService._internal();
   factory AgoraService() => _instance;
   AgoraService._internal();

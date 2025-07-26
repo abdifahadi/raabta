@@ -2,14 +2,16 @@ import 'dart:async';
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:agora_rtc_engine/agora_rtc_engine.dart';
+// Conditional import to prevent Agora from being loaded on Web
+import 'package:agora_rtc_engine/agora_rtc_engine.dart' if (dart.library.html) '../../../../core/services/web_stub.dart';
 
 import '../../domain/models/call_model.dart';
 import '../../../../core/services/production_agora_service.dart';
 import '../../../../core/services/service_locator.dart';
 
-/// Cross-platform call screen using Agora UIKit 1.3.10
-/// Perfect support for Web, Android, iOS, Windows, macOS, and Linux
+/// Cross-platform call screen
+/// Perfect support for Android, iOS, Windows, macOS, and Linux
+/// Web platform: Shows placeholder message (calling disabled)
 class UnifiedCallScreen extends StatefulWidget {
   final CallModel call;
 
@@ -39,6 +41,13 @@ class _UnifiedCallScreenState extends State<UnifiedCallScreen> with WidgetsBindi
   @override
   void initState() {
     super.initState();
+    
+    // Skip Agora initialization on Web
+    if (kIsWeb) {
+      if (kDebugMode) debugPrint('🌐 UnifiedCallScreen: Web platform - Agora disabled');
+      return;
+    }
+    
     WidgetsBinding.instance.addObserver(this);
     _agoraService = ProductionAgoraService();
     _initializeCall();
@@ -264,10 +273,152 @@ class _UnifiedCallScreenState extends State<UnifiedCallScreen> with WidgetsBindi
 
   @override
   Widget build(BuildContext context) {
+    // Show Web placeholder if on Web platform
+    if (kIsWeb) {
+      return _buildWebPlaceholder();
+    }
+    
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
         child: _buildCallInterface(),
+      ),
+    );
+  }
+
+  /// Build Web placeholder screen
+  Widget _buildWebPlaceholder() {
+    return Scaffold(
+      backgroundColor: const Color(0xFF1A1A1A),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: const Text(
+          'Call Not Supported',
+          style: TextStyle(color: Colors.white),
+        ),
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Large icon
+              Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.blue.withOpacity(0.1),
+                  border: Border.all(
+                    color: Colors.blue.withOpacity(0.3),
+                    width: 2,
+                  ),
+                ),
+                child: const Icon(
+                  Icons.web,
+                  size: 60,
+                  color: Colors.blue,
+                ),
+              ),
+              const SizedBox(height: 32),
+              
+              // Title
+              const Text(
+                'Video Calling Not Available',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              
+              // Description
+              Text(
+                'Video and audio calling is not supported on the Web version of Raabta.',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[400],
+                  height: 1.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              
+              // Instructions
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.blue.withOpacity(0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    const Icon(
+                      Icons.smartphone,
+                      size: 32,
+                      color: Colors.blue,
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'To make video calls:',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Please use the mobile app (Android/iOS) or desktop app (Windows/macOS/Linux)',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[300],
+                        height: 1.4,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 32),
+              
+              // Back button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text(
+                    'Back to Chat',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
