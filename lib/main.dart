@@ -21,7 +21,12 @@ import 'features/call/domain/models/call_model.dart';
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   // Initialize Firebase if not already initialized
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  try {
+    Firebase.app(); // Check if already initialized
+  } catch (e) {
+    // Only initialize if not already done
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  }
   
   if (kDebugMode) {
     log('📲 Background message received: ${message.messageId}');
@@ -45,15 +50,24 @@ void main() async {
       log('🌍 Platform detected: ${kIsWeb ? 'Web' : 'Native'}');
     }
     
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    ).timeout(
-      kIsWeb ? const Duration(seconds: 10) : const Duration(seconds: 15),
-      onTimeout: () {
-        if (kDebugMode) log('⏰ Firebase: Initialization timeout');
-        throw TimeoutException('Firebase initialization timeout', kIsWeb ? const Duration(seconds: 10) : const Duration(seconds: 15));
-      },
-    );
+    try {
+      // Check if Firebase is already initialized
+      Firebase.app();
+      if (kDebugMode) {
+        log('✅ Firebase: Already initialized, using existing instance');
+      }
+    } catch (e) {
+      // Firebase not initialized, proceed with initialization
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      ).timeout(
+        kIsWeb ? const Duration(seconds: 10) : const Duration(seconds: 15),
+        onTimeout: () {
+          if (kDebugMode) log('⏰ Firebase: Initialization timeout');
+          throw TimeoutException('Firebase initialization timeout', kIsWeb ? const Duration(seconds: 10) : const Duration(seconds: 15));
+        },
+      );
+    }
     
     if (kDebugMode) {
       log('✅ Firebase: Initialized successfully');
@@ -177,7 +191,7 @@ void main() async {
                     width: 100,
                     height: 100,
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
+                      color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(50),
                     ),
                     child: const Icon(
@@ -206,7 +220,7 @@ void main() async {
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.white.withValues(alpha: 0.9),
+                        color: Colors.white.withOpacity(0.9),
                         height: 1.4,
                       ),
                     ),
@@ -217,7 +231,7 @@ void main() async {
                       padding: const EdgeInsets.all(16.0),
                       margin: const EdgeInsets.symmetric(horizontal: 20),
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.3),
+                        color: Colors.black.withOpacity(0.3),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(

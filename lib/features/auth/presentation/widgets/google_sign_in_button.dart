@@ -73,18 +73,18 @@ class _GoogleSignInButtonState extends State<GoogleSignInButton>
               borderRadius: BorderRadius.circular(28),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.1),
+                  color: Colors.black.withOpacity(0.1),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
                 BoxShadow(
-                  color: Colors.white.withValues(alpha: 0.8),
+                  color: Colors.white.withOpacity(0.8),
                   blurRadius: 10,
                   offset: const Offset(0, -2),
                 ),
               ],
               border: Border.all(
-                color: Colors.grey.withValues(alpha: 0.2),
+                color: Colors.grey.withOpacity(0.2),
                 width: 1,
               ),
             ),

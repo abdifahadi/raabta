@@ -314,9 +314,9 @@ class _UnifiedCallScreenState extends State<UnifiedCallScreen> with WidgetsBindi
                 height: 120,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.blue.withValues(alpha: 0.1),
+                  color: Colors.blue.withOpacity(0.1),
                   border: Border.all(
-                    color: Colors.blue.withValues(alpha: 0.3),
+                    color: Colors.blue.withOpacity(0.3),
                     width: 2,
                   ),
                 ),
@@ -356,10 +356,10 @@ class _UnifiedCallScreenState extends State<UnifiedCallScreen> with WidgetsBindi
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.1),
+                  color: Colors.blue.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: Colors.blue.withValues(alpha: 0.3),
+                    color: Colors.blue.withOpacity(0.3),
                     width: 1,
                   ),
                 ),
@@ -489,7 +489,7 @@ class _UnifiedCallScreenState extends State<UnifiedCallScreen> with WidgetsBindi
               height: 160,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.2),
+                color: Colors.white.withOpacity(0.2),
                 border: Border.all(color: Colors.white, width: 3),
               ),
               child: const Icon(
@@ -569,8 +569,8 @@ class _UnifiedCallScreenState extends State<UnifiedCallScreen> with WidgetsBindi
           begin: Alignment.bottomCenter,
           end: Alignment.topCenter,
           colors: [
-            Colors.black.withValues(alpha: 0.8),
-            Colors.black.withValues(alpha: 0.4),
+            Colors.black.withOpacity(0.8),
+            Colors.black.withOpacity(0.4),
             Colors.transparent,
           ],
         ),
@@ -582,7 +582,7 @@ class _UnifiedCallScreenState extends State<UnifiedCallScreen> with WidgetsBindi
           _buildControlButton(
             icon: _isMuted ? Icons.mic_off : Icons.mic,
             color: _isMuted ? Colors.red : Colors.white,
-            backgroundColor: _isMuted ? Colors.red.withValues(alpha: 0.2) : null,
+            backgroundColor: _isMuted ? Colors.red.withOpacity(0.2) : null,
             onPressed: _toggleMute,
             tooltip: _isMuted ? 'Unmute' : 'Mute',
           ),
@@ -592,7 +592,7 @@ class _UnifiedCallScreenState extends State<UnifiedCallScreen> with WidgetsBindi
             _buildControlButton(
               icon: _isVideoEnabled ? Icons.videocam : Icons.videocam_off,
               color: _isVideoEnabled ? Colors.white : Colors.red,
-              backgroundColor: !_isVideoEnabled ? Colors.red.withValues(alpha: 0.2) : null,
+              backgroundColor: !_isVideoEnabled ? Colors.red.withOpacity(0.2) : null,
               onPressed: _toggleVideo,
               tooltip: _isVideoEnabled ? 'Turn off video' : 'Turn on video',
             ),
@@ -641,14 +641,14 @@ class _UnifiedCallScreenState extends State<UnifiedCallScreen> with WidgetsBindi
       width: isEndCall ? 64 : 56,
       height: isEndCall ? 64 : 56,
       decoration: BoxDecoration(
-        color: backgroundColor ?? Colors.black.withValues(alpha: 0.5),
+        color: backgroundColor ?? Colors.black.withOpacity(0.5),
         shape: BoxShape.circle,
         border: backgroundColor == null 
-            ? Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1) 
+            ? Border.all(color: Colors.white.withOpacity(0.3), width: 1) 
             : null,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
+            color: Colors.black.withOpacity(0.3),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -682,8 +682,8 @@ class _UnifiedCallScreenState extends State<UnifiedCallScreen> with WidgetsBindi
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Colors.black.withValues(alpha: 0.6),
-            Colors.black.withValues(alpha: 0.4),
+            Colors.black.withOpacity(0.6),
+            Colors.black.withOpacity(0.4),
             Colors.transparent,
           ],
         ),
