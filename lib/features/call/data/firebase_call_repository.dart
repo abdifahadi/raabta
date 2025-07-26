@@ -101,32 +101,80 @@ class FirebaseCallRepository implements CallRepository {
   @override
   Future<CallModel?> getActiveCall(String userId) async {
     try {
-      // Check for active calls where the user is either caller or receiver
-      final query = await _firestore
-          .collection('calls')
-          .where('status', whereIn: [
-            CallStatus.calling.name,
-            CallStatus.ringing.name,
-            CallStatus.accepted.name,
-            CallStatus.connected.name,
-          ])
-          .where(Filter.or(
-            Filter('callerId', isEqualTo: userId),
-            Filter('receiverId', isEqualTo: userId),
-          ))
-          .orderBy('createdAt', descending: true)
-          .limit(1)
-          .get();
+      // ✅ PERMISSION FIX: Check for active calls where the user is either caller or receiver
+      // Use separate queries to handle Firestore rules properly
+      QuerySnapshot? callerQuery;
+      QuerySnapshot? receiverQuery;
+      
+      try {
+        // Query for calls where user is the caller
+        callerQuery = await _firestore
+            .collection('calls')
+            .where('callerId', isEqualTo: userId)
+            .where('status', whereIn: [
+              CallStatus.calling.name,
+              CallStatus.ringing.name,
+              CallStatus.accepted.name,
+              CallStatus.connected.name,
+            ])
+            .orderBy('createdAt', descending: true)
+            .limit(1)
+            .get();
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('⚠️ Failed to query calls as caller: $e');
+        }
+      }
 
-      if (query.docs.isEmpty) {
+      try {
+        // Query for calls where user is the receiver
+        receiverQuery = await _firestore
+            .collection('calls')
+            .where('receiverId', isEqualTo: userId)
+            .where('status', whereIn: [
+              CallStatus.calling.name,
+              CallStatus.ringing.name,
+              CallStatus.accepted.name,
+              CallStatus.connected.name,
+            ])
+            .orderBy('createdAt', descending: true)
+            .limit(1)
+            .get();
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('⚠️ Failed to query calls as receiver: $e');
+        }
+      }
+
+      // Combine results and find the most recent active call
+      final List<QueryDocumentSnapshot> allDocs = [];
+      if (callerQuery != null) allDocs.addAll(callerQuery.docs);
+      if (receiverQuery != null) allDocs.addAll(receiverQuery.docs);
+
+      if (allDocs.isEmpty) {
         return null;
       }
 
-      final doc = query.docs.first;
-      return CallModel.fromMap(doc.data(), doc.id);
+      // Sort by creation time and get the most recent
+      allDocs.sort((a, b) {
+        final aTime = (a.data() as Map<String, dynamic>)['createdAt'] as Timestamp?;
+        final bTime = (b.data() as Map<String, dynamic>)['createdAt'] as Timestamp?;
+        if (aTime == null || bTime == null) return 0;
+        return bTime.compareTo(aTime);
+      });
+
+      final doc = allDocs.first;
+      return CallModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
     } catch (e) {
       if (kDebugMode) {
         debugPrint('❌ Failed to get active call: $e');
+      }
+      // ✅ PERMISSION FIX: Return null instead of throwing on permission errors
+      if (e.toString().contains('permission-denied')) {
+        if (kDebugMode) {
+          debugPrint('🔐 Permission denied getting active call - user may not have access');
+        }
+        return null;
       }
       throw Exception('Failed to get active call: $e');
     }

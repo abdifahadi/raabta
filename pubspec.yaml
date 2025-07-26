@@ -36,13 +36,13 @@ dependencies:
   cupertino_icons: ^1.0.8
   
   # Firebase dependencies - Compatible versions for SDK 3.3.0
-  firebase_core: ^3.15.2
-  firebase_auth: ^5.7.0
-  firebase_storage: ^12.4.10
-  firebase_messaging: ^15.2.10
-  google_sign_in: ^6.2.2
-  cloud_firestore: ^5.6.12
-  cloud_functions: ^5.6.2
+  firebase_core: ^2.24.2
+  firebase_auth: ^4.15.3
+  firebase_storage: ^11.6.0
+  firebase_messaging: ^14.7.9
+  google_sign_in: ^6.2.1
+  cloud_firestore: ^4.13.6
+  cloud_functions: ^4.6.9
   
   # Media and file handling - Updated for cross-platform compatibility
   file_selector: ^1.0.3
@@ -56,29 +56,30 @@ dependencies:
   animations: ^2.0.7
   
   # Utilities - Updated to compatible stable versions
-  intl: ^0.20.2
+  intl: ^0.19.0
   shared_preferences: ^2.2.3
   path_provider: ^2.1.4
-  mime: ^2.0.0
+  mime: ^1.0.4
   uuid: ^4.5.1
   logger: ^2.6.0
-  http: ^1.4.0
-  permission_handler: ^12.0.1
-  share_plus: ^11.0.0
-  flutter_local_notifications: ^19.3.1
+  http: ^1.2.0
+  permission_handler: ^11.3.1
+  share_plus: ^10.0.0
+  # ✅ DEPENDENCY FIX: Use compatible version for Dart 3.3.4
+  flutter_local_notifications: ^17.2.1
   
   # Encryption
   encrypt: ^5.0.3
   crypto: ^3.0.3
   
-  # Audio/Video Calling - Using latest agora_rtc_engine for cross-platform support
-  agora_rtc_engine: ^6.5.2
+  # Audio/Video Calling - Using compatible version for Dart 3.3.4
+  agora_rtc_engine: ^6.3.2
   
-  # Supabase for backend services
+  # Supabase for backend services - Compatible version
   supabase_flutter: ^2.5.6
   
-  # Web APIs for modern web support
-  web: ^1.0.0
+  # Web APIs for modern web support - Compatible version
+  web: ^0.5.1
   
 
 
@@ -91,7 +92,8 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^5.0.0
+  # ✅ DEPENDENCY FIX: Use compatible version for Dart 3.3.4
+  flutter_lints: ^4.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
