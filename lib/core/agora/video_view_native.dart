@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:agora_rtc_engine/agora_rtc_engine.dart';
+// Conditional import to prevent Agora from being loaded on Web
+import 'package:agora_rtc_engine/agora_rtc_engine.dart' if (dart.library.html) '../services/web_stub.dart';
 
 /// Native platform video view implementation (Android, iOS, Windows, macOS, Linux)
 class PlatformVideoView extends StatefulWidget {
