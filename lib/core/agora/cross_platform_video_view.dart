@@ -3,8 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 
-// Conditional imports for web
-import 'video_view_web.dart' if (dart.library.io) 'video_view_native.dart';
+// Import native video view implementation
+import 'video_view_native.dart';
 
 /// Cross-platform video view implementation for Agora RTC Engine 6.5.2+
 /// Supports Android, iOS, Web, Windows, Linux, and macOS
@@ -128,6 +128,11 @@ class _CrossPlatformVideoViewState extends State<CrossPlatformVideoView> {
   }
 
   Widget _buildLocalVideoView() {
+    // Disable video calling on Web platform
+    if (kIsWeb) {
+      return _buildWebPlaceholderView();
+    }
+    
     return PlatformVideoView(
       engine: widget.engine,
       uid: 0,
@@ -137,11 +142,52 @@ class _CrossPlatformVideoViewState extends State<CrossPlatformVideoView> {
   }
 
   Widget _buildRemoteVideoView() {
+    // Disable video calling on Web platform
+    if (kIsWeb) {
+      return _buildWebPlaceholderView();
+    }
+    
     return PlatformVideoView(
       engine: widget.engine,
       uid: widget.uid,
       isLocal: false,
       channelId: widget.channelId,
+    );
+  }
+
+  Widget _buildWebPlaceholderView() {
+    return Container(
+      color: Colors.black,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.web,
+              color: Colors.white54,
+              size: widget.width != null && widget.width! < 150 ? 32 : 48,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Video calling not supported on Web',
+              style: TextStyle(
+                color: Colors.white54,
+                fontSize: widget.width != null && widget.width! < 150 ? 10 : 12,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Use mobile or desktop app',
+              style: TextStyle(
+                color: Colors.white38,
+                fontSize: widget.width != null && widget.width! < 150 ? 8 : 10,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
     );
   }
 

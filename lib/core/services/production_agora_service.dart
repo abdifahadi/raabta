@@ -99,6 +99,13 @@ class ProductionAgoraService implements AgoraServiceInterface {
 
   @override
   Future<void> initialize() async {
+    // Handle Web platform differently - don't initialize Agora but mark as initialized
+    if (kIsWeb) {
+      if (kDebugMode) debugPrint('🌐 ProductionAgoraService: Web platform - skipping Agora initialization (calling disabled)');
+      _isInitialized = true;
+      return;
+    }
+
     if (_isInitialized) {
       if (kDebugMode) debugPrint('✅ ProductionAgoraService: Already initialized');
       return;
@@ -426,6 +433,12 @@ class ProductionAgoraService implements AgoraServiceInterface {
     required CallType callType,
     int? uid,
   }) async {
+    // Disable calling on Web platform
+    if (kIsWeb) {
+      if (kDebugMode) debugPrint('🌐 ProductionAgoraService: joinCall disabled on Web platform');
+      throw UnsupportedError('Video calling is not supported on Web platform. Please use the mobile or desktop app.');
+    }
+
     try {
       if (!_isInitialized) {
         throw Exception('Service not initialized. Call initialize() first.');
@@ -499,6 +512,12 @@ class ProductionAgoraService implements AgoraServiceInterface {
 
   @override
   Future<void> leaveCall() async {
+    // On Web platform, nothing to leave
+    if (kIsWeb) {
+      if (kDebugMode) debugPrint('🌐 ProductionAgoraService: leaveCall - nothing to do on Web platform');
+      return;
+    }
+
     try {
       if (_engine == null) return;
 

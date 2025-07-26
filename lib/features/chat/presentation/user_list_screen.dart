@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:raabta/features/auth/domain/models/user_profile_model.dart';
 import 'package:raabta/features/auth/domain/auth_repository.dart';
 import 'package:raabta/features/auth/domain/firebase_auth_repository.dart';
@@ -113,6 +114,17 @@ class _UserListScreenState extends State<UserListScreen> {
   }
 
   Future<void> _initiateCall(UserProfileModel user, CallType callType) async {
+    // Disable calling on Web platform
+    if (kIsWeb) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Video calling is not supported on Web. Please use the mobile or desktop app.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     try {
       final callManager = ServiceLocator().callManager;
       final currentUser = _authRepository.currentUser;

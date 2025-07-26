@@ -72,6 +72,12 @@ class AgoraUnifiedService implements AgoraServiceInterface {
 
   @override
   Future<void> initialize() async {
+    // Handle Web platform differently - don't initialize Agora but mark as initialized
+    if (kIsWeb) {
+      if (kDebugMode) debugPrint('🌐 AgoraUnifiedService: Web platform - skipping Agora initialization (calling disabled)');
+      return;
+    }
+
     try {
       if (kDebugMode) debugPrint('🚀 AgoraUnifiedService: Initializing with agora_rtc_engine...');
       
@@ -204,6 +210,12 @@ class AgoraUnifiedService implements AgoraServiceInterface {
     required CallType callType,
     int? uid,
   }) async {
+    // Disable calling on Web platform
+    if (kIsWeb) {
+      if (kDebugMode) debugPrint('🌐 AgoraUnifiedService: joinCall disabled on Web platform');
+      throw UnsupportedError('Video calling is not supported on Web platform. Please use the mobile or desktop app.');
+    }
+
     try {
       if (_engine == null) {
         throw Exception('Agora engine not initialized');
@@ -266,6 +278,12 @@ class AgoraUnifiedService implements AgoraServiceInterface {
 
   @override
   Future<void> leaveCall() async {
+    // On Web platform, nothing to leave
+    if (kIsWeb) {
+      if (kDebugMode) debugPrint('🌐 AgoraUnifiedService: leaveCall - nothing to do on Web platform');
+      return;
+    }
+
     try {
       if (_engine == null) return;
 

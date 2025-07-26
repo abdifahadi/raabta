@@ -1,6 +1,5 @@
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:flutter/foundation.dart';
-import '../helpers/permission_web_helper.dart';
 
 class AgoraService {
   static RtcEngine? _engine;
@@ -11,14 +10,10 @@ class AgoraService {
     required String channelName,
     required int uid,
   }) async {
-    // Initialize web-specific support first if on web platform
+    // Note: Web platform calling is disabled in this version
     if (kIsWeb) {
-      WebPermissionHelper.initializeAgoraWebSupport();
-      await WebPermissionHelper.requestWebPermissions();
-      
-      // Log browser info for debugging
-      final browserInfo = WebPermissionHelper.getWebBrowserInfo();
-      debugPrint('🌐 AgoraService: Browser info: $browserInfo');
+      debugPrint('🌐 AgoraService: Web platform calling disabled - use mobile/desktop app');
+      throw UnsupportedError('Video calling is not supported on Web platform. Please use the mobile or desktop app.');
     }
     
     try {
