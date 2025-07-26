@@ -77,28 +77,31 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.deepPurple,
         foregroundColor: Colors.white,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.call),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const UserListScreen(showCallButtonsOnly: true),
-                ),
-              );
-            },
-            tooltip: 'Voice Call',
-          ),
-          IconButton(
-            icon: const Icon(Icons.videocam),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const UserListScreen(showCallButtonsOnly: true, isVideoCall: true),
-                ),
-              );
-            },
-            tooltip: 'Video Call',
-          ),
+          // Hide call buttons on Web platform
+          if (!kIsWeb) ...[
+            IconButton(
+              icon: const Icon(Icons.call),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const UserListScreen(showCallButtonsOnly: true),
+                  ),
+                );
+              },
+              tooltip: 'Voice Call',
+            ),
+            IconButton(
+              icon: const Icon(Icons.videocam),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const UserListScreen(showCallButtonsOnly: true, isVideoCall: true),
+                  ),
+                );
+              },
+              tooltip: 'Video Call',
+            ),
+          ],
           IconButton(
             icon: const Icon(Icons.chat),
             onPressed: () {
@@ -159,7 +162,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-      floatingActionButton: kDebugMode ? FloatingActionButton(
+      floatingActionButton: (kDebugMode && !kIsWeb) ? FloatingActionButton(
         onPressed: () {
           Navigator.of(context).pushNamed('/call-test');
         },
