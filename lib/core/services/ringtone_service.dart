@@ -2,76 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:web/web.dart' as web;
 
-// Web Audio API JS interop declarations with Custom prefix to avoid conflicts
-class CustomAudioContext {
-  final web.AudioContext _context;
-  
-  CustomAudioContext() : _context = web.AudioContext();
-  
-  String get state => _context.state;
-  double get currentTime => _context.currentTime.toDouble();
-  
-  CustomGainNode createGain() => CustomGainNode(_context.createGain());
-  CustomOscillatorNode createOscillator() => CustomOscillatorNode(_context.createOscillator());
-  CustomAudioDestinationNode get destination => CustomAudioDestinationNode(_context.destination);
-  
-  Future<void> resume() async => _context.resume();
-  Future<void> suspend() async => _context.suspend();
-  Future<void> close() async => _context.close();
-}
-
-class CustomGainNode {
-  final web.GainNode _node;
-  
-  CustomGainNode(this._node);
-  
-  CustomAudioParam get gain => CustomAudioParam(_node.gain);
-  void connect(dynamic destination) {
-    if (destination is CustomGainNode) {
-      _node.connect(destination._node);
-    } else if (destination is CustomAudioDestinationNode) {
-      _node.connect(destination._node);
-    }
-  }
-}
-
-class CustomOscillatorNode {
-  final web.OscillatorNode _node;
-  
-  CustomOscillatorNode(this._node);
-  
-  CustomAudioParam get frequency => CustomAudioParam(_node.frequency);
-  set type(String type) => _node.type = type;
-  
-  void connect(dynamic destination) {
-    if (destination is CustomGainNode) {
-      _node.connect(destination._node);
-    } else if (destination is CustomAudioDestinationNode) {
-      _node.connect(destination._node);
-    }
-  }
-  
-  void start(double when) => _node.start(when);
-  void stop(double when) => _node.stop(when);
-}
-
-class CustomAudioParam {
-  final web.AudioParam _param;
-  
-  CustomAudioParam(this._param);
-  
-  set value(double value) => _param.value = value;
-  void setValueAtTime(double value, double startTime) => _param.setValueAtTime(value, startTime);
-  void linearRampToValueAtTime(double value, double endTime) => _param.linearRampToValueAtTime(value, endTime);
-}
-
-class CustomAudioDestinationNode {
-  final web.AudioDestinationNode _node;
-  
-  CustomAudioDestinationNode(this._node);
-}
+// Conditional imports for platform-specific audio
+import 'dart:html' as html 
+  if (dart.library.io) 'web_html_stub.dart' as html;
 
 class RingtoneService {
   static final RingtoneService _instance = RingtoneService._internal();
@@ -85,9 +19,9 @@ class RingtoneService {
   Timer? _stopDelayTimer;
   
   // Web audio context for playing ringtones
-  CustomAudioContext? _audioContext;
-  CustomOscillatorNode? _sourceNode;
-  CustomGainNode? _gainNode;
+  html.AudioContext? _audioContext;
+  html.OscillatorNode? _sourceNode;
+  html.GainNode? _gainNode;
 
   /// Start playing the ringtone
   Future<void> startRingtone() async {
@@ -257,7 +191,7 @@ class RingtoneService {
     
     try {
       // Create audio context if not exists
-      _audioContext ??= CustomAudioContext();
+      _audioContext ??= html.AudioContext();
       
       if (_audioContext!.state == 'suspended') {
         await _audioContext!.resume();
@@ -265,8 +199,8 @@ class RingtoneService {
       
       // Create gain node for volume control
       _gainNode = _audioContext!.createGain();
-      _gainNode!.connect(_audioContext!.destination);
-      _gainNode!.gain.value = 0.5; // 50% volume
+      _gainNode!.connectNode(_audioContext!.destination!);
+      _gainNode!.gain!.value = 0.5; // 50% volume
       
       // Generate a ringtone-like sound using oscillators
       await _generateRingtoneSound();
@@ -297,16 +231,16 @@ class RingtoneService {
       try {
         // Create oscillator for the ringtone tone
         final oscillator = _audioContext!.createOscillator();
-        oscillator.frequency.value = 800; // 800 Hz tone
+        oscillator.frequency!.value = 800; // 800 Hz tone
         oscillator.type = 'sine';
         
         // Create envelope for the tone
-        final now = _audioContext!.currentTime;
-        _gainNode!.gain.setValueAtTime(0, now);
-        _gainNode!.gain.linearRampToValueAtTime(0.3, now + 0.1);
-        _gainNode!.gain.linearRampToValueAtTime(0, now + 0.3);
+        final now = _audioContext!.currentTime!;
+        _gainNode!.gain!.setValueAtTime(0, now);
+        _gainNode!.gain!.linearRampToValueAtTime(0.3, now + 0.1);
+        _gainNode!.gain!.linearRampToValueAtTime(0, now + 0.3);
         
-        oscillator.connect(_gainNode!);
+        oscillator.connectNode(_gainNode!);
         oscillator.start(now);
         oscillator.stop(now + 0.3);
         
@@ -316,15 +250,15 @@ class RingtoneService {
           
           try {
             final oscillator2 = _audioContext!.createOscillator();
-            oscillator2.frequency.value = 1000; // 1000 Hz tone
+            oscillator2.frequency!.value = 1000; // 1000 Hz tone
             oscillator2.type = 'sine';
             
-            final now2 = _audioContext!.currentTime;
-            _gainNode!.gain.setValueAtTime(0, now2);
-            _gainNode!.gain.linearRampToValueAtTime(0.3, now2 + 0.1);
-            _gainNode!.gain.linearRampToValueAtTime(0, now2 + 0.3);
+            final now2 = _audioContext!.currentTime!;
+            _gainNode!.gain!.setValueAtTime(0, now2);
+            _gainNode!.gain!.linearRampToValueAtTime(0.3, now2 + 0.1);
+            _gainNode!.gain!.linearRampToValueAtTime(0, now2 + 0.3);
             
-            oscillator2.connect(_gainNode!);
+            oscillator2.connectNode(_gainNode!);
             oscillator2.start(now2);
             oscillator2.stop(now2 + 0.3);
           } catch (e) {
@@ -363,7 +297,7 @@ class RingtoneService {
       
       // Reset gain to prevent clicks
       if (_gainNode != null) {
-        _gainNode!.gain.value = 0;
+        _gainNode!.gain!.value = 0;
         _gainNode = null;
       }
       

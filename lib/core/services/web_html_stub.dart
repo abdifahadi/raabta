@@ -26,4 +26,40 @@ class MediaDevices {
   }
 }
 
+// Audio API stubs for non-web platforms
+class AudioContext {
+  String get state => 'running';
+  num? get currentTime => 0;
+  AudioDestinationNode? get destination => AudioDestinationNode();
+  
+  GainNode createGain() => GainNode();
+  OscillatorNode createOscillator() => OscillatorNode();
+  
+  Future<void> resume() async {}
+  Future<void> suspend() async {}
+  Future<void> close() async {}
+}
+
+class AudioDestinationNode {}
+
+class GainNode {
+  AudioParam? get gain => AudioParam();
+  void connectNode(dynamic destination) {}
+}
+
+class OscillatorNode {
+  AudioParam? get frequency => AudioParam();
+  String type = 'sine';
+  
+  void connectNode(dynamic destination) {}
+  void start(num when) {}
+  void stop(num when) {}
+}
+
+class AudioParam {
+  num value = 0;
+  void setValueAtTime(num value, num time) {}
+  void linearRampToValueAtTime(num value, num time) {}
+}
+
 final Window window = Window();
