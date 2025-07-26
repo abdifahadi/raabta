@@ -25,8 +25,8 @@ allprojects {
         if (project.hasProperty("android")) {
             (project.property("android") as com.android.build.gradle.BaseExtension).apply {
                 compileOptions {
-                    sourceCompatibility = JavaVersion.VERSION_17
-                    targetCompatibility = JavaVersion.VERSION_17
+                    sourceCompatibility = JavaVersion.VERSION_21
+                    targetCompatibility = JavaVersion.VERSION_21
                 }
             }
         }
@@ -34,8 +34,8 @@ allprojects {
         // Configure Java compilation options
         project.tasks.withType<JavaCompile> {
             options.compilerArgs.addAll(listOf("-Xlint:-options"))
-            sourceCompatibility = "17"
-            targetCompatibility = "17"
+            sourceCompatibility = "21"
+            targetCompatibility = "21"
         }
     }
 }
