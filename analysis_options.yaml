@@ -9,15 +9,6 @@
 # packages, and plugins designed to encourage good coding practices.
 include: package:flutter_lints/flutter.yaml
 
-analyzer:
-  # Exclude auto-generated files and external packages
-  exclude:
-    - "**/*.g.dart"
-    - "**/*.freezed.dart"
-    - "**/generated_plugin_registrant.dart"
-    - "build/**"
-    - ".dart_tool/**"
-
 linter:
   # The lint rules applied to this project can be customized in the
   # section below to disable rules from the `package:flutter_lints/flutter.yaml`
@@ -30,26 +21,8 @@ linter:
   # `// ignore_for_file: name_of_lint` syntax on the line or in the file
   # producing the lint.
   rules:
-    # Disable common lints that can cause issues but don't affect functionality
-    avoid_print: false
-    prefer_single_quotes: false
-    prefer_const_constructors: false
-    prefer_const_literals_to_create_immutables: false
-    prefer_const_declarations: false
-    use_key_in_widget_constructors: false
-    sized_box_for_whitespace: false
-    avoid_unnecessary_containers: false
-    prefer_typing_uninitialized_variables: false
-    prefer_final_fields: false
-    unnecessary_null_in_if_null_operators: false
-    prefer_interpolation_to_compose_strings: false
-    sort_child_properties_last: false
-    avoid_function_literals_in_foreach_calls: false
-    file_names: false
-    non_constant_identifier_names: false
-    constant_identifier_names: false
-    library_private_types_in_public_api: false
-    avoid_web_libraries_in_flutter: false
+    # avoid_print: false  # Uncomment to disable the `avoid_print` rule
+    # prefer_single_quotes: true  # Uncomment to enable the `prefer_single_quotes` rule
 
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options
