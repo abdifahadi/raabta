@@ -5,11 +5,9 @@
 *.swp
 .DS_Store
 .atom/
-.build/
 .buildlog/
 .history
 .svn/
-.swiftpm/
 migrate_working_dir/
 
 # IntelliJ related
@@ -43,14 +41,3 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
-flutter.tar.xz
-# Flutter SDK files
-flutter/
-*.tar.xz
-google-chrome-stable_current_amd64.deb
-
-# Large SDK and temporary files
-android-sdk.zip
-flutter_linux.tar.xz
-*.zip
-android-sdk/
