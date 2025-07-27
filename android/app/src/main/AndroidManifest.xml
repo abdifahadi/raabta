@@ -34,7 +34,11 @@
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false"
         android:usesCleartextTraffic="true"
-        android:requestLegacyExternalStorage="true">
+        android:requestLegacyExternalStorage="true"
+        android:largeHeap="true"
+        android:hardwareAccelerated="true"
+        android:extractNativeLibs="false"
+        android:supportsRtl="true">
         <activity
             android:name=".MainActivity"
             android:exported="true"

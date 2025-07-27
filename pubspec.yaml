@@ -80,6 +80,9 @@ dependencies:
   
   # Web APIs for modern web support - Compatible version
   web: ^0.5.1
+  
+  # Performance optimization dependencies
+  flutter_native_splash: ^2.3.10
 
 dev_dependencies:
   flutter_test:
