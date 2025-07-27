@@ -121,7 +121,7 @@ class _ImageViewerState extends State<ImageViewer> {
   Future<void> _shareImage(BuildContext context) async {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     try {
-      await Share.share(widget.imageUrl);
+      await Share.share(widget.imageUrl, subject: 'Shared Image');
     } catch (e) {
       if (mounted) {
         scaffoldMessenger.showSnackBar(

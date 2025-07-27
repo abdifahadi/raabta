@@ -394,11 +394,9 @@ class MyApp extends StatelessWidget {
           // Allow the app to extend into system UI areas when needed
           top: false,
           bottom: false,
-          child: Container(
+          child: const SizedBox.expand(
             // Ensure the container takes full screen space
-            width: double.infinity,
-            height: double.infinity,
-            child: const AuthWrapper(),
+            child: AuthWrapper(),
           ),
         ),
       ),
@@ -419,10 +417,8 @@ class MyApp extends StatelessWidget {
             body: SafeArea(
               top: false,
               bottom: false,
-              child: Container(
-                width: double.infinity,
-                height: double.infinity,
-                child: const AuthWrapper(),
+              child: const SizedBox.expand(
+                child: AuthWrapper(),
               ),
             ),
           );
@@ -443,10 +439,8 @@ class MyApp extends StatelessWidget {
             body: SafeArea(
               top: false,
               bottom: false,
-              child: Container(
-                width: double.infinity,
-                height: double.infinity,
-                child: const AuthWrapper(),
+              child: const SizedBox.expand(
+                child: AuthWrapper(),
               ),
             ),
           );
@@ -533,10 +527,8 @@ class MyApp extends StatelessWidget {
                               body: SafeArea(
                                 top: false,
                                 bottom: false,
-                                child: Container(
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  child: const AuthWrapper(),
+                                child: const SizedBox.expand(
+                                  child: AuthWrapper(),
                                 ),
                               ),
                             ),
@@ -550,10 +542,8 @@ class MyApp extends StatelessWidget {
                               body: SafeArea(
                                 top: false,
                                 bottom: false,
-                                child: Container(
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  child: const AuthWrapper(),
+                                child: const SizedBox.expand(
+                                  child: AuthWrapper(),
                                 ),
                               ),
                             ),
