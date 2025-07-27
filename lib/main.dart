@@ -417,10 +417,8 @@ class MyApp extends StatelessWidget {
             body: SafeArea(
               top: false,
               bottom: false,
-              child: Container(
-                width: double.infinity,
-                height: double.infinity,
-                child: const AuthWrapper(),
+              child: const SizedBox.expand(
+                child: AuthWrapper(),
               ),
             ),
           );
@@ -441,10 +439,8 @@ class MyApp extends StatelessWidget {
             body: SafeArea(
               top: false,
               bottom: false,
-              child: Container(
-                width: double.infinity,
-                height: double.infinity,
-                child: const AuthWrapper(),
+              child: const SizedBox.expand(
+                child: AuthWrapper(),
               ),
             ),
           );
@@ -531,10 +527,8 @@ class MyApp extends StatelessWidget {
                               body: SafeArea(
                                 top: false,
                                 bottom: false,
-                                child: Container(
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  child: const AuthWrapper(),
+                                child: const SizedBox.expand(
+                                  child: AuthWrapper(),
                                 ),
                               ),
                             ),
@@ -548,10 +542,8 @@ class MyApp extends StatelessWidget {
                               body: SafeArea(
                                 top: false,
                                 bottom: false,
-                                child: Container(
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  child: const AuthWrapper(),
+                                child: const SizedBox.expand(
+                                  child: AuthWrapper(),
                                 ),
                               ),
                             ),
